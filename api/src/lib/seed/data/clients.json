@@ -1,0 +1,15 @@
+[
+  {
+    "name": "Evelyn Client",
+    "phone": "+1555000444",
+    "notes": "VIP passenger",
+    "savedAddresses": ["123 Main St, Manhattan, NY"],
+    "cardsOnFile": []
+  },
+  {
+    "name": "David Business",
+    "phone": "+1555000555",
+    "savedAddresses": ["456 Corporate Plaza, NY"],
+    "cardsOnFile": ["card_123456"]
+  }
+]

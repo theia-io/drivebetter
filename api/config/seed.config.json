@@ -1,0 +1,16 @@
+{
+  "loadUsers": true,
+  "loadGroups": true,
+  "loadRides": true,
+  "loadClients": true,
+
+  "defaults": {
+    "password": "password123",
+    "roles": ["driver"]
+  },
+
+  "options": {
+    "clearBeforeInsert": true,
+    "logInserted": true
+  }
+}

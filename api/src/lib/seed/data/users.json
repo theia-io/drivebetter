@@ -1,0 +1,23 @@
+[
+  {
+    "name": "Alice Driver",
+    "email": "alice.driver@example.com",
+    "phone": "+1555000111",
+    "roles": ["driver"],
+    "emailVerified": true
+  },
+  {
+    "name": "Bob Dispatcher",
+    "email": "bob.dispatcher@example.com",
+    "phone": "+1555000222",
+    "roles": ["dispatcher"],
+    "emailVerified": true
+  },
+  {
+    "name": "Charlie Dual",
+    "email": "charlie.dual@example.com",
+    "phone": "+1555000333",
+    "roles": ["driver", "dispatcher"],
+    "emailVerified": true
+  }
+]

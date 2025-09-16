@@ -1,0 +1,19 @@
+[
+  {
+    "name": "Airport Drivers",
+    "type": "local",
+    "city": "New York",
+    "members": []
+  },
+  {
+    "name": "Corporate HQ",
+    "type": "corporate",
+    "city": "New York",
+    "members": []
+  },
+  {
+    "name": "Global Group",
+    "type": "global",
+    "members": []
+  }
+]

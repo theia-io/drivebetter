@@ -1,0 +1,31 @@
+[
+  {
+    "creatorId": null,
+    "clientId": null,
+    "from": "JFK Airport, Terminal 4",
+    "to": "Manhattan, NY",
+    "stops": ["Brooklyn, NY"],
+    "datetime": "2025-09-16T15:00:00.000Z",
+    "type": "reservation",
+    "queue": [],
+    "coveredVisible": true,
+    "status": "unassigned",
+    "notes": "Flight arrival at 14:30",
+    "payment": {
+      "method": "cash",
+      "paid": false,
+      "driverPaid": false
+    }
+  },
+  {
+    "creatorId": null,
+    "clientId": null,
+    "from": "LaGuardia Airport",
+    "to": "Times Square, NY",
+    "datetime": "2025-09-16T16:00:00.000Z",
+    "type": "asap",
+    "queue": [],
+    "coveredVisible": true,
+    "status": "unassigned"
+  }
+]
