@@ -4,11 +4,9 @@ const nextConfig = {
     swcMinify: true,
     experimental: { typedRoutes: true },
     images: {
-        remotePatterns: [
-            { protocol: "https", hostname: "**.drivebetter.app" }
-        ]
+        remotePatterns: [{ protocol: "https", hostname: "**.drivebetter.app" }],
     },
-    output: "standalone"
+    output: "standalone",
 };
 
-export default nextConfig;
+module.exports = nextConfig;

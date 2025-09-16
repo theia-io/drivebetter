@@ -1,9 +1,9 @@
 import { Router, Request, Response } from "express";
-import mongoose, { Schema, Document, Model } from "mongoose";
+import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
 interface ICalendarEntry extends Document {
-    userId: string;
-    rideId?: string | null;
+    userId: Types.ObjectId;                // ✅ use ObjectId in TS
+    rideId?: Types.ObjectId | null;        // ✅
     start: Date;
     end: Date;
     conflictFlag?: boolean;
@@ -17,13 +17,14 @@ const CalendarEntrySchema = new Schema<ICalendarEntry>(
         rideId: { type: Schema.Types.ObjectId, ref: "Ride", default: null },
         start: { type: Date, required: true },
         end: { type: Date, required: true },
-        conflictFlag: { type: Boolean, default: false }
+        conflictFlag: { type: Boolean, default: false },
     },
     { timestamps: true }
 );
 
 const CalendarEntry: Model<ICalendarEntry> =
-    mongoose.models.CalendarEntry || mongoose.model<ICalendarEntry>("CalendarEntry", CalendarEntrySchema);
+    mongoose.models.CalendarEntry ||
+    mongoose.model<ICalendarEntry>("CalendarEntry", CalendarEntrySchema);
 
 const router = Router();
 
@@ -31,7 +32,7 @@ const router = Router();
  * @openapi
  * /calendar:
  *   get:
- *     summary: Get calendar entries for a user
+ *     summary: "Get calendar entries for a user"
  *     tags: [Calendar]
  *     parameters:
  *       - in: query
@@ -45,11 +46,10 @@ const router = Router();
  *         name: to
  *         schema: { type: string, format: date-time }
  *     responses:
- *       200:
- *         description: OK
+ *       200: { description: OK }
  */
 router.get("/", async (req: Request, res: Response) => {
-    const { userId, from, to } = req.query as { userId: string; from?: string; to?: string };
+    const { userId, from, to } = req.query as { userId?: string; from?: string; to?: string };
     if (!userId) return res.status(400).json({ error: "userId is required" });
 
     const q: any = { userId };
@@ -67,7 +67,7 @@ router.get("/", async (req: Request, res: Response) => {
  * @openapi
  * /calendar/availability:
  *   post:
- *     summary: Create availability range for a user
+ *     summary: "Create availability range for a user"
  *     tags: [Calendar]
  *     requestBody:
  *       required: true
@@ -81,18 +81,17 @@ router.get("/", async (req: Request, res: Response) => {
  *               start: { type: string, format: date-time }
  *               end: { type: string, format: date-time }
  *     responses:
- *       200:
- *         description: Upserted
+ *       200: { description: Upserted }
  */
 router.post("/availability", async (req: Request, res: Response) => {
-    const { userId, start, end } = req.body as { userId: string; start: string; end: string };
+    const { userId, start, end } = req.body as { userId?: string; start?: string; end?: string };
     if (!userId || !start || !end) return res.status(400).json({ error: "userId, start, end required" });
 
     const doc = await CalendarEntry.create({
-        userId,
+        userId, // string is fine; Mongoose will cast to ObjectId
         start: new Date(start),
         end: new Date(end),
-        conflictFlag: false
+        conflictFlag: false,
     });
 
     res.json({ ok: true, entry: doc });

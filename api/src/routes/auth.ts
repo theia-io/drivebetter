@@ -188,7 +188,7 @@ router.post("/login", async (req: Request, res: Response) => {
  * @openapi
  * /auth/request-otp:
  *   post:
- *     summary: Request an OTP code via email (MVP: logs to console)
+ *     summary: Request an OTP code via email MVP logs to console
  *     tags: [Auth]
  *     security: []  # public
  *     requestBody:
