@@ -6,7 +6,6 @@ README.md
 .env
 .env.local
 .env.production.local
-.env.local
 .next
 .git
 .gitignore
@@ -14,3 +13,10 @@ README.md
 .turbo
 coverage
 .nyc_output
+**/node_modules
+**/.next
+dist
+**/dist
+docker-compose*.yml
+*.log
+.env*

@@ -9,7 +9,7 @@
     "clean": "turbo run clean",
     "type-check": "turbo run type-check",
     "docker:build": "docker build -t drivebetter .",
-    "docker:run": "docker run -p 3000:3000 drivebetter",
+    "docker:run": "docker run -p 4200:4200 drivebetter",
     "docker:dev": "docker-compose -f docker-compose.dev.yml up --build",
     "docker:prod": "docker-compose up --build"
   },
