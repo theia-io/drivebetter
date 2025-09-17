@@ -2,6 +2,7 @@ import express from "express";
 import next from "next";
 import mongoose from "mongoose";
 import { setupSwagger } from "./src/lib/swagger";
+import cors from "cors";
 
 import users from "./src/routes/users";
 import rides from "./src/routes/rides";
@@ -23,6 +24,12 @@ app.prepare().then(async () => {
     const server = express();
     server.use(express.json());
 
+    server.use(
+        cors({
+            origin: ["http://localhost:4200", "http://localhost:4201"], // dev + dev-alt
+            credentials: false,
+        })
+    );
     // mount REST
     server.use("/api/v1/users", users);
     server.use("/api/v1/rides", rides);

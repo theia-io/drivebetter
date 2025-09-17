@@ -37,7 +37,7 @@ services:
 
   web:
     build:
-      context: ./web
+      context: ./web/ui
       dockerfile: ./Dockerfile
     ports:
       - "4200:4200"
@@ -50,21 +50,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  web-dev:
-    build:
-      context: .
-      dockerfile: ./web/Dockerfile.dev
-    ports:
-      - "4201:4200"
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/apps/web/.next
-    environment:
-      - NODE_ENV=development
-    command: npm run dev
-    restart: unless-stopped
 
 volumes:
   mongo_data:

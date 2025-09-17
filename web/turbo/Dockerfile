@@ -11,7 +11,7 @@ ENV NODE_ENV=development
 # Root workspace manifests
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # Workspace package manifests (adjust to your repo)
-COPY apps/web/package.json apps/web/package.json
+COPY apps/ui/package.json apps/web/package.json
 COPY packages/ui/package.json packages/ui/package.json
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/config/package.json packages/config/package.json

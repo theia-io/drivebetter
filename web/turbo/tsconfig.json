@@ -26,6 +26,8 @@
       "@config/*": ["./packages/config/src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "apps/web/postcss.config.mjs"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts",
+    "apps/ui/postcss.config.mjs"
+  ],
   "exclude": ["node_modules"]
 }
