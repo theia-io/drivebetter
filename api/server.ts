@@ -3,6 +3,7 @@ import next from "next";
 import mongoose from "mongoose";
 import { setupSwagger } from "./src/lib/swagger";
 import cors from "cors";
+import { env, validateEnv, getCorsOrigins, isDevelopment } from "./src/lib/env";
 
 import users from "./src/routes/users";
 import rides from "./src/routes/rides";
@@ -14,41 +15,51 @@ import clients from "./src/routes/clients";
 import notifications from "./src/routes/notifications";
 import healthRoutes from "./src/routes/health";
 
-const dev = process.env.NODE_ENV !== "production";
-const app = next({ dev });
+try {
+  validateEnv();
+  console.log('✅ Environment variables loaded and validated successfully');
+} catch (error) {
+  console.error('❌ Environment validation failed:', error);
+  process.exit(1);
+}
+
+const app = next({ dev: isDevelopment() });
 const handle = app.getRequestHandler();
 
 app.prepare().then(async () => {
-    await mongoose.connect(process.env.MONGODB_URI || "mongodb://localhost:27017/drivebetter");
+  await mongoose.connect(env.MONGODB_URI);
 
-    const server = express();
-    server.use(express.json());
+  const server = express();
+  server.use(express.json());
 
-    server.use(
-        cors({
-            origin: ["http://localhost:4200", "http://localhost:4201"], // dev + dev-alt
-            credentials: false,
-        })
-    );
-    // mount REST
-    server.use("/api/v1/users", users);
-    server.use("/api/v1/rides", rides);
-    server.use("/api/v1/auth", auth);
-    server.use("/api/v1/oauth", oauth);
-    server.use("/api/v1/groups", groups);
-    server.use("/api/v1/calendar", calendar);
-    server.use("/api/v1/clients", clients);
-    server.use("/api/v1/notifications", notifications);
-    server.use("/api/v1/health", healthRoutes);
+  // CORS configuration
+  server.use(
+    cors({
+      origin: getCorsOrigins(),
+      credentials: false,
+    })
+  );
+  // mount REST
+  server.use("/api/v1/users", users);
+  server.use("/api/v1/rides", rides);
+  server.use("/api/v1/auth", auth);
+  server.use("/api/v1/oauth", oauth);
+  server.use("/api/v1/groups", groups);
+  server.use("/api/v1/calendar", calendar);
+  server.use("/api/v1/clients", clients);
+  server.use("/api/v1/notifications", notifications);
+  server.use("/api/v1/health", healthRoutes);
 
-    // mount swagger
-    setupSwagger(server);
+  // mount swagger
+  setupSwagger(server);
 
-    // Next handles everything else
-    server.all("*", (req, res) => handle(req, res));
+  // Next handles everything else
+  server.all("*", (req, res) => handle(req, res));
 
-    server.listen(Number(process.env.PORT) || 3000, () => {
-        console.log("Swagger UI: http://localhost:3000/api/docs");
-        console.log("OpenAPI:    http://localhost:3000/api/openapi.json");
-    });
+  server.listen(env.PORT, () => {
+    console.log(`🚀 Server running on port ${env.PORT}`);
+    console.log(`📚 Swagger UI: http://localhost:${env.PORT}/api/docs`);
+    console.log(`📋 OpenAPI:    http://localhost:${env.PORT}/api/openapi.json`);
+    console.log(`🌍 Environment: ${env.NODE_ENV}`);
+  });
 });
