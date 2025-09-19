@@ -41,20 +41,25 @@ export default function AccountPage() {
 
   return (
     <ProtectedLayout>
-      <Container>
-        <div className="space-y-8">
+      <Container className="px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6 sm:space-y-8">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
             <div>
-              <Typography variant="h1" className="text-3xl font-bold text-gray-900">
+              <Typography variant="h1" className="text-2xl sm:text-3xl font-bold text-gray-900">
                 Account Settings
               </Typography>
-              <Typography variant="body1" className="text-gray-600 mt-2">
+              <Typography variant="body1" className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">
                 Manage your driver account and preferences
               </Typography>
             </div>
-            <div className="mt-4 sm:mt-0">
-              <Button variant="outline" leftIcon={<Edit className="w-4 h-4" />}>
+            <div className="w-full sm:w-auto">
+              <Button 
+                variant="outline" 
+                leftIcon={<Edit className="w-4 h-4" />}
+                size="sm"
+                className="w-full sm:w-auto"
+              >
                 Edit Profile
               </Button>
             </div>
@@ -63,36 +68,36 @@ export default function AccountPage() {
           {/* Profile Card */}
           <Card variant="elevated" className="overflow-hidden">
             <CardBody className="p-0">
-              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 h-32"></div>
-              <div className="px-6 pb-6 -mt-16">
+              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 h-24 sm:h-32"></div>
+              <div className="px-4 sm:px-6 pb-4 sm:pb-6 -mt-12 sm:-mt-16">
                 <div className="flex flex-col sm:flex-row sm:items-end sm:space-x-6">
                   <div className="relative">
-                    <div className="w-32 h-32 bg-white rounded-full border-4 border-white shadow-lg flex items-center justify-center">
-                      <User className="w-16 h-16 text-gray-400" />
+                    <div className="w-24 h-24 sm:w-32 sm:h-32 bg-white rounded-full border-4 border-white shadow-lg flex items-center justify-center">
+                      <User className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400" />
                     </div>
-                    <button className="absolute bottom-2 right-2 w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center hover:bg-indigo-700 transition-colors">
-                      <Camera className="w-4 h-4 text-white" />
+                    <button className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 w-6 h-6 sm:w-8 sm:h-8 bg-indigo-600 rounded-full flex items-center justify-center hover:bg-indigo-700 transition-colors">
+                      <Camera className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                     </button>
                   </div>
-                  <div className="mt-4 sm:mt-0 flex-1">
-                    <Typography variant="h2" className="text-2xl font-bold text-gray-900">
+                  <div className="mt-3 sm:mt-0 flex-1">
+                    <Typography variant="h2" className="text-xl sm:text-2xl font-bold text-gray-900">
                       {user?.name || 'John Driver'}
                     </Typography>
-                    <Typography variant="body1" className="text-gray-600 mt-1">
+                    <Typography variant="body1" className="text-gray-600 mt-1 text-sm sm:text-base">
                       {user?.email || 'john.driver@example.com'}
                     </Typography>
-                    <div className="flex items-center mt-2">
-                      <Shield className="w-4 h-4 text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-600">{user?.role || 'Driver'}</span>
+                    <div className="flex items-center mt-1 sm:mt-2">
+                      <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 mr-2" />
+                      <span className="text-xs sm:text-sm text-gray-600">{user?.role || 'Driver'}</span>
                     </div>
                   </div>
-                  <div className="mt-4 sm:mt-0">
+                  <div className="mt-3 sm:mt-0">
                     <div className="flex items-center space-x-2">
                       <div className="flex items-center">
-                        <Star className="w-5 h-5 text-yellow-400 fill-current" />
-                        <span className="text-lg font-semibold text-gray-900 ml-1">4.8</span>
+                        <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 fill-current" />
+                        <span className="text-base sm:text-lg font-semibold text-gray-900 ml-1">4.8</span>
                       </div>
-                      <span className="text-sm text-gray-600">(1,247 reviews)</span>
+                      <span className="text-xs sm:text-sm text-gray-600">(1,247 reviews)</span>
                     </div>
                   </div>
                 </div>
@@ -101,23 +106,23 @@ export default function AccountPage() {
           </Card>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             {stats.map((stat, index) => {
               const Icon = stat.icon
               return (
                 <Card key={index} variant="elevated" className="hover:shadow-lg transition-shadow">
-                  <CardBody className="p-6">
+                  <CardBody className="p-3 sm:p-6">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <Typography variant="body2" className="text-gray-600 font-medium">
+                      <div className="flex-1 min-w-0">
+                        <Typography variant="body2" className="text-gray-600 font-medium text-xs sm:text-sm">
                           {stat.label}
                         </Typography>
-                        <Typography variant="h2" className="text-2xl font-bold text-gray-900 mt-1">
+                        <Typography variant="h2" className="text-lg sm:text-2xl font-bold text-gray-900 mt-1">
                           {stat.value}
                         </Typography>
                       </div>
-                      <div className={`p-3 rounded-xl ${stat.bgColor}`}>
-                        <Icon className={`w-6 h-6 ${stat.color}`} />
+                      <div className={`p-2 sm:p-3 rounded-xl ${stat.bgColor} flex-shrink-0`}>
+                        <Icon className={`w-4 h-4 sm:w-6 sm:h-6 ${stat.color}`} />
                       </div>
                     </div>
                   </CardBody>
@@ -126,7 +131,7 @@ export default function AccountPage() {
             })}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
             {/* Profile Information */}
             <div className="lg:col-span-2">
               <Card variant="elevated">

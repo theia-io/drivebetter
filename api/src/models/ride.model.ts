@@ -31,13 +31,13 @@ const RideSchema = new Schema<IRide>(
         to:               { type: String, required: true },
         stops:            [{ type: String }],
         datetime:         { type: Date, required: true },
-        type:             { type: String, enum: ["reservation", "asap"], required: true },
+        type:             { type: String, enum: ["reservation", "asap", "completed"], required: true },
         queue:            [{ type: Schema.Types.ObjectId, ref: "User" }],
         assignedDriverId: { type: Schema.Types.ObjectId, ref: "User", default: null },
         coveredVisible:   { type: Boolean, default: true },
         status: {
             type: String,
-            enum: ["unassigned", "assigned", "on_my_way", "on_location", "pob", "clear"],
+            enum: ["unassigned", "assigned", "on_my_way", "on_location", "pob", "clear", "completed"],
             default: "unassigned"
         },
         notes:   { type: String },

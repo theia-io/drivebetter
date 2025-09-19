@@ -125,32 +125,43 @@ export default function CalendarPage() {
 
   return (
     <ProtectedLayout>
-      <Container>
-        <div className="space-y-8">
+      <Container className="px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6 sm:space-y-8">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
             <div>
               <Typography
                 variant="h1"
-                className="text-3xl font-bold text-gray-900"
+                className="text-2xl sm:text-3xl font-bold text-gray-900"
               >
                 Calendar
               </Typography>
-              <Typography variant="body1" className="text-gray-600 mt-2">
+              <Typography variant="body1" className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">
                 View and manage your ride schedule
               </Typography>
             </div>
-            <div className="mt-4 sm:mt-0 flex space-x-3">
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
               <Button
                 variant="outline"
                 leftIcon={<Filter className="w-4 h-4" />}
+                size="sm"
+                className="w-full sm:w-auto"
               >
                 Filter
               </Button>
-              <Button variant="outline" leftIcon={<List className="w-4 h-4" />}>
+              <Button 
+                variant="outline" 
+                leftIcon={<List className="w-4 h-4" />}
+                size="sm"
+                className="w-full sm:w-auto"
+              >
                 List View
               </Button>
-              <Button leftIcon={<Plus className="w-4 h-4" />}>
+              <Button 
+                leftIcon={<Plus className="w-4 h-4" />}
+                size="sm"
+                className="w-full sm:w-auto"
+              >
                 Schedule Ride
               </Button>
             </div>
@@ -193,11 +204,11 @@ export default function CalendarPage() {
             </CardHeader>
             <CardBody className="pt-0">
               {/* Calendar Grid */}
-              <div className="grid grid-cols-7 gap-1 mb-4">
+              <div className="grid grid-cols-7 gap-1 mb-3 sm:mb-4">
                 {daysOfWeek.map((day) => (
                   <div
                     key={day}
-                    className="text-center font-semibold text-gray-700 py-3 text-sm"
+                    className="text-center font-semibold text-gray-700 py-2 sm:py-3 text-xs sm:text-sm"
                   >
                     {day}
                   </div>
@@ -208,7 +219,7 @@ export default function CalendarPage() {
                 {calendarDays.map((dayData, index) => (
                   <div
                     key={index}
-                    className={`h-24 border rounded-lg p-2 cursor-pointer transition-colors ${
+                    className={`h-16 sm:h-24 border rounded-lg p-1 sm:p-2 cursor-pointer transition-colors ${
                       dayData.isCurrentMonth
                         ? "bg-white hover:bg-gray-50"
                         : "bg-gray-50 text-gray-400"
@@ -224,7 +235,7 @@ export default function CalendarPage() {
                   >
                     <div className="flex flex-col h-full">
                       <div
-                        className={`text-sm font-medium ${
+                        className={`text-xs sm:text-sm font-medium ${
                           dayData.isToday ? "text-indigo-600" : "text-gray-900"
                         }`}
                       >
@@ -232,8 +243,8 @@ export default function CalendarPage() {
                       </div>
                       {dayData.hasRides && dayData.isCurrentMonth && (
                         <div className="mt-1 flex-1">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full mx-auto"></div>
-                          <div className="text-xs text-blue-600 text-center mt-1">
+                          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full mx-auto"></div>
+                          <div className="text-xs text-blue-600 text-center mt-1 hidden sm:block">
                             {dayData.day % 3 === 0 ? "3 rides" : "2 rides"}
                           </div>
                         </div>
@@ -246,7 +257,7 @@ export default function CalendarPage() {
           </Card>
 
           {/* Upcoming Rides */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
             <div className="lg:col-span-2">
               <Card variant="elevated">
                 <CardHeader className="pb-4">

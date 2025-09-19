@@ -1,23 +1,26 @@
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuthStore } from '@/stores/auth'
-import Navigation from './Navigation'
+import { useAuthStore } from "@/stores/auth";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import Navigation from "./Navigation";
 
 interface ProtectedLayoutProps {
-  children: React.ReactNode
+  children: React.ReactNode;
 }
 
 export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
-  const { isAuthenticated, user } = useAuthStore()
-  const router = useRouter()
+  const { isAuthenticated, user, fetchMe } = useAuthStore();
+  const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated || !user) {
-      router.push('/login')
-    }
-  }, [isAuthenticated, user, router])
+    (async () => {
+      const resolvedUser = user || (await fetchMe());
+      if (!resolvedUser) {
+        router.push("/login");
+      }
+    })();
+  }, [isAuthenticated, user, router]);
 
   if (!isAuthenticated || !user) {
     return (
@@ -27,15 +30,13 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
           <p className="mt-4 text-gray-600">Redirecting to login...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {children}
-      </main>
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">{children}</main>
     </div>
-  )
+  );
 }

@@ -9,6 +9,7 @@ import {
   Container,
   Typography,
 } from "@/components/ui";
+import { useGroupsStore } from "@/stores";
 import {
   Activity,
   Calendar,
@@ -24,56 +25,14 @@ import {
 } from "lucide-react";
 
 export default function GroupsPage() {
-  const mockGroups = [
-    {
-      id: 1,
-      name: "Morning Commuters",
-      description: "Early morning drivers serving downtown area",
-      members: 12,
-      activeRides: 8,
-      totalRides: 156,
-      rating: 4.8,
-      location: "Downtown LA",
-      created: "2 months ago",
-      status: "active",
-    },
-    {
-      id: 2,
-      name: "Evening Shift",
-      description: "Night shift drivers for late night rides",
-      members: 15,
-      activeRides: 5,
-      totalRides: 203,
-      rating: 4.6,
-      location: "Hollywood",
-      created: "1 month ago",
-      status: "active",
-    },
-    {
-      id: 3,
-      name: "Weekend Warriors",
-      description: "Weekend drivers for special events",
-      members: 8,
-      activeRides: 3,
-      totalRides: 89,
-      rating: 4.9,
-      location: "Santa Monica",
-      created: "3 weeks ago",
-      status: "active",
-    },
-    {
-      id: 4,
-      name: "Airport Express",
-      description: "Specialized airport transfer service",
-      members: 6,
-      activeRides: 2,
-      totalRides: 67,
-      rating: 4.7,
-      location: "LAX Area",
-      created: "1 week ago",
-      status: "active",
-    },
-  ];
+  const {
+    groups,
+    groupActivity,
+    isLoading,
+    error,
+    fetchGroups,
+    fetchGroupActivity,
+  } = useGroupsStore();
 
   const recentActivity = [
     {
@@ -101,58 +60,67 @@ export default function GroupsPage() {
 
   return (
     <ProtectedLayout>
-      <Container>
-        <div className="space-y-8">
+      <Container className="px-4 sm:px-6 lg:px-8">
+        <div className="space-y-6 sm:space-y-8">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
             <div>
               <Typography
                 variant="h1"
-                className="text-3xl font-bold text-gray-900"
+                className="text-2xl sm:text-3xl font-bold text-gray-900"
               >
                 Driver Groups
               </Typography>
-              <Typography variant="body1" className="text-gray-600 mt-2">
+              <Typography
+                variant="body1"
+                className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base"
+              >
                 Connect with other drivers and manage group activities
               </Typography>
             </div>
-            <div className="mt-4 sm:mt-0 flex space-x-3">
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
               <Button
                 variant="outline"
                 leftIcon={<Filter className="w-4 h-4" />}
+                size="sm"
+                className="w-full sm:w-auto"
               >
                 Filter
               </Button>
-              <Button leftIcon={<Plus className="w-4 h-4" />}>
+              <Button
+                leftIcon={<Plus className="w-4 h-4" />}
+                size="sm"
+                className="w-full sm:w-auto"
+              >
                 Create Group
               </Button>
             </div>
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
             <Card
               variant="elevated"
               className="hover:shadow-lg transition-shadow"
             >
-              <CardBody className="p-6">
+              <CardBody className="p-3 sm:p-6">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="flex-1 min-w-0">
                     <Typography
                       variant="body2"
-                      className="text-gray-600 font-medium"
+                      className="text-gray-600 font-medium text-xs sm:text-sm"
                     >
                       Total Groups
                     </Typography>
                     <Typography
                       variant="h2"
-                      className="text-2xl font-bold text-gray-900 mt-1"
+                      className="text-lg sm:text-2xl font-bold text-gray-900 mt-1"
                     >
                       4
                     </Typography>
                   </div>
-                  <div className="p-3 bg-blue-50 rounded-xl border border-blue-200">
-                    <Users className="w-6 h-6 text-blue-600" />
+                  <div className="p-2 sm:p-3 bg-blue-50 rounded-xl border border-blue-200 flex-shrink-0">
+                    <Users className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600" />
                   </div>
                 </div>
               </CardBody>
@@ -263,15 +231,15 @@ export default function GroupsPage() {
           </Card>
 
           {/* Groups Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {mockGroups.map((group) => (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {groups.map((group) => (
               <Card
                 key={group.id}
                 variant="elevated"
                 className="hover:shadow-lg transition-shadow"
               >
                 <CardBody className="p-6">
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start justifys-between mb-4">
                     <div className="flex items-center space-x-3">
                       <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
                         <Users className="w-6 h-6 text-indigo-600" />
