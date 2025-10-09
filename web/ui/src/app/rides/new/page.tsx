@@ -6,10 +6,8 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { ArrowLeft, Save } from "lucide-react";
 import DriverCombobox from "@/components/ui/DriverCombobox";
-import PlaceCombobox from "@/components/ui/PlaceCombobox";
-import LeafletMap from "@/components/ui/LeafletMap";
-import PointLayer from "@/components/ui/PointLayer";
-import RouteLayer from "@/components/ui/RouteLayer";
+import PlaceCombobox from "@/components/ui/maps/PlaceCombobox";
+import LeafletMap from "@/components/ui/maps/LeafletMap";
 import { useRidesStore } from "@/stores/rides";
 import {PlaceHit} from "@/stores/geocode";
 import {getRoute} from "@/stores/routes";
@@ -155,30 +153,55 @@ export default function NewRidePage() {
                                     <PlaceCombobox
                                         id="pickup"
                                         value={values.pickup}
-                                        onSelect={(hit) => { set("pickup", hit.label); setPickupHit(hit); }}
+                                        onSelectedChange={(hit) => {
+                                            if (hit) {
+                                                set("pickup", hit.label);
+                                                setPickupHit(hit);   // will show map
+                                            } else {
+                                                setPickupHit(null);  // hide map on edit/clear
+                                            }
+                                        }}
+                                        error={errors.pickup}
                                     />
                                     <FieldError message={errors.pickup} />
-                                    <div className="mt-2">
-                                        <LeafletMap heightClass="h-56">
-                                            <PointLayer coord={pickupHit ? [pickupHit.lon, pickupHit.lat] : null} />
-                                        </LeafletMap>
-                                    </div>
+                                    {pickupHit && (
+                                        <div className="mt-2">
+                                            <LeafletMap
+                                                heightClass="h-56"
+                                                center={pickupHit ? [pickupHit.lon, pickupHit.lat] : null}
+                                                marker={pickupHit ? [pickupHit.lon, pickupHit.lat] : null}
+                                                markerLabel={pickupHit?.label}
+                                            />
+                                        </div>
+                                    )}
                                 </Field>
 
-                                {/*<Field>*/}
-                                {/*    <FieldLabel htmlFor="destination">Destination</FieldLabel>*/}
-                                {/*    <PlaceCombobox*/}
-                                {/*        id="destination"*/}
-                                {/*        value={values.destination}*/}
-                                {/*        onSelect={(hit) => { set("destination", hit.label); setDestHit(hit); }}*/}
-                                {/*    />*/}
-                                {/*    <FieldError message={errors.destination} />*/}
-                                {/*    <div className="mt-2">*/}
-                                {/*        <LeafletMap heightClass="h-56">*/}
-                                {/*            <PointLayer coord={destHit ? [destHit.lon, destHit.lat] : null} />*/}
-                                {/*        </LeafletMap>*/}
-                                {/*    </div>*/}
-                                {/*</Field>*/}
+                                <Field>
+                                    <FieldLabel htmlFor="destination">Destination</FieldLabel>
+                                    <PlaceCombobox
+                                        id="destination"
+                                        value={values.destination}
+                                        onSelectedChange={(hit) => {
+                                            if (hit) {
+                                                set("pickup", hit.label);
+                                                setDestHit(hit);   // will show map
+                                            } else {
+                                                setDestHit(null);  // hide map on edit/clear
+                                            }
+                                        }}
+                                    />
+                                    <FieldError message={errors.destination} />
+                                    {destHit && (
+                                    <div className="mt-2">
+                                        <LeafletMap
+                                            heightClass="h-56"
+                                            center={destHit ? [destHit.lon, destHit.lat] : null}
+                                            marker={destHit ? [destHit.lon, destHit.lat] : null}
+                                            markerLabel={destHit?.label}
+                                        />
+                                    </div>
+                                    )}
+                                </Field>
 
                                 {/*// route map section (only when both are selected)*/}
                                 {/*{(pickupHit && destHit) && (*/}

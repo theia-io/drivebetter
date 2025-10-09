@@ -1,7 +1,9 @@
 import { Router, Request, Response } from "express";
+import {logger} from "bs-logger";
 
 const router = Router();
-const MAPTILER_API_KEY = process.env.MAPTILER_API_KEY;
+const MAPTILER_API_KEY = process.env.MAPTILER_API_KEY!;
+const STYLE = process.env.MAPTILER_RASTER_STYLE || "streets";
 if (!MAPTILER_API_KEY) {
     // Fail fast on boot if desired, or keep runtime guard below
     throw new Error("Missing MAPTILER_API_KEY");
@@ -67,6 +69,7 @@ function bad(res: Response, status: number, error: string) {
 router.get("/search", async (req: Request, res: Response) => {
     try {
         const q = String(req.query.q || "").trim();
+
         if (!MAPTILER_API_KEY) return bad(res, 500, "maptiler_key_missing");
         if (!q || q.length < 2) return res.json([]);
 
@@ -74,10 +77,11 @@ router.get("/search", async (req: Request, res: Response) => {
         url.searchParams.set("key", MAPTILER_API_KEY);
         url.searchParams.set("autocomplete", "true");
         url.searchParams.set("limit", String(req.query.limit || 8));
+
         if (req.query.country) url.searchParams.set("country", String(req.query.country)); // optional filter
         if (req.query.language) url.searchParams.set("language", String(req.query.language)); // optional locale
 
-        const r = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+        const r = await fetch(url.toString(), { headers: { Accept: "application/json", Origin: "localhost" } });
         if (!r.ok) return bad(res, 502, "geocode_upstream_failed");
 
         const data = await r.json();
@@ -214,7 +218,7 @@ router.get("/route", async (req: Request, res: Response) => {
         if (req.query.language) url.searchParams.set("language", String(req.query.language));
         if (req.query.units) url.searchParams.set("units", String(req.query.units)); // m|km|mi
 
-        const r = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+        const r = await fetch(url.toString(), { headers: { Accept: "application/json", Origin: "localhost" } });
         if (!r.ok) return bad(res, 502, "route_upstream_failed");
 
         const data = await r.json();
@@ -257,6 +261,60 @@ router.get("/route", async (req: Request, res: Response) => {
     } catch (err: any) {
         return bad(res, 500, "route_proxy_error");
     }
+});
+
+/**
+ * @openapi
+ * /geo/tiles/{z}/{x}/{y}.png:
+ *   get:
+ *     summary: Retrieve a raster map tile from MapTiler proxy
+ *     description: >
+ *       Returns a PNG raster tile proxied from the MapTiler API for the given
+ *       tile coordinates (`z`, `x`, `y`).
+ *       This endpoint hides the MapTiler API key from clients and adds caching headers.
+ *     tags: [Geo]
+ *     parameters:
+ *       - in: path
+ *         name: z
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *         description: Zoom level of the requested tile
+ *       - in: path
+ *         name: x
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *         description: X coordinate of the tile
+ *       - in: path
+ *         name: y
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 0
+ *         description: Y coordinate of the tile
+ *     responses:
+ *       200:
+ *         description: PNG raster map tile
+ *         content:
+ *           image/png: {}
+ *       502:
+ *         description: Upstream MapTiler service error or fetch failure
+ */
+router.get("/tiles/:z/:x/:y", async (req, res) => {
+    if (!MAPTILER_API_KEY) return bad(res, 500, "maptiler_key_missing");
+    const { z, x, y } = req.params;
+    const upstream = `https://api.maptiler.com/maps/streets/${z}/${x}/${y}.png?key=${MAPTILER_API_KEY}`;
+
+    const r = await fetch(upstream, { headers: { Accept: "image/png", Origin: "localhost" } });
+    if (!r.ok) return res.status(502).end();
+
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "public, max-age=86400, s-maxage=86400");
+    const buf = Buffer.from(await r.arrayBuffer());
+    res.end(buf);
 });
 
 export default router;

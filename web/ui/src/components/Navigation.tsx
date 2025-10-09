@@ -50,7 +50,7 @@ export default function Navigation() {
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 {user?.name}
               </span>
-              {/*<ThemeToggle />*/}
+              <ThemeToggle />
               <Button
                 variant="outline"
                 size="sm"
