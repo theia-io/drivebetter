@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { CalendarDay, CalendarEvent, CalendarStats, CalendarFilters, Ride } from "@/types/calendar";
+import type { CalendarDay, CalendarEvent, CalendarStats, CalendarFilters } from "@/types/calendar";
+import type { Ride } from "@/types/ride"
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api/v1";
 
