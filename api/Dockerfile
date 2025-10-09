@@ -1,7 +1,7 @@
 # ---- Base image ----
 FROM node:20-alpine AS base
 WORKDIR /app
-ENV NODE_ENV=production
+ENV NODE_ENV=development
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # ---- Dependencies layer (cached) ----
@@ -16,6 +16,7 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 # Copy the rest of the project
 COPY . .
+ENV NODE_ENV=production
 # Build Next.js (Pages Router) and compile server (server.ts -> dist/)
 # Requires "build": "next build && tsc -p tsconfig.server.json" in package.json
 RUN npm run build
