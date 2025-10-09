@@ -1,13 +1,18 @@
-// web/ui/src/app/rides/new/page.tsx
 "use client";
 
-import { useState } from "react";
+import {useEffect, useState} from "react";
 import { useRouter } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { ArrowLeft, Save } from "lucide-react";
 import DriverCombobox from "@/components/ui/DriverCombobox";
+import PlaceCombobox from "@/components/ui/PlaceCombobox";
+import LeafletMap from "@/components/ui/LeafletMap";
+import PointLayer from "@/components/ui/PointLayer";
+import RouteLayer from "@/components/ui/RouteLayer";
 import { useRidesStore } from "@/stores/rides";
+import {PlaceHit} from "@/stores/geocode";
+import {getRoute} from "@/stores/routes";
 
 export type RideStatus = "scheduled" | "in-progress" | "completed";
 
@@ -42,6 +47,9 @@ export default function NewRidePage() {
     const [values, setValues] = useState<RideFormValues>(initialValues);
     const [submitting, setSubmitting] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [pickupHit, setPickupHit] = useState<PlaceHit | null>(null);
+    const [destHit, setDestHit] = useState<PlaceHit | null>(null);
+    const [routeLine, setRouteLine] = useState<[number, number][]>([]);
 
     const set = (k: keyof RideFormValues, v: RideFormValues[keyof RideFormValues]) =>
         setValues((prev) => ({ ...prev, [k]: v }));
@@ -91,6 +99,19 @@ export default function NewRidePage() {
         }
     };
 
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            if (!pickupHit || !destHit) { setRouteLine([]); return; }
+            const r = await getRoute([pickupHit.lon, pickupHit.lat], [destHit.lon, destHit.lat]);
+            if (cancelled) return;
+            setRouteLine(r.geometry);
+            set("distanceMeters", r.distanceMeters);
+            set("durationMinutes", Math.round(r.durationSeconds / 60));
+        })();
+        return () => { cancelled = true; };
+    }, [pickupHit, destHit]);
+
     return (
         <ProtectedLayout>
             <Container className="px-4 sm:px-6 lg:px-8">
@@ -131,28 +152,46 @@ export default function NewRidePage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field>
                                     <FieldLabel htmlFor="pickup">Pickup</FieldLabel>
-                                    <input
+                                    <PlaceCombobox
                                         id="pickup"
-                                        type="text"
                                         value={values.pickup}
-                                        onChange={(e) => set("pickup", e.target.value)}
-                                        className={inputClass(errors.pickup)}
-                                        placeholder="e.g., Downtown Plaza"
+                                        onSelect={(hit) => { set("pickup", hit.label); setPickupHit(hit); }}
                                     />
                                     <FieldError message={errors.pickup} />
+                                    <div className="mt-2">
+                                        <LeafletMap heightClass="h-56">
+                                            <PointLayer coord={pickupHit ? [pickupHit.lon, pickupHit.lat] : null} />
+                                        </LeafletMap>
+                                    </div>
                                 </Field>
-                                <Field>
-                                    <FieldLabel htmlFor="destination">Destination</FieldLabel>
-                                    <input
-                                        id="destination"
-                                        type="text"
-                                        value={values.destination}
-                                        onChange={(e) => set("destination", e.target.value)}
-                                        className={inputClass(errors.destination)}
-                                        placeholder="e.g., LAX Airport"
-                                    />
-                                    <FieldError message={errors.destination} />
-                                </Field>
+
+                                {/*<Field>*/}
+                                {/*    <FieldLabel htmlFor="destination">Destination</FieldLabel>*/}
+                                {/*    <PlaceCombobox*/}
+                                {/*        id="destination"*/}
+                                {/*        value={values.destination}*/}
+                                {/*        onSelect={(hit) => { set("destination", hit.label); setDestHit(hit); }}*/}
+                                {/*    />*/}
+                                {/*    <FieldError message={errors.destination} />*/}
+                                {/*    <div className="mt-2">*/}
+                                {/*        <LeafletMap heightClass="h-56">*/}
+                                {/*            <PointLayer coord={destHit ? [destHit.lon, destHit.lat] : null} />*/}
+                                {/*        </LeafletMap>*/}
+                                {/*    </div>*/}
+                                {/*</Field>*/}
+
+                                {/*// route map section (only when both are selected)*/}
+                                {/*{(pickupHit && destHit) && (*/}
+                                {/*    <div className="mt-4">*/}
+                                {/*        <LeafletMap heightClass="h-64">*/}
+                                {/*            <RouteLayer*/}
+                                {/*                a={[pickupHit.lon, pickupHit.lat]}*/}
+                                {/*                b={[destHit.lon, destHit.lat]}*/}
+                                {/*                line={routeLine}*/}
+                                {/*            />*/}
+                                {/*        </LeafletMap>*/}
+                                {/*    </div>*/}
+                                {/*)}*/}
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
