@@ -48,9 +48,9 @@ export default function Navigation() {
           <div className="flex items-center">
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-700 dark:text-gray-300">
-                Welcome, {user?.name}
+                {user?.name}
               </span>
-              <ThemeToggle />
+              {/*<ThemeToggle />*/}
               <Button
                 variant="outline"
                 size="sm"

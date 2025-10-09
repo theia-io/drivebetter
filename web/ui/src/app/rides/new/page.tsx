@@ -1,45 +1,31 @@
+// web/ui/src/app/rides/new/page.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
-import {
-    Button,
-    Card,
-    CardBody,
-    Container,
-    Typography,
-} from "@/components/ui";
-import {
-    ArrowLeft,
-    Calendar,
-    Car,
-    Clock,
-    DollarSign,
-    MapPin,
-    Save,
-    Star,
-    User,
-} from "lucide-react";
+import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
+import { ArrowLeft, Save } from "lucide-react";
+import DriverCombobox from "@/components/ui/DriverCombobox";
+import { useRidesStore } from "@/stores/rides";
 
-// Align with the existing domain model used on the list page
 export type RideStatus = "scheduled" | "in-progress" | "completed";
 
 export interface RideFormValues {
-    passenger: string;
+    driverEmail: string;
     pickup: string;
     destination: string;
     date: string; // YYYY-MM-DD
     time: string; // HH:mm
-    fareCents: number; // store money as integer cents
-    distanceMeters: number; // store distance in meters
+    fareCents: number;
+    distanceMeters: number;
     durationMinutes: number;
     status: RideStatus;
-    rating: number | ""; // optional 1..5
+    rating: number | "";
 }
 
 const initialValues: RideFormValues = {
-    passenger: "",
+    driverEmail: "",
     pickup: "",
     destination: "",
     date: "",
@@ -62,7 +48,7 @@ export default function NewRidePage() {
 
     const validate = (v: RideFormValues) => {
         const e: Record<string, string> = {};
-        if (!v.passenger.trim()) e.passenger = "Passenger name is required";
+        if (!v.driverEmail) e.driverEmail = "Driver is required";
         if (!v.pickup.trim()) e.pickup = "Pickup location is required";
         if (!v.destination.trim()) e.destination = "Destination is required";
         if (!v.date) e.date = "Date is required";
@@ -82,17 +68,24 @@ export default function NewRidePage() {
 
         setSubmitting(true);
         try {
-            // Hook up your API here; this is a placeholder POST.
-            // Ensure you create app/api/rides/route.ts that persists to your DB.
-            await fetch("/api/rides", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(values),
-            });
-            router.push("/rides");
+            const create = useRidesStore.getState().createRide;
+            const iso = new Date(`${values.date}T${values.time}:00`).toISOString();
+            const payload = {
+                driverEmail: values.driverEmail,
+                from: values.pickup,
+                to: values.destination,
+                datetime: iso,
+                fareCents: values.fareCents,
+                distanceMeters: values.distanceMeters,
+                durationMinutes: values.durationMinutes,
+                status: values.status,
+                rating: values.rating === "" ? undefined : Number(values.rating),
+            };
+            const created = await create(payload as any);
+            if (created) router.push("/rides");
         } catch (err) {
             console.error(err);
-            alert("Failed to create ride. Please try again.");
+            alert("Failed to create ride.");
         } finally {
             setSubmitting(false);
         }
@@ -112,33 +105,32 @@ export default function NewRidePage() {
                         Back
                     </Button>
                     <div>
-                        <Typography variant="h1" className="text-2xl sm:text-3xl font-bold">New Ride</Typography>
-                        <Typography variant="body1" className="text-gray-600 text-sm sm:text-base">Create and schedule a new ride</Typography>
+                        <Typography variant="h1" className="text-2xl sm:text-3xl font-bold">
+                            New Ride
+                        </Typography>
+                        <Typography variant="body1" className="text-gray-600 text-sm sm:text-base">
+                            Create and schedule a new ride
+                        </Typography>
                     </div>
                 </div>
 
                 <Card variant="elevated" className="max-w-3xl">
                     <CardBody className="p-4 sm:p-6">
                         <form onSubmit={onSubmit} className="space-y-6" noValidate>
-                            {/* Passenger */}
                             <Field>
-                                <FieldLabel htmlFor="passenger" icon={<User className="w-4 h-4" aria-hidden="true" />}>Passenger</FieldLabel>
-                                <input
-                                    id="passenger"
-                                    type="text"
-                                    autoComplete="name"
-                                    value={values.passenger}
-                                    onChange={(e) => set("passenger", e.target.value)}
-                                    className={inputClass(errors.passenger)}
-                                    placeholder="e.g., Sarah Johnson"
+                                <FieldLabel htmlFor="driver">Driver</FieldLabel>
+                                <DriverCombobox
+                                    id="driver"
+                                    valueEmail={values.driverEmail}
+                                    onChange={(driver) => set("driverEmail", driver?.email ?? "")}
+                                    error={errors.driverEmail}
                                 />
-                                <FieldError message={errors.passenger} />
+                                <FieldError message={errors.driverEmail} />
                             </Field>
 
-                            {/* Locations */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field>
-                                    <FieldLabel htmlFor="pickup" icon={<MapPin className="w-4 h-4" aria-hidden="true" />}>Pickup</FieldLabel>
+                                    <FieldLabel htmlFor="pickup">Pickup</FieldLabel>
                                     <input
                                         id="pickup"
                                         type="text"
@@ -150,7 +142,7 @@ export default function NewRidePage() {
                                     <FieldError message={errors.pickup} />
                                 </Field>
                                 <Field>
-                                    <FieldLabel htmlFor="destination" icon={<MapPin className="w-4 h-4" aria-hidden="true" />}>Destination</FieldLabel>
+                                    <FieldLabel htmlFor="destination">Destination</FieldLabel>
                                     <input
                                         id="destination"
                                         type="text"
@@ -163,10 +155,9 @@ export default function NewRidePage() {
                                 </Field>
                             </div>
 
-                            {/* Date & Time */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field>
-                                    <FieldLabel htmlFor="date" icon={<Calendar className="w-4 h-4" aria-hidden="true" />}>Date</FieldLabel>
+                                    <FieldLabel htmlFor="date">Date</FieldLabel>
                                     <input
                                         id="date"
                                         type="date"
@@ -177,7 +168,7 @@ export default function NewRidePage() {
                                     <FieldError message={errors.date} />
                                 </Field>
                                 <Field>
-                                    <FieldLabel htmlFor="time" icon={<Clock className="w-4 h-4" aria-hidden="true" />}>Time</FieldLabel>
+                                    <FieldLabel htmlFor="time">Time</FieldLabel>
                                     <input
                                         id="time"
                                         type="time"
@@ -189,10 +180,9 @@ export default function NewRidePage() {
                                 </Field>
                             </div>
 
-                            {/* Fare, Distance, Duration */}
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <Field>
-                                    <FieldLabel htmlFor="fare" icon={<DollarSign className="w-4 h-4" aria-hidden="true" />}>Fare (USD)</FieldLabel>
+                                    <FieldLabel htmlFor="fare">Fare (USD)</FieldLabel>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                                         <input
@@ -213,7 +203,7 @@ export default function NewRidePage() {
                                     <FieldError message={errors.fareCents} />
                                 </Field>
                                 <Field>
-                                    <FieldLabel htmlFor="distance" icon={<Car className="w-4 h-4" aria-hidden="true" />}>Distance (km)</FieldLabel>
+                                    <FieldLabel htmlFor="distance">Distance (km)</FieldLabel>
                                     <input
                                         id="distance"
                                         type="number"
@@ -231,7 +221,7 @@ export default function NewRidePage() {
                                     <FieldError message={errors.distanceMeters} />
                                 </Field>
                                 <Field>
-                                    <FieldLabel htmlFor="duration" icon={<Clock className="w-4 h-4" aria-hidden="true" />}>Duration (min)</FieldLabel>
+                                    <FieldLabel htmlFor="duration">Duration (min)</FieldLabel>
                                     <input
                                         id="duration"
                                         type="number"
@@ -247,7 +237,6 @@ export default function NewRidePage() {
                                 </Field>
                             </div>
 
-                            {/* Status & Rating */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field>
                                     <FieldLabel htmlFor="status">Status</FieldLabel>
@@ -263,7 +252,7 @@ export default function NewRidePage() {
                                     </select>
                                 </Field>
                                 <Field>
-                                    <FieldLabel htmlFor="rating" icon={<Star className="w-4 h-4" aria-hidden="true" />}>Rating (optional)</FieldLabel>
+                                    <FieldLabel htmlFor="rating">Rating (optional)</FieldLabel>
                                     <input
                                         id="rating"
                                         type="number"
@@ -280,7 +269,6 @@ export default function NewRidePage() {
                                 </Field>
                             </div>
 
-                            {/* Actions */}
                             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                                 <Button
                                     type="button"
@@ -312,21 +300,13 @@ export default function NewRidePage() {
 function Field({ children }: { children: React.ReactNode }) {
     return <div className="space-y-1.5">{children}</div>;
 }
-
-function FieldLabel({ htmlFor, children, icon }: { htmlFor?: string; children: React.ReactNode; icon?: React.ReactNode; }) {
-    return (
-        <label htmlFor={htmlFor} className="flex items-center text-sm font-medium text-gray-700">
-            {icon ? <span className="mr-2 text-gray-500" aria-hidden="true">{icon}</span> : null}
-            {children}
-        </label>
-    );
+function FieldLabel({ htmlFor, children }: { htmlFor?: string; children: React.ReactNode }) {
+    return <label htmlFor={htmlFor} className="flex items-center text-sm font-medium text-gray-700">{children}</label>;
 }
-
 function FieldError({ message }: { message?: string }) {
     if (!message) return null;
     return <p className="text-sm text-red-600">{message}</p>;
 }
-
 function inputClass(error?: string) {
     return [
         "w-full rounded-lg border px-3 py-2.5 text-sm sm:text-base",
