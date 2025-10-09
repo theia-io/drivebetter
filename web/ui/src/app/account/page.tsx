@@ -88,7 +88,7 @@ export default function AccountPage() {
                     </Typography>
                     <div className="flex items-center mt-1 sm:mt-2">
                       <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 mr-2" />
-                      <span className="text-xs sm:text-sm text-gray-600">{user?.role || 'Driver'}</span>
+                      <span className="text-xs sm:text-sm text-gray-600">{user?.roles || 'Driver'}</span>
                     </div>
                   </div>
                   <div className="mt-3 sm:mt-0">
