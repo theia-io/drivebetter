@@ -129,3 +129,13 @@ The Web application is a standard Next.js project.
 | **`npm run build`** | Local: `./web/ui` or Docker: `docker compose exec web npm run build` | Creates an optimized production build (output to `.next`). |
 | **`npm run start`** | Local: `./web/ui` or Docker: `docker compose exec web npm run start` | Runs the production-built application on **port 4200**. |
 | **`npm run type-check`**| Local: `./web/ui` or Docker: `docker compose exec web npm run type-check` | Manually runs the TypeScript compiler check. |
+
+
+## Example account:
+
+```
+{
+  "email": "alice.driver@example.com",
+  "password": "password123"
+}
+```

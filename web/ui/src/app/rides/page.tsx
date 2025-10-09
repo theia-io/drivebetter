@@ -21,6 +21,7 @@ import {
   Star,
   User,
 } from "lucide-react";
+import Link from "next/link";
 
 export default function RidesPage() {
   const mockRides = [
@@ -135,7 +136,7 @@ export default function RidesPage() {
                 size="sm"
                 className="w-full sm:w-auto"
               >
-                New Ride
+                  <Link href="/rides/new">New Ride</Link>
               </Button>
             </div>
           </div>

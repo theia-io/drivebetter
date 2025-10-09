@@ -33,7 +33,6 @@ export const env = {
 export function validateEnv() {
   const required = [
     'MONGODB_URI',
-    'JWT_SECRET'
   ];
   
   const missing = required.filter(key => !env[key as keyof typeof env]);
