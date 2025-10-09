@@ -20,24 +20,36 @@ router.get("/", async (_req: Request, res: Response) => {
 
 /**
  * @openapi
- * /users/{id}:
+ * /users/drivers:
  *   get:
- *     summary: Get user by ID
+ *     summary: Get all drivers (public fields only)
  *     tags: [Users]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: MongoDB ObjectId of the user
  *     responses:
  *       200:
- *         description: User object
- *       404:
- *         description: User not found
+ *         description: List of drivers
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   name:  { type: string }
+ *                   email: { type: string }
+ *                   phone: { type: string }
+ *                   roles:
+ *                     type: array
+ *                     items: { type: string }
  */
-router.get("/:id", async (req: Request, res: Response) => {
+router.get("/drivers", async (_req: Request, res: Response) => {
+    const drivers = await User.find({ roles: "driver" })
+        .select({ name: 1, email: 1, phone: 1, roles: 1, _id: 0 })
+        .lean();
+    res.json(drivers);
+});
+
+// keep your ObjectId-constrained route after this
+router.get("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
     const user = await User.findById(req.params.id).select("-password");
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);
