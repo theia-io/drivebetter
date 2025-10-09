@@ -14,6 +14,7 @@ import calendar from "./src/routes/calendar";
 import clients from "./src/routes/clients";
 import notifications from "./src/routes/notifications";
 import healthRoutes from "./src/routes/health";
+import geo from "@/src/routes/geo";
 
 try {
   validateEnv();
@@ -47,6 +48,7 @@ app.prepare().then(async () => {
   server.use("/api/v1/groups", groups);
   server.use("/api/v1/calendar", calendar);
   server.use("/api/v1/clients", clients);
+  server.use("/api/v1/geo", geo);
   server.use("/api/v1/notifications", notifications);
   server.use("/api/v1/health", healthRoutes);
 
