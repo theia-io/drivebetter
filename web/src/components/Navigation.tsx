@@ -7,10 +7,11 @@ import { ThemeToggle } from './ThemeToggle'
 import { Button } from './ui'
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard' },
-  { name: 'Calendar', href: '/calendar' },
-  { name: 'Groups', href: '/groups' },
+  // { name: 'Dashboard', href: '/dashboard' },
+  // { name: 'Calendar', href: '/calendar' },
+  // { name: 'Groups', href: '/groups' },
   { name: 'Rides', href: '/rides' },
+  { name: 'Users', href: '/users' },
   { name: 'Account', href: '/account' },
 ]
 
