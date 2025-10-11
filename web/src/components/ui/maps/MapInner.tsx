@@ -73,10 +73,9 @@ export default function MapInner({
     markerBLabel?: string;
     children?: React.ReactNode;
 }) {
-    // MapContainer needs a non-null center; we always provide fallback
     const [clon, clat] = center;
     const tilesUrl = `${API_BASE}/geo/tiles/{z}/{x}/{y}`;
-    console.log(tilesUrl);
+
     return (
         <MapContainer center={[clat, clon]} zoom={zoom} className={`${heightClass} w-full rounded-xl border`}>
             <TileLayer

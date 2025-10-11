@@ -1,6 +1,6 @@
 "use client";
 
-import {useEffect, useState} from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
@@ -9,35 +9,41 @@ import DriverCombobox from "@/components/ui/DriverCombobox";
 import PlaceCombobox from "@/components/ui/maps/PlaceCombobox";
 import LeafletMap from "@/components/ui/maps/LeafletMap";
 import { useRidesStore } from "@/stores/rides";
-import {PlaceHit} from "@/stores/geocode";
-import {getRoute} from "@/stores/routes";
+import { PlaceHit } from "@/stores/geocode";
+import { getRoute } from "@/stores/routes";
+import {currentHourTimeInput, todayDateInput} from "@/services/datetime";
 
-export type RideStatus = "scheduled" | "in-progress" | "completed";
+/* ------------------------------- Types ------------------------------- */
 
-export interface RideFormValues {
-    driverEmail: string;
-    pickup: string;
-    destination: string;
+type RideType = "reservation" | "asap";
+type RideStatus = "unassigned" | "assigned" | "on_my_way" | "on_location" | "pob" | "clear" | "completed";
+
+interface RideFormValues {
+    assignedDriverId?: string;
+    clientId?: string;
+    fromLabel: string;
+    toLabel: string;
     date: string; // YYYY-MM-DD
     time: string; // HH:mm
-    fareCents: number;
-    distanceMeters: number;
-    durationMinutes: number;
+    type: RideType | "";
     status: RideStatus;
-    rating: number | "";
+    notes: string;
+    coveredVisible: boolean;
 }
 
+/* ----------------------------- Initial State ----------------------------- */
+
 const initialValues: RideFormValues = {
-    driverEmail: "",
-    pickup: "",
-    destination: "",
-    date: "",
-    time: "",
-    fareCents: 0,
-    distanceMeters: 0,
-    durationMinutes: 0,
-    status: "scheduled",
-    rating: "",
+    assignedDriverId: undefined,
+    clientId: undefined,
+    fromLabel: "",
+    toLabel: "",
+    date: todayDateInput(),
+    time: currentHourTimeInput(),
+    type: "",
+    status: "unassigned",
+    notes: "",
+    coveredVisible: true,
 };
 
 export default function NewRidePage() {
@@ -45,24 +51,28 @@ export default function NewRidePage() {
     const [values, setValues] = useState<RideFormValues>(initialValues);
     const [submitting, setSubmitting] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+
     const [pickupHit, setPickupHit] = useState<PlaceHit | null>(null);
     const [destHit, setDestHit] = useState<PlaceHit | null>(null);
     const [routeLine, setRouteLine] = useState<[number, number][]>([]);
+    const [distanceMeters, setDistanceMeters] = useState<number>(0);
+    const [durationMinutes, setDurationMinutes] = useState<number>(0);
 
-    const set = (k: keyof RideFormValues, v: RideFormValues[keyof RideFormValues]) =>
+    const set = <K extends keyof RideFormValues>(k: K, v: RideFormValues[K]) =>
         setValues((prev) => ({ ...prev, [k]: v }));
 
     const validate = (v: RideFormValues) => {
         const e: Record<string, string> = {};
-        if (!v.driverEmail) e.driverEmail = "Driver is required";
-        if (!v.pickup.trim()) e.pickup = "Pickup location is required";
-        if (!v.destination.trim()) e.destination = "Destination is required";
+        if (!v.fromLabel.trim()) e.fromLabel = "Pickup is required";
+        if (!v.toLabel.trim()) e.toLabel = "Destination is required";
         if (!v.date) e.date = "Date is required";
         if (!v.time) e.time = "Time is required";
-        if (v.fareCents < 0) e.fareCents = "Fare cannot be negative";
-        if (v.distanceMeters < 0) e.distanceMeters = "Distance cannot be negative";
-        if (v.durationMinutes <= 0) e.durationMinutes = "Duration must be greater than 0";
-        if (v.rating !== "" && (Number(v.rating) < 1 || Number(v.rating) > 5)) e.rating = "Rating must be 1-5";
+        if (!pickupHit) e.fromLabel = "Select a pickup from suggestions";
+        if (!destHit) e.toLabel = "Select a destination from suggestions";
+
+        if (v.assignedDriverId && v.status === "unassigned") {
+            set("status", "assigned");
+        }
         return e;
     };
 
@@ -75,19 +85,32 @@ export default function NewRidePage() {
         setSubmitting(true);
         try {
             const create = useRidesStore.getState().createRide;
+
             const iso = new Date(`${values.date}T${values.time}:00`).toISOString();
-            const payload = {
-                driverEmail: values.driverEmail,
-                from: values.pickup,
-                to: values.destination,
+
+            const payload: any = {
+                assignedDriverId: values.assignedDriverId || undefined,
+                clientId: values.clientId || undefined,
+
+                from: values.fromLabel,
+                to: values.toLabel,
+
                 datetime: iso,
-                fareCents: values.fareCents,
-                distanceMeters: values.distanceMeters,
-                durationMinutes: values.durationMinutes,
+                type: values.type || undefined,
+
                 status: values.status,
-                rating: values.rating === "" ? undefined : Number(values.rating),
+                notes: values.notes,
+                coveredVisible: values.coveredVisible,
+
+                fromLocation: pickupHit
+                    ? { type: "Point", coordinates: [pickupHit.lon, pickupHit.lat] }
+                    : undefined,
+                toLocation: destHit
+                    ? { type: "Point", coordinates: [destHit.lon, destHit.lat] }
+                    : undefined,
             };
-            const created = await create(payload as any);
+
+            const created = await create(payload);
             if (created) router.push("/rides");
         } catch (err) {
             console.error(err);
@@ -100,15 +123,21 @@ export default function NewRidePage() {
     useEffect(() => {
         let cancelled = false;
         (async () => {
-            if (!pickupHit || !destHit) { setRouteLine([]); return; }
-
+            if (!pickupHit || !destHit) {
+                setRouteLine([]);
+                setDistanceMeters(0);
+                setDurationMinutes(0);
+                return;
+            }
             const r = await getRoute([pickupHit.lon, pickupHit.lat], [destHit.lon, destHit.lat]);
             if (cancelled) return;
             setRouteLine(r.geometry);
-            set("distanceMeters", r.distanceMeters);
-            set("durationMinutes", Math.round(r.durationSeconds / 60));
+            setDistanceMeters(r.distanceMeters);
+            setDurationMinutes(Math.round(r.durationSeconds / 60));
         })();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [pickupHit, destHit]);
 
     return (
@@ -137,41 +166,59 @@ export default function NewRidePage() {
                 <Card variant="elevated" className="max-w-3xl">
                     <CardBody className="p-4 sm:p-6">
                         <form onSubmit={onSubmit} className="space-y-6" noValidate>
-                            <Field>
-                                <FieldLabel htmlFor="driver">Driver</FieldLabel>
-                                <DriverCombobox
-                                    id="driver"
-                                    valueEmail={values.driverEmail}
-                                    onChange={(driver) => set("driverEmail", driver?.email ?? "")}
-                                    error={errors.driverEmail}
-                                />
-                                <FieldError message={errors.driverEmail} />
-                            </Field>
+                            {/* Assignment */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Field>
+                                    <FieldLabel htmlFor="driver">Driver</FieldLabel>
+                                    <DriverCombobox
+                                        id="driver"
+                                        onChange={(driver: any | null) => {
+                                            set("assignedDriverId", driver?._id || undefined);
+                                            if (driver && values.status === "unassigned") set("status", "assigned");
+                                            if (!driver && values.status === "assigned") set("status", "unassigned");
+                                        }}
+                                        error={errors["assignedDriverId"]} valueEmail={""}                                    />
+                                    <FieldError message={errors["assignedDriverId"]} />
+                                </Field>
 
+                                <Field>
+                                    <FieldLabel htmlFor="client">Client (optional)</FieldLabel>
+                                    <input
+                                        id="client"
+                                        type="text"
+                                        value={values.clientId || ""}
+                                        onChange={(e) => set("clientId", e.target.value)}
+                                        className={inputClass()}
+                                        placeholder="Client name / phone / notes"
+                                    />
+                                </Field>
+                            </div>
+
+                            {/* Where */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field>
                                     <FieldLabel htmlFor="pickup">Pickup</FieldLabel>
                                     <PlaceCombobox
                                         id="pickup"
-                                        value={values.pickup}
+                                        value={values.fromLabel}
                                         onSelectedChange={(hit) => {
                                             if (hit) {
-                                                set("pickup", hit.label);
-                                                setPickupHit(hit);   // will show map
+                                                set("fromLabel", hit.label);
+                                                setPickupHit(hit);
                                             } else {
-                                                setPickupHit(null);  // hide map on edit/clear
+                                                setPickupHit(null);
                                             }
                                         }}
-                                        error={errors.pickup}
+                                        error={errors.fromLabel}
                                     />
-                                    <FieldError message={errors.pickup} />
+                                    <FieldError message={errors.fromLabel} />
                                     {pickupHit && (
                                         <div className="mt-2">
                                             <LeafletMap
                                                 heightClass="h-56"
-                                                center={pickupHit ? [pickupHit.lon, pickupHit.lat] : null}
-                                                markerA={pickupHit ? [pickupHit.lon, pickupHit.lat] : null}
-                                                markerALabel={pickupHit?.label}
+                                                center={[pickupHit.lon, pickupHit.lat]}
+                                                markerA={[pickupHit.lon, pickupHit.lat]}
+                                                markerALabel={pickupHit.label}
                                             />
                                         </div>
                                     )}
@@ -181,104 +228,50 @@ export default function NewRidePage() {
                                     <FieldLabel htmlFor="destination">Destination</FieldLabel>
                                     <PlaceCombobox
                                         id="destination"
-                                        value={values.destination}
+                                        value={values.toLabel}
                                         onSelectedChange={(hit) => {
                                             if (hit) {
-                                                set("pickup", hit.label);
-                                                setDestHit(hit);   // will show map
+                                                set("toLabel", hit.label);
+                                                setDestHit(hit);
                                             } else {
-                                                setDestHit(null);  // hide map on edit/clear
+                                                setDestHit(null);
                                             }
                                         }}
+                                        error={errors.toLabel}
                                     />
-                                    <FieldError message={errors.destination} />
+                                    <FieldError message={errors.toLabel} />
                                     {destHit && (
-                                    <div className="mt-2">
-                                        <LeafletMap
-                                            heightClass="h-56"
-                                            center={destHit ? [destHit.lon, destHit.lat] : null}
-                                            markerA={destHit ? [destHit.lon, destHit.lat] : null}
-                                            markerALabel={destHit?.label}
-                                        />
-                                    </div>
+                                        <div className="mt-2">
+                                            <LeafletMap
+                                                heightClass="h-56"
+                                                center={[destHit.lon, destHit.lat]}
+                                                markerA={[destHit.lon, destHit.lat]}
+                                                markerALabel={destHit.label}
+                                            />
+                                        </div>
                                     )}
                                 </Field>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
-                                {/*// route map section (only when both are selected)*/}
-                                {(pickupHit && destHit) && (
-                                    <div className="mt-4">
-                                        <LeafletMap heightClass="h-64">
-                                            <LeafletMap
-                                                heightClass="h-64"
-                                                markerA={[pickupHit.lon, pickupHit.lat]}
-                                                markerALabel="A"
-                                                markerB={[destHit.lon, destHit.lat]}
-                                                markerBLabel="B"
-                                                routeLine={routeLine}
-                                            />
-                                        </LeafletMap>
-                                    </div>
-                                )}
-                            </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <Field>
-                                    <FieldLabel htmlFor="fare">Fare (USD)</FieldLabel>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                                        <input
-                                            id="fare"
-                                            type="number"
-                                            min={0}
-                                            step={0.01}
-                                            inputMode="decimal"
-                                            value={values.fareCents ? (values.fareCents / 100).toString() : ""}
-                                            onChange={(e) => {
-                                                const dollars = Number(e.target.value || 0);
-                                                set("fareCents", Math.round(dollars * 100));
-                                            }}
-                                            className={`${inputClass(errors.fareCents)} pl-7`}
-                                            placeholder="0.00"
-                                        />
+                            {/* Route preview (when both picked) */}
+                            {(pickupHit && destHit) && (
+                                <div className="mt-2">
+                                    <LeafletMap
+                                        heightClass="h-64"
+                                        markerA={[pickupHit.lon, pickupHit.lat]}
+                                        markerALabel="A"
+                                        markerB={[destHit.lon, destHit.lat]}
+                                        markerBLabel="B"
+                                        routeLine={routeLine}
+                                    />
+                                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
+                                        <div>Distance: {(distanceMeters / 1000).toFixed(1)} km</div>
+                                        <div>Duration: {durationMinutes} min</div>
                                     </div>
-                                    <FieldError message={errors.fareCents} />
-                                </Field>
-                                <Field>
-                                    <FieldLabel htmlFor="distance">Distance (km)</FieldLabel>
-                                    <input
-                                        id="distance"
-                                        type="number"
-                                        min={0}
-                                        step={0.1}
-                                        inputMode="decimal"
-                                        value={values.distanceMeters ? (values.distanceMeters / 1000).toString() : ""}
-                                        onChange={(e) => {
-                                            const km = Number(e.target.value || 0);
-                                            set("distanceMeters", Math.round(km * 1000));
-                                        }}
-                                        className={inputClass(errors.distanceMeters)}
-                                        placeholder="0.0"
-                                    />
-                                    <FieldError message={errors.distanceMeters} />
-                                </Field>
-                                <Field>
-                                    <FieldLabel htmlFor="duration">Duration (min)</FieldLabel>
-                                    <input
-                                        id="duration"
-                                        type="number"
-                                        min={1}
-                                        step={1}
-                                        inputMode="numeric"
-                                        value={values.durationMinutes || ""}
-                                        onChange={(e) => set("durationMinutes", Number(e.target.value || 0))}
-                                        className={inputClass(errors.durationMinutes)}
-                                        placeholder="0"
-                                    />
-                                    <FieldError message={errors.durationMinutes} />
-                                </Field>
-                            </div>
+                                </div>
+                            )}
 
+                            {/* When */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field>
                                     <FieldLabel htmlFor="date">Date</FieldLabel>
@@ -304,7 +297,44 @@ export default function NewRidePage() {
                                 </Field>
                             </div>
 
+                            {/* Type + Status */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Field>
+                                    <FieldLabel>Type</FieldLabel>
+                                    <div className="flex items-center gap-4">
+                                        <label className="inline-flex items-center gap-2 text-sm">
+                                            <input
+                                                type="radio"
+                                                name="rideType"
+                                                value="reservation"
+                                                checked={values.type === "reservation"}
+                                                onChange={() => set("type", "reservation")}
+                                            />
+                                            Reservation
+                                        </label>
+                                        <label className="inline-flex items-center gap-2 text-sm">
+                                            <input
+                                                type="radio"
+                                                name="rideType"
+                                                value="asap"
+                                                checked={values.type === "asap"}
+                                                onChange={() => set("type", "asap")}
+                                            />
+                                            ASAP
+                                        </label>
+                                        <label className="inline-flex items-center gap-2 text-sm">
+                                            <input
+                                                type="radio"
+                                                name="rideType"
+                                                value=""
+                                                checked={!values.type}
+                                                onChange={() => set("type", "")}
+                                            />
+                                            Auto (by time)
+                                        </label>
+                                    </div>
+                                </Field>
+
                                 <Field>
                                     <FieldLabel htmlFor="status">Status</FieldLabel>
                                     <select
@@ -313,29 +343,42 @@ export default function NewRidePage() {
                                         onChange={(e) => set("status", e.target.value as RideStatus)}
                                         className={inputClass()}
                                     >
-                                        <option value="scheduled">Scheduled</option>
-                                        <option value="in-progress">In progress</option>
+                                        <option value="unassigned">Unassigned</option>
+                                        <option value="assigned">Assigned</option>
+                                        <option value="on_my_way">On my way</option>
+                                        <option value="on_location">On location</option>
+                                        <option value="pob">POB</option>
+                                        <option value="clear">Clear</option>
                                         <option value="completed">Completed</option>
                                     </select>
                                 </Field>
-                                <Field>
-                                    <FieldLabel htmlFor="rating">Rating (optional)</FieldLabel>
-                                    <input
-                                        id="rating"
-                                        type="number"
-                                        min={1}
-                                        max={5}
-                                        step={1}
-                                        inputMode="numeric"
-                                        value={values.rating}
-                                        onChange={(e) => set("rating", e.target.value === "" ? "" : Number(e.target.value))}
-                                        className={inputClass(errors.rating)}
-                                        placeholder="1–5"
-                                    />
-                                    <FieldError message={errors.rating} />
-                                </Field>
                             </div>
 
+                            {/* Notes + visibility */}
+                            <div className="grid grid-cols-1 gap-4">
+                                <Field>
+                                    <FieldLabel htmlFor="notes">Notes</FieldLabel>
+                                    <textarea
+                                        id="notes"
+                                        rows={3}
+                                        value={values.notes}
+                                        onChange={(e) => set("notes", e.target.value)}
+                                        className={inputClass()}
+                                        placeholder="Internal notes"
+                                    />
+                                </Field>
+
+                                <label className="inline-flex items-center gap-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={values.coveredVisible}
+                                        onChange={(e) => set("coveredVisible", e.target.checked)}
+                                    />
+                                    Covered visible
+                                </label>
+                            </div>
+
+                            {/* Actions */}
                             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                                 <Button
                                     type="button"
@@ -364,16 +407,20 @@ export default function NewRidePage() {
 }
 
 /* ----------------------------- UI primitives ---------------------------- */
+
 function Field({ children }: { children: React.ReactNode }) {
     return <div className="space-y-1.5">{children}</div>;
 }
+
 function FieldLabel({ htmlFor, children }: { htmlFor?: string; children: React.ReactNode }) {
     return <label htmlFor={htmlFor} className="flex items-center text-sm font-medium text-gray-700">{children}</label>;
 }
+
 function FieldError({ message }: { message?: string }) {
     if (!message) return null;
     return <p className="text-sm text-red-600">{message}</p>;
 }
+
 function inputClass(error?: string) {
     return [
         "w-full rounded-lg border px-3 py-2.5 text-sm sm:text-base",

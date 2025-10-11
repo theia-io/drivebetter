@@ -113,7 +113,6 @@ router.get("/", async (req: Request, res: Response) => {
  *                 enum: [unassigned, assigned, on_my_way, on_location, pob, clear, completed]
  *               notes: { type: string }
  *               coveredVisible: { type: boolean, default: true }
- *               geo (optional)
  *               fromLocation:
  *                 type: object
  *                 properties:

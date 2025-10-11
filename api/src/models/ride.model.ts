@@ -111,7 +111,7 @@ const RideSchema = new Schema<IRide>(
         notes: { type: String },
 
         payment: {
-            method:     { type: String, enum: ["cash", "zelle", "card", "qr"] },
+            method:     { type: String, enum: ["cash", "card", "qr"] },
             paid:       { type: Boolean, default: false },
             driverPaid: { type: Boolean, default: false },
             amountCents:{ type: Number, min: 0 },
