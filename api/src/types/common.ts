@@ -14,7 +14,7 @@ export type RideStatus =
     | "clear";
 
 // Payment methods
-export type PaymentMethod = "cash" | "zelle" | "card" | "qr";
+export type PaymentMethod = "cash" | "card" | "qr";
 
 // Generic ID type (Mongo ObjectId as string)
 export type ID = string;
