@@ -8,7 +8,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import DriverCombobox from "@/components/ui/DriverCombobox";
 import PlaceCombobox from "@/components/ui/maps/PlaceCombobox";
 import LeafletMap from "@/components/ui/maps/LeafletMap";
-import { useRidesStore } from "@/stores/rides";
+import { createRide } from "@/stores/rides";
 import { PlaceHit } from "@/stores/geocode";
 import { getRoute } from "@/stores/routes";
 import {currentHourTimeInput, todayDateInput} from "@/services/datetime";
@@ -84,8 +84,6 @@ export default function NewRidePage() {
 
         setSubmitting(true);
         try {
-            const create = useRidesStore.getState().createRide;
-
             const iso = new Date(`${values.date}T${values.time}:00`).toISOString();
 
             const payload: any = {
@@ -110,7 +108,7 @@ export default function NewRidePage() {
                     : undefined,
             };
 
-            const created = await create(payload);
+            const created = createRide(payload);
             if (created) router.push("/rides");
         } catch (err) {
             console.error(err);
