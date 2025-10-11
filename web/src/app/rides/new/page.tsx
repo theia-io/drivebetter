@@ -109,7 +109,6 @@ export default function NewRidePage() {
                     ? { type: "Point", coordinates: [destHit.lon, destHit.lat] }
                     : undefined,
             };
-            console.log(payload);
             const created = createRide(payload);
             if (created) router.push("/rides");
         } catch (err) {
