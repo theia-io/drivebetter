@@ -7,16 +7,78 @@ const router = Router();
  * @openapi
  * /users:
  *   get:
- *     summary: Get all users
+ *     summary: List users
  *     tags: [Users]
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [driver, dispatcher, client, admin]
+ *       - in: query
+ *         name: q
+ *         schema:
+ *           type: string
+ *         description: Search by name or email (case-insensitive)
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 20
  *     responses:
  *       200:
- *         description: List of users
+ *         description: Paginated users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 items:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/User'
+ *                 page: { type: integer }
+ *                 limit: { type: integer }
+ *                 total: { type: integer }
+ *                 pages: { type: integer }
  */
-router.get("/", async (_req: Request, res: Response) => {
-    const users = await User.find().select("-password");
-    res.json(users);
+router.get("/", async (req: Request, res: Response) => {
+    const page = Math.max(parseInt(String(req.query.page ?? "1"), 10) || 1, 1);
+    const limitRaw = Math.max(parseInt(String(req.query.limit ?? "20"), 10) || 20, 1);
+    const limit = Math.min(limitRaw, 100);
+
+    const role = (req.query.role as string) || "";
+    const q = (req.query.q as string) || "";
+
+    const filter: any = {};
+    if (role) filter.roles = role;
+    if (q) {
+        filter.$or = [
+            { name:  { $regex: q, $options: "i" } },
+            { email: { $regex: q, $options: "i" } },
+            { phone: { $regex: q, $options: "i" } },
+        ];
+    }
+
+    const total = await User.countDocuments(filter);
+    const items = await User.find(filter)
+        .select({ _id: 1, name: 1, email: 1, phone: 1, roles: 1, createdAt: 1, updatedAt: 1 })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean();
+
+    res.json({ items, page, limit, total, pages: Math.ceil(total / limit) });
 });
+
 
 /**
  * @openapi

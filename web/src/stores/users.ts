@@ -1,25 +1,44 @@
 // web/ui/src/services/users.ts
 import useSWR from "swr";
-import useSWRInfinite from "swr/infinite";
-import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from "@/services/http";
-import type { User } from "@/types/user";
+import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from "@/services/http";
 
 /* ------------------------------- Types ------------------------------- */
+
+export type Role = "driver" | "dispatcher" | "client" | "admin";
+
+export type User = {
+    _id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    roles: Role[];
+    referralCode?: string;
+    emailVerified?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+};
 
 export type CreateUserRequest = {
     name: string;
     email: string;
     phone?: string;
-    roles?: string[]; // ["driver","dispatcher",...]
+    roles?: Role[];
 };
 
-export type UpdateUserRequest = Partial<CreateUserRequest>;
+export type ReplaceUserRequest = {
+    name: string;
+    email: string;
+    phone?: string;
+    roles?: Role[];
+};
 
-export type UsersQuery = {
+export type UpdateUserRequest = Partial<ReplaceUserRequest>;
+
+export type UsersListQuery = {
+    role?: string;
     q?: string;
-    role?: string;   // "driver" | "dispatcher" | "client" | "admin"
-    page?: number;
-    limit?: number;
+    page?: number;   // default 1
+    limit?: number;  // default 20, max 100
 };
 
 export type UsersPage = {
@@ -38,9 +57,9 @@ export type DriverPublic = {
     roles: string[];
 };
 
-/* ------------------------------ Utilities ----------------------------- */
+/* ------------------------------ Helpers ------------------------------ */
 
-const q = (params?: Record<string, any>) => {
+const qs = (params?: Record<string, any>) => {
     if (!params) return "";
     const sp = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
@@ -53,16 +72,16 @@ const q = (params?: Record<string, any>) => {
 
 /* -------------------------------- API -------------------------------- */
 
-export const listUsers = (params?: UsersQuery) =>
-    apiGet<UsersPage>(`/users${q(params)}`);
-
-export const getUser = (id: string) =>
-    apiGet<User>(`/users/${id}`);
+export const listUsers = (params?: UsersListQuery) =>
+    apiGet<UsersPage>(`/users${qs(params)}`);
 
 export const createUser = (payload: CreateUserRequest) =>
     apiPost<User>("/users", payload);
 
-export const replaceUser = (id: string, payload: CreateUserRequest) =>
+export const getUser = (id: string) =>
+    apiGet<User>(`/users/${id}`);
+
+export const replaceUser = (id: string, payload: ReplaceUserRequest) =>
     apiPut<User>(`/users/${id}`, payload);
 
 export const updateUser = (id: string, payload: UpdateUserRequest) =>
@@ -76,22 +95,9 @@ export const listDriversPublic = () =>
 
 /* -------------------------------- Hooks ------------------------------- */
 
-export function useUsers(params?: UsersQuery) {
-    const key = `/users${q(params)}`;
+export function useUsers(params?: UsersListQuery) {
+    const key = `/users${qs(params)}`;
     return useSWR<UsersPage>(key, () => listUsers(params));
-}
-
-export function useUsersInfinite(base?: Omit<UsersQuery, "page" | "limit">, pageSize = 20) {
-    const getKey = (index: number, prev: UsersPage | null) => {
-        if (prev && prev.items.length === 0) return null;
-        const params: UsersQuery = { ...(base || {}), page: index + 1, limit: pageSize };
-        return `/users${q(params)}`;
-    };
-    const swr = useSWRInfinite<UsersPage>(getKey, (key: string) => apiGet<UsersPage>(key));
-    const flat: User[] = (swr.data || []).flatMap((p) => p.items);
-    const totalPages = swr.data?.[0]?.pages ?? 1;
-    const reachedEnd = swr.size >= totalPages;
-    return { ...swr, items: flat, reachedEnd, totalPages };
 }
 
 export function useUser(id?: string) {
@@ -99,6 +105,6 @@ export function useUser(id?: string) {
     return useSWR<User>(key, () => getUser(id as string));
 }
 
-export function useAllDrivers() {
-    return useSWR<DriverPublic[]>("/users/drivers", () => listDriversPublic());
+export function useDriversPublic() {
+    return useSWR<DriverPublic[]>(`/users/drivers`, listDriversPublic);
 }

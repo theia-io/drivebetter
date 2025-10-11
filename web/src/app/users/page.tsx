@@ -29,8 +29,9 @@ export default function UsersPage() {
     const [limit, setLimit] = useState(Number(searchParams.get("limit") || 20));
 
     const params = useMemo(() => ({ q, role, page, limit }), [q, role, page, limit]);
+    console.log(params);
     const { data, isLoading, mutate } = useUsers(params);
-
+    console.log(JSON.stringify(data));
     const items = data?.items ?? [];
     const pages = data?.pages ?? 1;
     const total = data?.total ?? 0;
