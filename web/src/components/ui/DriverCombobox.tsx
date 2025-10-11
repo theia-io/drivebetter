@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Car } from "lucide-react";
-import {type DriverPublic, useAllDrivers} from "@/stores/users";
+import {type DriverPublic, useDriversPublic} from "@/stores/users";
 
 export default function DriverCombobox({
                                            id,
@@ -16,7 +16,7 @@ export default function DriverCombobox({
     onChange: (driver: DriverPublic | null) => void;
     error?: string;
 }) {
-    const { data } = useAllDrivers();
+    const { data } = useDriversPublic();
     const [query, setQuery] = useState("");
     const [open, setOpen] = useState(false);
     const inputRef = useRef<HTMLInputElement | null>(null);
