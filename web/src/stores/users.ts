@@ -31,6 +31,6 @@ export function useUsers() {
     return useSWR<User[]>("/users", () => listUsers());
 }
 
-export function getAllDrivers() {
+export function useAllDrivers() {
     return useSWR<DriverPublic[]>("/users/drivers", () => listDriversPublic());
 }

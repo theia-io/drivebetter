@@ -14,7 +14,7 @@ import calendar from "./src/routes/calendar";
 import clients from "./src/routes/clients";
 import notifications from "./src/routes/notifications";
 import healthRoutes from "./src/routes/health";
-import geo from "@/src/routes/geo";
+import geo from "./src/routes/geo";
 
 try {
   validateEnv();
