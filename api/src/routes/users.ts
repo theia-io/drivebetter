@@ -34,6 +34,7 @@ router.get("/", async (_req: Request, res: Response) => {
  *               items:
  *                 type: object
  *                 properties:
+ *                   _id:  { type: string }
  *                   name:  { type: string }
  *                   email: { type: string }
  *                   phone: { type: string }
@@ -43,7 +44,7 @@ router.get("/", async (_req: Request, res: Response) => {
  */
 router.get("/drivers", async (_req: Request, res: Response) => {
     const drivers = await User.find({ roles: "driver" })
-        .select({ name: 1, email: 1, phone: 1, roles: 1, _id: 0 })
+        .select({ name: 1, email: 1, phone: 1, roles: 1, _id: 1 })
         .lean();
     res.json(drivers);
 });

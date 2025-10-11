@@ -14,6 +14,7 @@ export type CreateUserRequest = {
 
 /** GET /users/drivers item shape (public fields) */
 export type DriverPublic = {
+    _id: string;
     name: string;
     email: string;
     phone?: string;

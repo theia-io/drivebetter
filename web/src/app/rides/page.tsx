@@ -70,7 +70,6 @@ export default function RidesPage() {
                             </Typography>
                         </div>
                         <div className="hidden sm:flex items-center gap-2 sm:gap-3 shrink-0">
-                            <Button variant="outline" leftIcon={<Filter className="w-4 h-4" />} size="sm">Filter</Button>
                             <Button leftIcon={<Plus className="w-4 h-4" />} size="sm">
                                 <Link href="/rides/new">New Ride</Link>
                             </Button>
@@ -104,60 +103,6 @@ export default function RidesPage() {
                                 </div>
                             </CardBody>
                         </Card>
-
-                        <Card variant="elevated" className="hover:shadow-lg transition-shadow">
-                            <CardBody className="p-3 sm:p-6">
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="min-w-0">
-                                        <Typography variant="body2" className="text-gray-600 font-medium text-[11px] sm:text-sm">
-                                            Total Earnings
-                                        </Typography>
-                                        <Typography variant="h2" className="text-base sm:text-2xl font-bold text-gray-900 mt-0.5 sm:mt-1">
-                                            —
-                                        </Typography>
-                                    </div>
-                                    <div className="p-2 sm:p-3 bg-green-50 rounded-xl border border-green-200">
-                                        <DollarSign className="w-4 h-4 sm:w-6 sm:h-6 text-green-600" />
-                                    </div>
-                                </div>
-                            </CardBody>
-                        </Card>
-
-                        <Card variant="elevated" className="hover:shadow-lg transition-shadow">
-                            <CardBody className="p-3 sm:p-6">
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="min-w-0">
-                                        <Typography variant="body2" className="text-gray-600 font-medium text-[11px] sm:text-sm">
-                                            Distance
-                                        </Typography>
-                                        <Typography variant="h2" className="text-base sm:text-2xl font-bold text-gray-900 mt-0.5 sm:mt-1">
-                                            —
-                                        </Typography>
-                                    </div>
-                                    <div className="p-2 sm:p-3 bg-purple-50 rounded-xl border border-purple-200">
-                                        <MapPin className="w-4 h-4 sm:w-6 sm:h-6 text-purple-600" />
-                                    </div>
-                                </div>
-                            </CardBody>
-                        </Card>
-
-                        <Card variant="elevated" className="hover:shadow-lg transition-shadow">
-                            <CardBody className="p-3 sm:p-6">
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="min-w-0">
-                                        <Typography variant="body2" className="text-gray-600 font-medium text-[11px] sm:text-sm">
-                                            Avg Rating
-                                        </Typography>
-                                        <Typography variant="h2" className="text-base sm:text-2xl font-bold text-gray-900 mt-0.5 sm:mt-1">
-                                            —
-                                        </Typography>
-                                    </div>
-                                    <div className="p-2 sm:p-3 bg-yellow-50 rounded-xl border border-yellow-200">
-                                        <Star className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-600" />
-                                    </div>
-                                </div>
-                            </CardBody>
-                        </Card>
                     </div>
 
                     {/* Search */}
@@ -173,6 +118,7 @@ export default function RidesPage() {
                                         disabled
                                     />
                                 </div>
+                                <Button variant="outline" leftIcon={<Filter className="w-4 h-4" />} size="sm">Filter</Button>
                                 <Button
                                     variant="outline"
                                     leftIcon={<Calendar className="w-4 h-4" />}

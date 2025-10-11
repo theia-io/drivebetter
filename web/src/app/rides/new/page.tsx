@@ -20,6 +20,7 @@ type RideStatus = "unassigned" | "assigned" | "on_my_way" | "on_location" | "pob
 
 interface RideFormValues {
     assignedDriverId?: string;
+    driverEmail?: string;
     clientId?: string;
     fromLabel: string;
     toLabel: string;
@@ -35,6 +36,7 @@ interface RideFormValues {
 
 const initialValues: RideFormValues = {
     assignedDriverId: undefined,
+    driverEmail: "",
     clientId: undefined,
     fromLabel: "",
     toLabel: "",
@@ -107,7 +109,7 @@ export default function NewRidePage() {
                     ? { type: "Point", coordinates: [destHit.lon, destHit.lat] }
                     : undefined,
             };
-
+            console.log(payload);
             const created = createRide(payload);
             if (created) router.push("/rides");
         } catch (err) {
@@ -170,12 +172,14 @@ export default function NewRidePage() {
                                     <FieldLabel htmlFor="driver">Driver</FieldLabel>
                                     <DriverCombobox
                                         id="driver"
+                                        valueEmail={values.driverEmail || ""}
                                         onChange={(driver: any | null) => {
                                             set("assignedDriverId", driver?._id || undefined);
+                                            set("driverEmail", driver?.email || "");
                                             if (driver && values.status === "unassigned") set("status", "assigned");
                                             if (!driver && values.status === "assigned") set("status", "unassigned");
                                         }}
-                                        error={errors["assignedDriverId"]} valueEmail={""}                                    />
+                                        error={errors["assignedDriverId"]}/>
                                     <FieldError message={errors["assignedDriverId"]} />
                                 </Field>
 
