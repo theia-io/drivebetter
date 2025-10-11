@@ -11,7 +11,6 @@ import LeafletMap from "@/components/ui/maps/LeafletMap";
 import { useRidesStore } from "@/stores/rides";
 import {PlaceHit} from "@/stores/geocode";
 import {getRoute} from "@/stores/routes";
-import RouteLayer from "@/components/ui/RouteLayer";
 
 export type RideStatus = "scheduled" | "in-progress" | "completed";
 
@@ -172,8 +171,8 @@ export default function NewRidePage() {
                                             <LeafletMap
                                                 heightClass="h-56"
                                                 center={pickupHit ? [pickupHit.lon, pickupHit.lat] : null}
-                                                marker={pickupHit ? [pickupHit.lon, pickupHit.lat] : null}
-                                                markerLabel={pickupHit?.label}
+                                                markerA={pickupHit ? [pickupHit.lon, pickupHit.lat] : null}
+                                                markerALabel={pickupHit?.label}
                                             />
                                         </div>
                                     )}
@@ -199,8 +198,8 @@ export default function NewRidePage() {
                                         <LeafletMap
                                             heightClass="h-56"
                                             center={destHit ? [destHit.lon, destHit.lat] : null}
-                                            marker={destHit ? [destHit.lon, destHit.lat] : null}
-                                            markerLabel={destHit?.label}
+                                            markerA={destHit ? [destHit.lon, destHit.lat] : null}
+                                            markerALabel={destHit?.label}
                                         />
                                     </div>
                                     )}
@@ -211,10 +210,13 @@ export default function NewRidePage() {
                                 {(pickupHit && destHit) && (
                                     <div className="mt-4">
                                         <LeafletMap heightClass="h-64">
-                                            <RouteLayer
-                                                a={[pickupHit.lon, pickupHit.lat]}
-                                                b={[destHit.lon, destHit.lat]}
-                                                line={routeLine}
+                                            <LeafletMap
+                                                heightClass="h-64"
+                                                markerA={[pickupHit.lon, pickupHit.lat]}
+                                                markerALabel="A"
+                                                markerB={[destHit.lon, destHit.lat]}
+                                                markerBLabel="B"
+                                                routeLine={routeLine}
                                             />
                                         </LeafletMap>
                                     </div>
