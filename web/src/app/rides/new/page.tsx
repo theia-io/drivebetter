@@ -101,8 +101,7 @@ export default function NewRidePage() {
         let cancelled = false;
         (async () => {
             if (!pickupHit || !destHit) { setRouteLine([]); return; }
-            console.log(pickupHit);
-            console.log(destHit);
+
             const r = await getRoute([pickupHit.lon, pickupHit.lat], [destHit.lon, destHit.lat]);
             if (cancelled) return;
             setRouteLine(r.geometry);

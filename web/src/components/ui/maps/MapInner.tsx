@@ -9,6 +9,9 @@ import marker2x from "leaflet/dist/images/marker-icon-2x.png";
 import marker from "leaflet/dist/images/marker-icon.png";
 import shadow from "leaflet/dist/images/marker-shadow.png";
 
+export const API_BASE =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api/v1";
+
 L.Icon.Default.mergeOptions({
     iconRetinaUrl: (marker2x as any).src ?? (marker2x as any),
     iconUrl: (marker as any).src ?? (marker as any),
@@ -72,11 +75,12 @@ export default function MapInner({
 }) {
     // MapContainer needs a non-null center; we always provide fallback
     const [clon, clat] = center;
-
+    const tilesUrl = `${API_BASE}/geo/tiles/{z}/{x}/{y}`;
+    console.log(tilesUrl);
     return (
         <MapContainer center={[clat, clon]} zoom={zoom} className={`${heightClass} w-full rounded-xl border`}>
             <TileLayer
-                url="http://localhost:3000/api/v1/geo/tiles/{z}/{x}/{y}"
+                url={tilesUrl}
                 attribution="&copy; MapTiler &copy; OpenStreetMap contributors"
             />
 
