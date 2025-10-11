@@ -125,7 +125,7 @@ export default function UsersPage() {
                                     <Th>Phone</Th>
                                     <Th>Roles</Th>
                                     <Th>Created</Th>
-                                    <Th className="text-right pr-4">Actions</Th>
+                                    <Th className="text-center pr-4">Actions</Th>
                                 </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
