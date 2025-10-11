@@ -222,31 +222,6 @@ export default function NewRidePage() {
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <Field>
-                                    <FieldLabel htmlFor="date">Date</FieldLabel>
-                                    <input
-                                        id="date"
-                                        type="date"
-                                        value={values.date}
-                                        onChange={(e) => set("date", e.target.value)}
-                                        className={inputClass(errors.date)}
-                                    />
-                                    <FieldError message={errors.date} />
-                                </Field>
-                                <Field>
-                                    <FieldLabel htmlFor="time">Time</FieldLabel>
-                                    <input
-                                        id="time"
-                                        type="time"
-                                        value={values.time}
-                                        onChange={(e) => set("time", e.target.value)}
-                                        className={inputClass(errors.time)}
-                                    />
-                                    <FieldError message={errors.time} />
-                                </Field>
-                            </div>
-
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <Field>
                                     <FieldLabel htmlFor="fare">Fare (USD)</FieldLabel>
@@ -301,6 +276,31 @@ export default function NewRidePage() {
                                         placeholder="0"
                                     />
                                     <FieldError message={errors.durationMinutes} />
+                                </Field>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Field>
+                                    <FieldLabel htmlFor="date">Date</FieldLabel>
+                                    <input
+                                        id="date"
+                                        type="date"
+                                        value={values.date}
+                                        onChange={(e) => set("date", e.target.value)}
+                                        className={inputClass(errors.date)}
+                                    />
+                                    <FieldError message={errors.date} />
+                                </Field>
+                                <Field>
+                                    <FieldLabel htmlFor="time">Time</FieldLabel>
+                                    <input
+                                        id="time"
+                                        type="time"
+                                        value={values.time}
+                                        onChange={(e) => set("time", e.target.value)}
+                                        className={inputClass(errors.time)}
+                                    />
+                                    <FieldError message={errors.time} />
                                 </Field>
                             </div>
 
