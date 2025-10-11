@@ -21,12 +21,14 @@ export default function MapInner({
                                      heightClass = "h-64",
                                      marker,
                                      markerLabel,
+                                     children,
                                  }: {
     center?: Pt;
     zoom?: number;
     heightClass?: string;
     marker?: Pt | null;
     markerLabel?: string;
+    children?: React.ReactNode;
 }) {
     return (
         <MapContainer center={[center[1], center[0]]} zoom={zoom} className={`${heightClass} w-full rounded-xl border`}>
@@ -37,6 +39,7 @@ export default function MapInner({
                     {markerLabel ? <Popup>{markerLabel}</Popup> : null}
                 </Marker>
             )}
+            {children}
         </MapContainer>
     );
 }

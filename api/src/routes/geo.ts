@@ -115,7 +115,7 @@ router.get("/search", async (req: Request, res: Response) => {
  * /geo/route:
  *   get:
  *     summary: Point-to-point route
- *     description: Proxies MapTiler Directions and returns a normalized route.
+ *     description: Proxies OpenRouteService Directions and returns a normalized route.
  *     tags: [Geo]
  *     parameters:
  *       - in: query
@@ -124,7 +124,6 @@ router.get("/search", async (req: Request, res: Response) => {
  *         description: Origin as "lon,lat"
  *         schema:
  *           type: string
- *           pattern: '^-?\\d+(\\.\\d+)?,\\s*-?\\d+(\\.\\d+)?$'
  *           example: "4.8922,52.3731"
  *       - in: query
  *         name: to
@@ -132,42 +131,31 @@ router.get("/search", async (req: Request, res: Response) => {
  *         description: Destination as "lon,lat"
  *         schema:
  *           type: string
- *           pattern: '^-?\\d+(\\.\\d+)?,\\s*-?\\d+(\\.\\d+)?$'
  *           example: "4.8994,52.3791"
  *       - in: query
  *         name: profile
  *         required: false
- *         description: Routing profile
+ *         description: Routing profile (mapped to ORS profiles)
  *         schema:
  *           type: string
  *           enum: [driving, cycling, foot]
  *           default: driving
  *       - in: query
- *         name: alternatives
- *         required: false
- *         description: Request alternative routes if supported
- *         schema:
- *           type: boolean
- *       - in: query
  *         name: avoid
  *         required: false
- *         description: Avoid features (e.g., toll, ferry)
+ *         description: Comma-separated avoid features; supports toll,ferry,unpaved,motorway,tunnel,ford
  *         schema:
  *           type: string
+ *           example: toll,ferry
  *       - in: query
- *         name: language
+ *         name: alternatives
  *         required: false
- *         description: IETF language tag
+ *         description: Number of alternative routes to request (0-3). Only the first is returned here.
  *         schema:
- *           type: string
- *           example: en
- *       - in: query
- *         name: units
- *         required: false
- *         description: Distance units for provider response (normalized here to meters anyway)
- *         schema:
- *           type: string
- *           enum: [m, km, mi]
+ *           type: integer
+ *           minimum: 0
+ *           maximum: 3
+ *           default: 0
  *     responses:
  *       200:
  *         description: Route summary and geometry
@@ -196,58 +184,90 @@ router.get("/search", async (req: Request, res: Response) => {
  */
 router.get("/route", async (req: Request, res: Response) => {
     try {
-        if (!MAPTILER_API_KEY) return bad(res, 500, "maptiler_key_missing");
+        const ORS_API_KEY = process.env.ORS_API_KEY;
+        if (!ORS_API_KEY) return bad(res, 500, "ors_key_missing");
 
-        const from = String(req.query.from || req.query.a || "").trim(); // support both
+        const from = String(req.query.from || req.query.a || "").trim();
         const to = String(req.query.to || req.query.b || "").trim();
-        const profile = String(req.query.profile || "driving");
+        const profileIn = String(req.query.profile || "driving");
 
         if (!from || !to) return bad(res, 400, "missing_coords");
         const [flon, flat] = from.split(",").map(Number);
         const [tlon, tlat] = to.split(",").map(Number);
         if (![flon, flat, tlon, tlat].every(Number.isFinite)) return bad(res, 400, "bad_coords");
 
-        // MapTiler Directions (GeoJSON)
-        // https://api.maptiler.com/directions/{profile}/geojson?key=...&coordinates=lon,lat;lon,lat
-        const url = new URL(`https://api.maptiler.com/directions/${encodeURIComponent(profile)}/geojson`);
-        url.searchParams.set("key", MAPTILER_API_KEY);
-        url.searchParams.set("coordinates", `${flon},${flat};${tlon},${tlat}`);
-        // Optional params:
-        if (req.query.alternatives) url.searchParams.set("alternatives", String(req.query.alternatives));
-        if (req.query.avoid) url.searchParams.set("avoid", String(req.query.avoid)); // e.g., toll, ferry
-        if (req.query.language) url.searchParams.set("language", String(req.query.language));
-        if (req.query.units) url.searchParams.set("units", String(req.query.units)); // m|km|mi
+        // map generic profiles to ORS
+        const profile =
+            profileIn === "cycling"
+                ? "cycling-regular"
+                : profileIn === "foot"
+                    ? "foot-walking"
+                    : "driving-car";
 
-        const r = await fetch(url.toString(), { headers: { Accept: "application/json", Origin: "localhost" } });
+        // avoid features mapping
+        const avoidParam = String(req.query.avoid || "").trim();
+        const avoidList = avoidParam
+            ? avoidParam.split(",").map(s => s.trim()).filter(Boolean)
+            : [];
+        // ORS avoid_features keywords
+        const orsAvoidAllowed = new Set([
+            "highways", "tollways", "ferries", "fords", "steps",
+            "unpavedroads", "tunnels", "tracks"
+        ]);
+        const normalizedAvoid = avoidList
+            .map(a => {
+                if (a === "toll") return "tollways";
+                if (a === "motorway" || a === "highway") return "highways";
+                if (a === "unpaved") return "unpavedroads";
+                if (a === "ferry") return "ferries";
+                return a;
+            })
+            .filter(a => orsAvoidAllowed.has(a));
+
+        const altCount = Math.max(0, Math.min(3, Number(req.query.alternatives ?? 0)));
+
+        const body: any = {
+            coordinates: [
+                [flon, flat],
+                [tlon, tlat]
+            ],
+            units: "m",
+        };
+
+        if (normalizedAvoid.length > 0) {
+            body.options = { ...(body.options || {}), avoid_features: normalizedAvoid };
+        }
+        if (altCount > 0) {
+            body.alternative_routes = { target_count: altCount, share_factor: 0.6, weight_factor: 1.4 };
+        }
+
+        const url = `https://api.openrouteservice.org/v2/directions/${profile}/geojson`;
+
+        const r = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Authorization": ORS_API_KEY,
+                'Content-Type': 'application/json; charset=utf-8',
+                'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+            },
+            body: JSON.stringify(body),
+        });
+
         if (!r.ok) return bad(res, 502, "route_upstream_failed");
 
         const data = await r.json();
-
-        // MapTiler may return either a GeoJSON FeatureCollection or a structure with routes[]
-        // Handle both defensively.
-
-        // Case A: routes[] like Mapbox
-        const routeA = Array.isArray((data as any)?.routes) ? (data as any).routes[0] : null;
-
-        // Case B: GeoJSON FeatureCollection
         const feat0 =
-            Array.isArray((data as any)?.features) && (data as any).features.length > 0
-                ? (data as any).features[0]
-                : null;
+            Array.isArray(data?.features) && data.features.length > 0 ? data.features[0] : null;
 
         let distanceMeters = 0;
         let durationSeconds = 0;
         let line: [number, number][] = [];
 
-        if (routeA) {
-            distanceMeters = Math.round(routeA.distance ?? 0);
-            durationSeconds = Math.round(routeA.duration ?? 0);
-            if (routeA.geometry?.coordinates) line = routeA.geometry.coordinates as [number, number][];
-        } else if (feat0) {
+        if (feat0) {
             const props = feat0.properties || {};
-            // Some variants use summary, some use distance/duration top-level
-            distanceMeters = Math.round(props.summary?.distance ?? props.distance ?? 0);
-            durationSeconds = Math.round(props.summary?.duration ?? props.duration ?? 0);
+            const summary = props.summary || {};
+            distanceMeters = Math.round(summary.distance ?? props.distance ?? 0);
+            durationSeconds = Math.round(summary.duration ?? props.duration ?? 0);
             if (Array.isArray(feat0.geometry?.coordinates)) {
                 line = feat0.geometry.coordinates as [number, number][];
             }
@@ -258,10 +278,11 @@ router.get("/route", async (req: Request, res: Response) => {
             durationSeconds,
             geometry: line,
         });
-    } catch (err: any) {
+    } catch {
         return bad(res, 500, "route_proxy_error");
     }
 });
+
 
 /**
  * @openapi

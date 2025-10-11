@@ -11,6 +11,7 @@ import LeafletMap from "@/components/ui/maps/LeafletMap";
 import { useRidesStore } from "@/stores/rides";
 import {PlaceHit} from "@/stores/geocode";
 import {getRoute} from "@/stores/routes";
+import RouteLayer from "@/components/ui/RouteLayer";
 
 export type RideStatus = "scheduled" | "in-progress" | "completed";
 
@@ -101,6 +102,8 @@ export default function NewRidePage() {
         let cancelled = false;
         (async () => {
             if (!pickupHit || !destHit) { setRouteLine([]); return; }
+            console.log(pickupHit);
+            console.log(destHit);
             const r = await getRoute([pickupHit.lon, pickupHit.lat], [destHit.lon, destHit.lat]);
             if (cancelled) return;
             setRouteLine(r.geometry);
@@ -202,19 +205,20 @@ export default function NewRidePage() {
                                     </div>
                                     )}
                                 </Field>
-
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
                                 {/*// route map section (only when both are selected)*/}
-                                {/*{(pickupHit && destHit) && (*/}
-                                {/*    <div className="mt-4">*/}
-                                {/*        <LeafletMap heightClass="h-64">*/}
-                                {/*            <RouteLayer*/}
-                                {/*                a={[pickupHit.lon, pickupHit.lat]}*/}
-                                {/*                b={[destHit.lon, destHit.lat]}*/}
-                                {/*                line={routeLine}*/}
-                                {/*            />*/}
-                                {/*        </LeafletMap>*/}
-                                {/*    </div>*/}
-                                {/*)}*/}
+                                {(pickupHit && destHit) && (
+                                    <div className="mt-4">
+                                        <LeafletMap heightClass="h-64">
+                                            <RouteLayer
+                                                a={[pickupHit.lon, pickupHit.lat]}
+                                                b={[destHit.lon, destHit.lat]}
+                                                line={routeLine}
+                                            />
+                                        </LeafletMap>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
