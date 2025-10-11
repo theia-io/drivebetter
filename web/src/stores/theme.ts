@@ -21,7 +21,7 @@ export const useThemeStore = create<ThemeState>()(
 
       setMode: (mode: ThemeMode) => {
         set({ mode })
-        // Apply theme to document
+
         if (typeof window !== 'undefined') {
           const root = document.documentElement
           if (mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
@@ -38,7 +38,7 @@ export const useThemeStore = create<ThemeState>()(
 
       toggleMode: () => {
         const currentMode = get().mode
-        const newMode = 'light'// currentMode === 'light' ? 'dark' : 'light'
+        const newMode = currentMode === 'light' ? 'dark' : 'light'
         get().setMode(newMode)
       }
     }),
@@ -52,7 +52,6 @@ export const useThemeStore = create<ThemeState>()(
   )
 )
 
-// Initialize theme on store creation
 if (typeof window !== 'undefined') {
   const store = useThemeStore.getState()
   store.setMode(store.mode)

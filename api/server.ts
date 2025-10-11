@@ -15,6 +15,7 @@ import clients from "./src/routes/clients";
 import notifications from "./src/routes/notifications";
 import healthRoutes from "./src/routes/health";
 import geo from "./src/routes/geo";
+import drivers from "@/src/routes/drivers";
 
 try {
   validateEnv();
@@ -42,6 +43,7 @@ app.prepare().then(async () => {
   );
   // mount REST
   server.use("/api/v1/users", users);
+    server.use("/api/v1/driver-details", drivers);
   server.use("/api/v1/rides", rides);
   server.use("/api/v1/auth", auth);
   server.use("/api/v1/oauth", oauth);

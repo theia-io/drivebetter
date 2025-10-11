@@ -9,6 +9,7 @@ import { ArrowLeft, Calendar, Clock, DollarSign, MapPin, Navigation, Trash2 } fr
 import LeafletMap from "@/components/ui/maps/LeafletMap";
 import { useRide, useSetRideStatus, useDeleteRide, type Ride } from "@/stores/rides";
 import { getRoute } from "@/stores/routes";
+import {useAllDrivers} from "@/stores/users";
 
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
