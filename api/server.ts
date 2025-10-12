@@ -15,7 +15,7 @@ import clients from "./src/routes/clients";
 import notifications from "./src/routes/notifications";
 import healthRoutes from "./src/routes/health";
 import geo from "./src/routes/geo";
-import drivers from "@/src/routes/drivers";
+import drivers from "./src/routes/driverDetails";
 
 try {
   validateEnv();

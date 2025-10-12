@@ -16,6 +16,15 @@ export type DriverDocument = {
     note?: string;
 };
 
+export type Day = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+
+export type Availability = {
+    workingDays?: Day[];
+    shiftStart?: string | null; // "HH:mm" or null
+    shiftEnd?: string | null;   // "HH:mm" or null
+    breaks?: { start: string; end: string }[];
+};
+
 export type DriverDetails = {
     _id: string;
     userId: string;
@@ -48,7 +57,7 @@ export type DriverDetails = {
     };
 
     equipment?: {
-        chargerTypes?: Array<"usb-a" | "usb-c" | "magsafe" | "lighter">;
+        chargerTypes?: string;
         skiRack?: boolean;
         bikeRack?: boolean;
         trunkLarge?: boolean;
@@ -74,12 +83,7 @@ export type DriverDetails = {
         serviceAreas?: string[];
     };
 
-    availability?: {
-        workingDays?: Array<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun">;
-        shiftStart?: string | null;
-        shiftEnd?: string | null;
-        breaks?: Array<{ start: string; end: string }>;
-    };
+    availability?: Availability;
 
     pricing?: {
         baseFareCents?: number;
@@ -176,6 +180,9 @@ export const createDriverDetails = (payload: CreateDriverDetailsRequest) =>
 
 export const replaceDriverDetails = (id: string, payload: CreateDriverDetailsRequest) =>
     apiPut<DriverDetails>(`/driver-details/${id}`, payload);
+
+export const updateDriverDetailsByUserId = (id: string, payload: UpdateDriverDetailsRequest) =>
+    apiPatch<DriverDetails>(`/driver-details/by-user/${id}`, payload);
 
 export const updateDriverDetails = (id: string, payload: UpdateDriverDetailsRequest) =>
     apiPatch<DriverDetails>(`/driver-details/${id}`, payload);

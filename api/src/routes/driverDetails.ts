@@ -430,6 +430,38 @@ router.patch("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
 
 /**
  * @openapi
+ * /driver-details/by-user/{userId}:
+ *   patch:
+ *     summary: Update driver details by userId (partial)
+ *     tags: [DriverDetails]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema: { type: object, additionalProperties: true }
+ *     responses:
+ *       200: { description: Updated }
+ *       404: { description: Not found }
+ */
+router.patch("/by-user/:userId([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
+    const doc = await DriverDetails.findOneAndUpdate(
+        { userId: req.params.userId },
+        { $set: req.body },
+        { new: true, runValidators: true }
+    ).lean();
+
+    if (!doc) return res.status(404).json({ error: "Not found" });
+    res.json(doc);
+});
+
+
+/**
+ * @openapi
  * /driver-details/{id}:
  *   delete:
  *     summary: Delete driver details
