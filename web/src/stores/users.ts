@@ -1,22 +1,11 @@
 // web/ui/src/services/users.ts
 import useSWR from "swr";
 import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from "@/services/http";
+import {User} from "@/types";
 
 /* ------------------------------- Types ------------------------------- */
 
 export type Role = "driver" | "dispatcher" | "client" | "admin";
-
-export type User = {
-    _id: string;
-    name: string;
-    email: string;
-    phone?: string;
-    roles: Role[];
-    referralCode?: string;
-    emailVerified?: boolean;
-    createdAt?: string;
-    updatedAt?: string;
-};
 
 export type CreateUserRequest = {
     name: string;

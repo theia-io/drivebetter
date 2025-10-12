@@ -100,7 +100,6 @@ export default function UserDetailsPage() {
                                 <div className="space-y-3">
                                     <KV label="Created" value={dt(user?.createdAt)} />
                                     <KV label="Updated" value={dt(user?.updatedAt)} />
-                                    <KV label="Referral Code" value={user?.referralCode || "—"} />
                                     <div className="mt-2">
                                         {isDriver ? (
                                             <Link href={`/driver-details/by-user/${id}`}>

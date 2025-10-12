@@ -2,6 +2,7 @@
 import { Router, Request, Response } from "express";
 import mongoose from "mongoose";
 import DriverDetails from "../models/driverDetails.model";
+import {normalizeValidationError} from "../lib/httpErrors";
 
 const router = Router();
 
@@ -449,14 +450,20 @@ router.patch("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
  *       404: { description: Not found }
  */
 router.patch("/by-user/:userId([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
-    const doc = await DriverDetails.findOneAndUpdate(
-        { userId: req.params.userId },
-        { $set: req.body },
-        { new: true, runValidators: true }
-    ).lean();
+    try {
+        const doc = await DriverDetails.findOneAndUpdate(
+            { userId: req.params.userId },
+            { $set: req.body },
+            { new: true, runValidators: true }
+        ).lean();
 
-    if (!doc) return res.status(404).json({ error: "Not found" });
-    res.json(doc);
+        if (!doc) return res.status(404).json({ error: "Not found" });
+        res.json(doc);
+    } catch (err: any) {
+        const norm = normalizeValidationError(err);
+        if (norm) return res.status(norm.status).json(norm.body);
+        res.status(500).json({ error: "ServerError" });
+    }
 });
 
 

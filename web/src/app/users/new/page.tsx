@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { ArrowLeft, Save } from "lucide-react";
-import { createUser } from "@/stores/users";
+import {createUser, Role} from "@/stores/users";
 import { apiPost } from "@/services/http";
 
 /* ------------------------------- Types ------------------------------- */
@@ -16,7 +16,7 @@ type NewUserForm = {
     name: string;
     email: string;
     phone: string;
-    roles: string[]; // include "driver" to create driver profile
+    roles: string[];
 };
 
 type DriverDetailsForm = {
@@ -121,7 +121,7 @@ export default function NewUserWithDriverDetailsPage() {
                 name: user.name.trim(),
                 email: user.email.trim(),
                 phone: user.phone.trim() || undefined,
-                roles: user.roles,
+                roles: user.roles as Role[],
             });
 
             // 2) if role includes driver -> create driver details

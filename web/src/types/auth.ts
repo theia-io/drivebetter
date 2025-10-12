@@ -1,7 +1,7 @@
 import type { User } from "./user";
 
 export interface LoginResponse {
-    user: Pick<User, "id" | "email" | "roles" | "emailVerified">;
+    user: Pick<User, "_id" | "email" | "roles" | "emailVerified">;
     accessToken: string;
     refreshToken: string;
 }
