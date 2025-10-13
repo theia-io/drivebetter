@@ -152,3 +152,68 @@ export function DateTimeInput({
         </Field>
     );
 }
+
+export function Section({
+                     title,
+                     icon,
+                     children,
+                 }: {
+    title: string;
+    icon?: React.ReactNode;
+    children: React.ReactNode;
+}) {
+    return (
+        <div>
+            <div className="flex items-center gap-2 mb-2">
+                {icon}
+                <Typography className="font-semibold text-gray-900">{title}</Typography>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">{children}</div>
+        </div>
+    );
+}
+
+export function KV({ k, v }: { k: string; v?: string | number | null }) {
+    return (
+        <div className="rounded-lg border border-gray-200 p-3">
+            <div className="text-gray-500 text-xs">{k}</div>
+            <div className="text-gray-900 text-sm break-words">{v ?? "—"}</div>
+        </div>
+    );
+}
+
+/* ------------------------------- Helpers ------------------------------- */
+
+export function dt(x?: string | null) {
+    if (!x) return "—";
+    try {
+        return new Date(x).toLocaleString();
+    } catch {
+        return "—";
+    }
+}
+
+export function num(x?: number | null) {
+    return typeof x === "number" && !Number.isNaN(x) ? String(x) : "—";
+}
+export function bool(x?: boolean | null) {
+    return x ? "Yes" : "No";
+}
+export function arr(a?: string[] | null) {
+    return a && a.length ? a.join(", ") : "—";
+}
+export function coords(c?: [number, number]) {
+    return c && c.length === 2 ? `${c[1].toFixed(5)}, ${c[0].toFixed(5)}` : "—";
+}
+export function money(cents?: number | null) {
+    if (typeof cents !== "number") return "—";
+    return `$${(cents / 100).toFixed(2)}`;
+}
+
+/* icon shims to avoid extra deps variations */
+export function DollarIcon() {
+    return <span className="inline-block w-4 h-4 rounded-sm border border-gray-400" />;
+}
+export function CalendarIcon() {
+    return <span className="inline-block w-4 h-4 rounded-sm border border-gray-400" />;
+}
