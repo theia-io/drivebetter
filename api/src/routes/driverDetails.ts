@@ -3,7 +3,7 @@ import { Router, Request, Response } from "express";
 import mongoose from "mongoose";
 import DriverDetails from "../models/driverDetails.model";
 import {normalizeValidationError} from "../lib/httpErrors";
-import User from "@/src/models/user.model";
+import User from "../models/user.model";
 
 const router = Router();
 

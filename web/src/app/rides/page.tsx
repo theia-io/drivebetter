@@ -5,7 +5,8 @@ import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { Calendar, Car, Clock, DollarSign, Filter, MapPin, Navigation, Plus, Search, Star, User } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
-import { useRidesInfinite, type Ride } from "@/stores/rides";
+import { useRidesInfinite } from "@/stores/rides";
+import {Ride} from "@/types";
 
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
@@ -191,7 +192,7 @@ export default function RidesPage() {
                                         </div>
                                         <div className="flex items-center">
                                             <Navigation className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 text-gray-400 shrink-0" />
-                                            <span className="truncate">{km((ride as any).distanceMeters)}</span>
+                                            <span className="truncate">{km(ride.distance)}</span>
                                         </div>
                                         <div className="flex items-center">
                                             <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 text-gray-400 shrink-0" />
