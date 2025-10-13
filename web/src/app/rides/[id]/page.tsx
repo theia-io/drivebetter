@@ -5,11 +5,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import { ArrowLeft, Calendar, Clock, DollarSign, MapPin, Navigation, Trash2 } from "lucide-react";
+import {ArrowLeft, Calendar, Clock, DollarSign, MapPin, Navigation, Trash2, User} from "lucide-react";
 import LeafletMap from "@/components/ui/maps/LeafletMap";
 import { useRide, useSetRideStatus, useDeleteRide } from "@/stores/rides";
 import { getRoute } from "@/stores/routes";
 import {Ride} from "@/types";
+import Link from "next/link";
+import {useUser} from "@/stores/users";
 
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
@@ -25,6 +27,8 @@ export default function RideDetailsPage() {
     const { data: ride, mutate } = useRide(id);
     const { setRideStatus, isSettingStatus } = useSetRideStatus(id);
     const { deleteRide, isDeleting } = useDeleteRide(id);
+    const assignedDriverId = ride?.assignedDriverId;
+    const { data: driver } = useUser(assignedDriverId);
 
     const [routeLine, setRouteLine] = useState<[number, number][]>([]);
     const hasA = !!ride?.fromLocation?.coordinates?.length;
@@ -146,9 +150,30 @@ export default function RideDetailsPage() {
                                         <span className="font-medium mr-1">Distance:</span>
                                         {km((ride as any).distanceMeters)}
                                     </div>
-                                    <div className="text-sm text-gray-700">
+                                    <div className="flex items-center text-sm text-gray-700">
+                                        <User className="w-4 h-4 mr-2 text-gray-400" />
                                         <span className="font-medium mr-1">Assigned driver:</span>
-                                        {ride.assignedDriverId ? ride.assignedDriverId : "—"}
+
+                                        {ride.assignedDriverId ? (
+                                            // ✅ Use a Link/Button structure for the assigned driver
+                                            <Link
+                                                href={`/users/${ride.assignedDriverId}`}
+                                                className="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700
+                       ring-1 ring-inset ring-indigo-600/20 hover:bg-indigo-100 transition-colors truncate"
+                                            >
+                                                <span className="truncate">
+                                                    {/* Primary Display: Driver Name (or "View driver") */}
+                                                    {driver?.name || "View driver"}
+                                                </span>
+                                                {/* Secondary Display: Driver Email (if available) - optional to include in the button */}
+                                                {driver?.email ? (
+                                                    <span className="ml-1 text-gray-600/80"> • {driver.email}</span>
+                                                ) : null}
+                                            </Link>
+                                        ) : (
+                                            // Fallback for unassigned
+                                            "—"
+                                        )}
                                     </div>
                                     {ride.status === "unassigned" && (
                                         <Button size="sm" onClick={() => router.push(`/rides/${ride._id}/assign`)}>
