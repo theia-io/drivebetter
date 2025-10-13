@@ -23,7 +23,7 @@ export interface IDriverDetails extends Document {
     capacity?: {
         seatsTotal?: number;                 // installed seatbelts incl. driver
         maxPassengers?: number;             // passengers allowed for rides
-        luggageCapacityLiters?: number;
+        luggageCapacity?: number;
     };
 
     features?: {

@@ -60,7 +60,7 @@ const router = Router();
  *           properties:
  *             seatsTotal: { type: integer }
  *             maxPassengers: { type: integer }
- *             luggageCapacityLiters: { type: integer }
+ *             luggageCapacity: { type: integer }
  *         features:
  *           type: object
  *           properties:
@@ -257,10 +257,10 @@ router.get("/", async (req: Request, res: Response) => {
  *                 type: integer
  *                 minimum: 1
  *                 description: Minimum number of passengers the driver must support.
- *               luggageLiters:
+ *               luggages:
  *                 type: integer
  *                 minimum: 0
- *                 description: Minimum luggage volume in liters.
+ *                 description: Minimum luggage in liters.
  *               vehicleType:
  *                 type: string
  *                 enum: [sedan, suv, van, wagon, hatchback, pickup, other]
@@ -324,7 +324,7 @@ router.get("/", async (req: Request, res: Response) => {
  *                     properties:
  *                       seatsTotal:     { type: integer }
  *                       maxPassengers:  { type: integer }
- *                       luggageCapacityLiters: { type: integer }
+ *                       luggageCapacity: { type: integer }
  *                   features:
  *                     type: object
  *                     properties:
@@ -359,7 +359,7 @@ router.post("/eligible", async (req: Request, res: Response) => {
     try {
         const {
             passengers,
-            luggageLiters,
+            luggages,
             vehicleType,
             language,
             needs,
@@ -376,8 +376,8 @@ router.post("/eligible", async (req: Request, res: Response) => {
         if (Number.isFinite(passengers)) {
             filter["capacity.maxPassengers"] = { $gte: Number(passengers) };
         }
-        if (Number.isFinite(luggageLiters)) {
-            filter["capacity.luggageCapacityLiters"] = { $gte: Number(luggageLiters) };
+        if (Number.isFinite(luggages)) {
+            filter["capacity.luggageCapacity"] = { $gte: Number(luggages) };
         }
         if (vehicleType) {
             filter["vehicle.type"] = vehicleType;

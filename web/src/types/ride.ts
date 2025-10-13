@@ -22,7 +22,7 @@ export type EligibleDriver = {
 
 export type EligibleDriverBody = {
     passengers?: number;
-    luggageLiters?: number;
+    luggages?: number;
     vehicleType?: VehicleType | "";
     language?: string;
     needs?: { pet?: boolean; babySeat?: boolean; wheelchair?: boolean };

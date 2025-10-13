@@ -36,7 +36,7 @@ export type DriverDetails = {
     capacity?: {
         seatsTotal?: number;
         maxPassengers?: number;
-        luggageCapacityLiters?: number;
+        luggageCapacity?: number;
     };
 
     features?: {

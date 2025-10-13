@@ -30,7 +30,7 @@ interface RideFormValues {
 
     // Filters to pass to assignment step
     passengers?: number;
-    luggageLiters?: number;
+    luggages?: number;
     vehicleType?: VehicleType | "";
     language?: string;
     airportTrip?: boolean;
@@ -52,7 +52,7 @@ const initialValues: RideFormValues = {
 
     // defaults for stage 2
     passengers: 1,
-    luggageLiters: 0,
+    luggages: 0,
     vehicleType: "",
     language: "",
     airportTrip: false,
@@ -118,7 +118,7 @@ export default function NewRidePage() {
                 // Pass filters in the querystring to the assignment page
                 const sp = new URLSearchParams();
                 if (values.passengers) sp.set("passengers", String(values.passengers));
-                if (values.luggageLiters) sp.set("luggageLiters", String(values.luggageLiters));
+                if (values.luggages) sp.set("luggages", String(values.luggages));
                 if (values.vehicleType) sp.set("vehicleType", String(values.vehicleType));
                 if (values.language) sp.set("language", values.language);
                 if (values.airportTrip) sp.set("airportTrip", "1");
@@ -214,13 +214,13 @@ export default function NewRidePage() {
                             {/* More filters (optional) */}
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <Field>
-                                    <FieldLabel htmlFor="luggageLiters">Luggage (L)</FieldLabel>
+                                    <FieldLabel htmlFor="luggages">Luggage</FieldLabel>
                                     <input
-                                        id="luggageLiters"
+                                        id="luggages"
                                         type="number"
                                         min={0}
-                                        value={values.luggageLiters ?? 0}
-                                        onChange={(e) => set("luggageLiters", Number(e.target.value || 0))}
+                                        value={values.luggages ?? 0}
+                                        onChange={(e) => set("luggages", Number(e.target.value || 0))}
                                         className={inputClass()}
                                     />
                                 </Field>

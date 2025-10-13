@@ -132,7 +132,7 @@ export default function DriverDetailsPage() {
                                 <Section title="Capacity" icon={<GaugeCircle className="w-4 h-4" />}>
                                     <KV k="Seats" v={num(dd.capacity?.seatsTotal)} />
                                     <KV k="Max Passengers" v={num(dd.capacity?.maxPassengers)} />
-                                    <KV k="Luggage (L)" v={num(dd.capacity?.luggageCapacityLiters)} />
+                                    <KV k="Luggage" v={num(dd.capacity?.luggageCapacity)} />
                                 </Section>
                             </div>
                         </CardBody>

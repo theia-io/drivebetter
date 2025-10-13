@@ -99,7 +99,7 @@ export default function EditDriverDetailsPage() {
             capacity: {
                 seatsTotal: toInt(values.capacity?.seatsTotal),
                 maxPassengers: toInt(values.capacity?.maxPassengers),
-                luggageCapacityLiters: toInt(values.capacity?.luggageCapacityLiters),
+                luggageCapacity: toInt(values.capacity?.luggageCapacity),
             },
             features: {
                 petFriendly: !!values.features?.petFriendly,
@@ -220,7 +220,7 @@ export default function EditDriverDetailsPage() {
                                 <Grid3>
                                     <NumberField id="seats" label="Seats Total" value={values.capacity?.seatsTotal as any} onChange={(v) => setValues(sv(values, "capacity.seatsTotal", v))} />
                                     <NumberField id="maxPax" label="Max Passengers" value={values.capacity?.maxPassengers as any} onChange={(v) => setValues(sv(values, "capacity.maxPassengers", v))} />
-                                    <NumberField id="luggage" label="Luggage Capacity (L)" value={values.capacity?.luggageCapacityLiters as any} onChange={(v) => setValues(sv(values, "capacity.luggageCapacityLiters", v))} />
+                                    <NumberField id="luggage" label="Luggage Capacity" value={values.capacity?.luggageCapacity as any} onChange={(v) => setValues(sv(values, "capacity.luggageCapacityLiters", v))} />
                                 </Grid3>
                             </CardBody>
                         </Card>
