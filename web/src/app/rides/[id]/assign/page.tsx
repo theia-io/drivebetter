@@ -130,9 +130,6 @@ export default function AssignDriverPage() {
                                     <option value="other">Other</option>
                                 </select>
                             </Field>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <Field>
                                 <FieldLabel htmlFor="language">Language</FieldLabel>
                                 <input
@@ -144,7 +141,9 @@ export default function AssignDriverPage() {
                                     placeholder='ISO 639-1 (e.g., "en")'
                                 />
                             </Field>
+                        </div>
 
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <label className="inline-flex items-center gap-2 text-sm">
                                 <input
                                     type="checkbox"
