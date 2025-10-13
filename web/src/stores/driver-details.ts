@@ -2,19 +2,10 @@
 import useSWR from "swr";
 import useSWRInfinite from "swr/infinite";
 import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from "@/services/http";
+import {DriverDocument, VehicleType} from "@/types/driver-details";
+import {EligibleDriverBody, EligibleDriver} from "@/types";
 
 /* ------------------------------- Types ------------------------------- */
-
-export type VehicleType = "sedan" | "suv" | "van" | "wagon" | "hatchback" | "pickup" | "other";
-
-export type DriverDocument = {
-    _id?: string;
-    type: "license" | "insurance" | "registration" | "permit" | "other";
-    url: string;
-    uploadedAt?: string;
-    expiresAt?: string | null;
-    note?: string;
-};
 
 export type Day = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
@@ -198,6 +189,9 @@ export const addDriverDocument = (id: string, doc: Omit<DriverDocument, "_id" | 
 
 export const removeDriverDocument = (id: string, docId: string) =>
     apiDelete<DriverDetails>(`/driver-details/${id}/documents/${docId}`);
+
+export const findEligibleDriversPost = (body: EligibleDriverBody) =>
+    apiPost<EligibleDriver[]>("/driver-details/eligible", body);
 
 export const driverDetailsStats = () =>
     apiGet<{

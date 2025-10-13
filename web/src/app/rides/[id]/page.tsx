@@ -7,8 +7,9 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { ArrowLeft, Calendar, Clock, DollarSign, MapPin, Navigation, Trash2 } from "lucide-react";
 import LeafletMap from "@/components/ui/maps/LeafletMap";
-import { useRide, useSetRideStatus, useDeleteRide, type Ride } from "@/stores/rides";
+import { useRide, useSetRideStatus, useDeleteRide } from "@/stores/rides";
 import { getRoute } from "@/stores/routes";
+import {Ride} from "@/types";
 
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
@@ -149,6 +150,11 @@ export default function RideDetailsPage() {
                                         <span className="font-medium mr-1">Assigned driver:</span>
                                         {ride.assignedDriverId ? ride.assignedDriverId : "—"}
                                     </div>
+                                    {ride.status === "unassigned" && (
+                                        <Button size="sm" onClick={() => router.push(`/rides/${ride._id}/assign`)}>
+                                            Assign driver
+                                        </Button>
+                                    )}
                                 </div>
                             </div>
                         </CardBody>

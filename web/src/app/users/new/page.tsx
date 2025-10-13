@@ -7,10 +7,10 @@ import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { ArrowLeft, Save } from "lucide-react";
 import {createUser, Role} from "@/stores/users";
 import { apiPost } from "@/services/http";
+import {VehicleType} from "@/types/driver-details";
+import { Field, FieldLabel, FieldError, inputClass } from "@/components/ui/commmon";
 
 /* ------------------------------- Types ------------------------------- */
-
-type VehicleType = "sedan" | "suv" | "van" | "wagon" | "hatchback" | "pickup" | "other";
 
 type NewUserForm = {
     name: string;
@@ -501,24 +501,4 @@ export default function NewUserWithDriverDetailsPage() {
             </Container>
         </ProtectedLayout>
     );
-}
-
-/* ----------------------------- UI primitives ---------------------------- */
-
-function Field({ children }: { children: React.ReactNode }) {
-    return <div className="space-y-1.5">{children}</div>;
-}
-function FieldLabel({ htmlFor, children }: { htmlFor?: string; children: React.ReactNode }) {
-    return <label htmlFor={htmlFor} className="flex items-center text-sm font-medium text-gray-700">{children}</label>;
-}
-function FieldError({ message }: { message?: string }) {
-    if (!message) return null;
-    return <p className="text-sm text-red-600">{message}</p>;
-}
-function inputClass(error?: string) {
-    return [
-        "w-full rounded-lg border px-3 py-2.5 text-sm sm:text-base",
-        "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
-        error ? "border-red-300" : "border-gray-300",
-    ].join(" ");
 }

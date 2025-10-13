@@ -5,22 +5,19 @@ import { useRouter } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { ArrowLeft, Save } from "lucide-react";
-import DriverCombobox from "@/components/ui/DriverCombobox";
 import PlaceCombobox from "@/components/ui/maps/PlaceCombobox";
 import LeafletMap from "@/components/ui/maps/LeafletMap";
 import { createRide } from "@/stores/rides";
 import { PlaceHit } from "@/stores/geocode";
 import { getRoute } from "@/stores/routes";
-import {currentHourTimeInput, todayDateInput} from "@/services/datetime";
+import { currentHourTimeInput, todayDateInput } from "@/services/datetime";
+import { VehicleType } from "@/types/driver-details";
+import { RideStatus, RideType } from "@/types/ride";
+import { Field, FieldLabel, FieldError, inputClass } from "@/components/ui/commmon";
 
 /* ------------------------------- Types ------------------------------- */
 
-type RideType = "reservation" | "asap";
-type RideStatus = "unassigned" | "assigned" | "on_my_way" | "on_location" | "pob" | "clear" | "completed";
-
 interface RideFormValues {
-    assignedDriverId?: string;
-    driverEmail?: string;
     clientId?: string;
     fromLabel: string;
     toLabel: string;
@@ -30,13 +27,19 @@ interface RideFormValues {
     status: RideStatus;
     notes: string;
     coveredVisible: boolean;
+
+    // Filters to pass to assignment step
+    passengers?: number;
+    luggageLiters?: number;
+    vehicleType?: VehicleType | "";
+    language?: string;
+    airportTrip?: boolean;
+    longDistance?: boolean;
 }
 
 /* ----------------------------- Initial State ----------------------------- */
 
 const initialValues: RideFormValues = {
-    assignedDriverId: undefined,
-    driverEmail: "",
     clientId: undefined,
     fromLabel: "",
     toLabel: "",
@@ -46,6 +49,14 @@ const initialValues: RideFormValues = {
     status: "unassigned",
     notes: "",
     coveredVisible: true,
+
+    // defaults for stage 2
+    passengers: 1,
+    luggageLiters: 0,
+    vehicleType: "",
+    language: "",
+    airportTrip: false,
+    longDistance: false,
 };
 
 export default function NewRidePage() {
@@ -71,10 +82,6 @@ export default function NewRidePage() {
         if (!v.time) e.time = "Time is required";
         if (!pickupHit) e.fromLabel = "Select a pickup from suggestions";
         if (!destHit) e.toLabel = "Select a destination from suggestions";
-
-        if (v.assignedDriverId && v.status === "unassigned") {
-            set("status", "assigned");
-        }
         return e;
     };
 
@@ -88,20 +95,16 @@ export default function NewRidePage() {
         try {
             const iso = new Date(`${values.date}T${values.time}:00`).toISOString();
 
+            // Stage 1: create UNASSIGNED ride (no assignedDriverId here)
             const payload: any = {
-                assignedDriverId: values.assignedDriverId || undefined,
                 clientId: values.clientId || undefined,
-
                 from: values.fromLabel,
                 to: values.toLabel,
-
                 datetime: iso,
                 type: values.type || undefined,
-
-                status: values.status,
+                status: "unassigned",
                 notes: values.notes,
                 coveredVisible: values.coveredVisible,
-
                 fromLocation: pickupHit
                     ? { type: "Point", coordinates: [pickupHit.lon, pickupHit.lat] }
                     : undefined,
@@ -109,8 +112,23 @@ export default function NewRidePage() {
                     ? { type: "Point", coordinates: [destHit.lon, destHit.lat] }
                     : undefined,
             };
-            const created = createRide(payload);
-            if (created) router.push("/rides");
+
+            const created = await createRide(payload); // IMPORTANT: await
+            if (created?._id) {
+                // Pass filters in the querystring to the assignment page
+                const sp = new URLSearchParams();
+                if (values.passengers) sp.set("passengers", String(values.passengers));
+                if (values.luggageLiters) sp.set("luggageLiters", String(values.luggageLiters));
+                if (values.vehicleType) sp.set("vehicleType", String(values.vehicleType));
+                if (values.language) sp.set("language", values.language);
+                if (values.airportTrip) sp.set("airportTrip", "1");
+                if (values.longDistance) sp.set("longDistance", "1");
+
+                router.push(`/rides/${created._id}/assign?${sp.toString()}`);
+            } else {
+                alert("Ride created but response missing ID.");
+                router.push("/rides");
+            }
         } catch (err) {
             console.error(err);
             alert("Failed to create ride.");
@@ -157,7 +175,7 @@ export default function NewRidePage() {
                             New Ride
                         </Typography>
                         <Typography variant="body1" className="text-gray-600 text-sm sm:text-base">
-                            Create and schedule a new ride
+                            Stage 1: Create the ride (assign driver later)
                         </Typography>
                     </div>
                 </div>
@@ -165,23 +183,8 @@ export default function NewRidePage() {
                 <Card variant="elevated" className="max-w-3xl">
                     <CardBody className="p-4 sm:p-6">
                         <form onSubmit={onSubmit} className="space-y-6" noValidate>
-                            {/* Assignment */}
+                            {/* Client (optional) */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <Field>
-                                    <FieldLabel htmlFor="driver">Driver</FieldLabel>
-                                    <DriverCombobox
-                                        id="driver"
-                                        valueEmail={values.driverEmail || ""}
-                                        onChange={(driver: any | null) => {
-                                            set("assignedDriverId", driver?._id || undefined);
-                                            set("driverEmail", driver?.email || "");
-                                            if (driver && values.status === "unassigned") set("status", "assigned");
-                                            if (!driver && values.status === "assigned") set("status", "unassigned");
-                                        }}
-                                        error={errors["assignedDriverId"]}/>
-                                    <FieldError message={errors["assignedDriverId"]} />
-                                </Field>
-
                                 <Field>
                                     <FieldLabel htmlFor="client">Client (optional)</FieldLabel>
                                     <input
@@ -190,9 +193,88 @@ export default function NewRidePage() {
                                         value={values.clientId || ""}
                                         onChange={(e) => set("clientId", e.target.value)}
                                         className={inputClass()}
-                                        placeholder="Client name / phone / notes"
+                                        placeholder="Client name / phone / ID"
                                     />
                                 </Field>
+
+                                {/* Filters you want to persist to next step */}
+                                <Field>
+                                    <FieldLabel htmlFor="passengers">Passengers</FieldLabel>
+                                    <input
+                                        id="passengers"
+                                        type="number"
+                                        min={1}
+                                        value={values.passengers ?? 1}
+                                        onChange={(e) => set("passengers", Number(e.target.value || 1))}
+                                        className={inputClass()}
+                                    />
+                                </Field>
+                            </div>
+
+                            {/* More filters (optional) */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <Field>
+                                    <FieldLabel htmlFor="luggageLiters">Luggage (L)</FieldLabel>
+                                    <input
+                                        id="luggageLiters"
+                                        type="number"
+                                        min={0}
+                                        value={values.luggageLiters ?? 0}
+                                        onChange={(e) => set("luggageLiters", Number(e.target.value || 0))}
+                                        className={inputClass()}
+                                    />
+                                </Field>
+
+                                <Field>
+                                    <FieldLabel htmlFor="vehicleType">Vehicle Type</FieldLabel>
+                                    <select
+                                        id="vehicleType"
+                                        value={values.vehicleType || ""}
+                                        onChange={(e) => set("vehicleType", e.target.value as VehicleType | "")}
+                                        className={inputClass()}
+                                    >
+                                        <option value="">Any</option>
+                                        <option value="sedan">Sedan</option>
+                                        <option value="suv">SUV</option>
+                                        <option value="van">Van</option>
+                                        <option value="wagon">Wagon</option>
+                                        <option value="hatchback">Hatchback</option>
+                                        <option value="pickup">Pickup</option>
+                                        <option value="other">Other</option>
+                                    </select>
+                                </Field>
+
+                                <Field>
+                                    <FieldLabel htmlFor="lang">Preferred language</FieldLabel>
+                                    <input
+                                        id="lang"
+                                        type="text"
+                                        value={values.language || ""}
+                                        onChange={(e) => set("language", e.target.value)}
+                                        className={inputClass()}
+                                        placeholder='ISO 639-1 (e.g., "en")'
+                                    />
+                                </Field>
+                            </div>
+
+                            {/* Flags */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                                <label className="inline-flex items-center gap-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={values.airportTrip ?? false}
+                                        onChange={(e) => set("airportTrip", e.target.checked)}
+                                    />
+                                    Airport trip
+                                </label>
+                                <label className="inline-flex items-center gap-2 text-sm">
+                                    <input
+                                        type="checkbox"
+                                        checked={values.longDistance ?? false}
+                                        onChange={(e) => set("longDistance", e.target.checked)}
+                                    />
+                                    Long distance
+                                </label>
                             </div>
 
                             {/* Where */}
@@ -254,8 +336,8 @@ export default function NewRidePage() {
                                 </Field>
                             </div>
 
-                            {/* Route preview (when both picked) */}
-                            {(pickupHit && destHit) && (
+                            {/* Route preview */}
+                            {pickupHit && destHit && (
                                 <div className="mt-2">
                                     <LeafletMap
                                         heightClass="h-64"
@@ -298,7 +380,7 @@ export default function NewRidePage() {
                                 </Field>
                             </div>
 
-                            {/* Type + Status */}
+                            {/* Type + Status (status forced to unassigned here but editable later if you want) */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field>
                                     <FieldLabel>Type</FieldLabel>
@@ -337,27 +419,6 @@ export default function NewRidePage() {
                                 </Field>
 
                                 <Field>
-                                    <FieldLabel htmlFor="status">Status</FieldLabel>
-                                    <select
-                                        id="status"
-                                        value={values.status}
-                                        onChange={(e) => set("status", e.target.value as RideStatus)}
-                                        className={inputClass()}
-                                    >
-                                        <option value="unassigned">Unassigned</option>
-                                        <option value="assigned">Assigned</option>
-                                        <option value="on_my_way">On my way</option>
-                                        <option value="on_location">On location</option>
-                                        <option value="pob">POB</option>
-                                        <option value="clear">Clear</option>
-                                        <option value="completed">Completed</option>
-                                    </select>
-                                </Field>
-                            </div>
-
-                            {/* Notes + visibility */}
-                            <div className="grid grid-cols-1 gap-4">
-                                <Field>
                                     <FieldLabel htmlFor="notes">Notes</FieldLabel>
                                     <textarea
                                         id="notes"
@@ -368,16 +429,17 @@ export default function NewRidePage() {
                                         placeholder="Internal notes"
                                     />
                                 </Field>
-
-                                <label className="inline-flex items-center gap-2 text-sm">
-                                    <input
-                                        type="checkbox"
-                                        checked={values.coveredVisible}
-                                        onChange={(e) => set("coveredVisible", e.target.checked)}
-                                    />
-                                    Covered visible
-                                </label>
                             </div>
+
+                            {/* Visibility */}
+                            <label className="inline-flex items-center gap-2 text-sm">
+                                <input
+                                    type="checkbox"
+                                    checked={values.coveredVisible}
+                                    onChange={(e) => set("coveredVisible", e.target.checked)}
+                                />
+                                Covered visible
+                            </label>
 
                             {/* Actions */}
                             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
@@ -405,27 +467,4 @@ export default function NewRidePage() {
             </Container>
         </ProtectedLayout>
     );
-}
-
-/* ----------------------------- UI primitives ---------------------------- */
-
-function Field({ children }: { children: React.ReactNode }) {
-    return <div className="space-y-1.5">{children}</div>;
-}
-
-function FieldLabel({ htmlFor, children }: { htmlFor?: string; children: React.ReactNode }) {
-    return <label htmlFor={htmlFor} className="flex items-center text-sm font-medium text-gray-700">{children}</label>;
-}
-
-function FieldError({ message }: { message?: string }) {
-    if (!message) return null;
-    return <p className="text-sm text-red-600">{message}</p>;
-}
-
-function inputClass(error?: string) {
-    return [
-        "w-full rounded-lg border px-3 py-2.5 text-sm sm:text-base",
-        "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
-        error ? "border-red-300" : "border-gray-300",
-    ].join(" ");
 }

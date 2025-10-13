@@ -3,6 +3,7 @@ import { Router, Request, Response } from "express";
 import mongoose from "mongoose";
 import DriverDetails from "../models/driverDetails.model";
 import {normalizeValidationError} from "../lib/httpErrors";
+import User from "@/src/models/user.model";
 
 const router = Router();
 
@@ -235,6 +236,223 @@ router.get("/", async (req: Request, res: Response) => {
 
     res.json({ items, page, limit, total, pages: Math.ceil(total / limit) });
 });
+
+/**
+ * @openapi
+ * /driver-details/eligible:
+ *   post:
+ *     summary: Find eligible drivers for a ride (filters only, no location used)
+ *     description: >
+ *       Returns a list of drivers whose profile and vehicle match the provided constraints.
+ *       This endpoint **does not** apply any geospatial filter yet.
+ *     tags: [DriverDetails]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               passengers:
+ *                 type: integer
+ *                 minimum: 1
+ *                 description: Minimum number of passengers the driver must support.
+ *               luggageLiters:
+ *                 type: integer
+ *                 minimum: 0
+ *                 description: Minimum luggage volume in liters.
+ *               vehicleType:
+ *                 type: string
+ *                 enum: [sedan, suv, van, wagon, hatchback, pickup, other]
+ *               language:
+ *                 type: string
+ *                 description: ISO 639-1 code (e.g., "en").
+ *               needs:
+ *                 type: object
+ *                 properties:
+ *                   pet:
+ *                     type: boolean
+ *                   babySeat:
+ *                     type: boolean
+ *                   wheelchair:
+ *                     type: boolean
+ *               airportTrip:
+ *                 type: boolean
+ *                 description: If true, requires drivers with airportPermit preference.
+ *               longDistance:
+ *                 type: boolean
+ *                 description: If true, requires drivers with longDistance preference.
+ *               limit:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 100
+ *                 default: 30
+ *     responses:
+ *       200:
+ *         description: Eligible drivers
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   userId:        { type: string }
+ *                   user:
+ *                     type: object
+ *                     properties:
+ *                       _id:   { type: string }
+ *                       name:  { type: string }
+ *                       email: { type: string }
+ *                       phone: { type: string }
+ *                       roles:
+ *                         type: array
+ *                         items: { type: string }
+ *                   vehicle:
+ *                     type: object
+ *                     properties:
+ *                       make:  { type: string }
+ *                       model: { type: string }
+ *                       year:  { type: integer }
+ *                       color: { type: string }
+ *                       plate: { type: string }
+ *                       type:
+ *                         type: string
+ *                         enum: [sedan, suv, van, wagon, hatchback, pickup, other]
+ *                   capacity:
+ *                     type: object
+ *                     properties:
+ *                       seatsTotal:     { type: integer }
+ *                       maxPassengers:  { type: integer }
+ *                       luggageCapacityLiters: { type: integer }
+ *                   features:
+ *                     type: object
+ *                     properties:
+ *                       petFriendly:
+ *                          type: boolean
+ *                       babySeat:
+ *                          type: boolean
+ *                       wheelchairAccessible:
+ *                          type: boolean
+ *                   languages:
+ *                     type: object
+ *                     properties:
+ *                       primary: { type: string }
+ *                       list:
+ *                         type: array
+ *                         items: { type: string }
+ *                   preferences:
+ *                     type: object
+ *                     properties:
+ *                       airportPermit: { type: boolean }
+ *                       longDistance:  { type: boolean }
+ *                   stats:
+ *                     type: object
+ *                     properties:
+ *                       ratingAvg:       { type: number }
+ *                       ratingCount:     { type: integer }
+ *                       completedRides:  { type: integer }
+ *       400:
+ *         description: Invalid payload
+ */
+router.post("/eligible", async (req: Request, res: Response) => {
+    try {
+        const {
+            passengers,
+            luggageLiters,
+            vehicleType,
+            language,
+            needs,
+            airportTrip,
+            longDistance,
+            limit,
+        } = req.body || {};
+
+        const resultLimit = Math.max(1, Math.min(Number(limit) || 30, 100));
+
+        // Build a Mongo filter object from provided constraints
+        const filter: Record<string, any> = {};
+
+        if (Number.isFinite(passengers)) {
+            filter["capacity.maxPassengers"] = { $gte: Number(passengers) };
+        }
+        if (Number.isFinite(luggageLiters)) {
+            filter["capacity.luggageCapacityLiters"] = { $gte: Number(luggageLiters) };
+        }
+        if (vehicleType) {
+            filter["vehicle.type"] = vehicleType;
+        }
+        if (airportTrip === true) {
+            filter["preferences.airportPermit"] = true;
+        }
+        if (longDistance === true) {
+            filter["preferences.longDistance"] = true;
+        }
+
+        // Needs booleans
+        if (needs?.pet === true) {
+            filter["features.petFriendly"] = true;
+        }
+        if (needs?.babySeat === true) {
+            filter["features.babySeat"] = true;
+        }
+        if (needs?.wheelchair === true) {
+            filter["features.wheelchairAccessible"] = true;
+        }
+
+        // Language can match primary OR in list
+        if (language && typeof language === "string") {
+            filter["$or"] = [
+                { "languages.primary": language },
+                { "languages.list": language },
+            ];
+        }
+
+        // Query DriverDetails, join basic user info
+        const docs = await DriverDetails.find(filter)
+            .select({
+                userId: 1,
+                vehicle: 1,
+                capacity: 1,
+                features: 1,
+                languages: 1,
+                preferences: 1,
+                stats: 1,
+            })
+            .sort({ "stats.ratingAvg": -1, "stats.ratingCount": -1 }) // best first
+            .limit(resultLimit)
+            .lean();
+
+        // fetch user basic fields in one shot (avoid N+1)
+        const userIds = docs.map((d) => d.userId).filter(Boolean);
+        const users = await User.find({ _id: { $in: userIds } })
+            .select({ name: 1, email: 1, phone: 1, roles: 1 })
+            .lean();
+
+        const userById = new Map(users.map((u) => [String(u._id), u]));
+
+        const payload = docs.map((d) => {
+            const u = userById.get(String(d.userId));
+            return {
+                userId: String(d.userId),
+                user: u
+                    ? { _id: String(u._id), name: u.name, email: u.email, phone: u.phone, roles: u.roles }
+                    : undefined,
+                vehicle: d.vehicle,
+                capacity: d.capacity,
+                features: d.features,
+                languages: d.languages,
+                preferences: d.preferences,
+                stats: d.stats,
+            };
+        });
+
+        res.json(payload);
+    } catch (err: any) {
+        res.status(400).json({ error: err?.message || "Invalid payload" });
+    }
+});
+
 
 /**
  * @openapi

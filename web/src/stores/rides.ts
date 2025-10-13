@@ -1,94 +1,11 @@
-// web/ui/src/services/rides.ts
-
 import useSWR from "swr";
 import useSWRInfinite from "swr/infinite";
 import useSWRMutation from 'swr/mutation';
 import { mutate as globalMutate } from "swr";
 import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from "@/services/http";
+import {CreateRideRequest, RideStatus, RideType, Ride} from "@/types";
 
 /* ------------------------------- Types ------------------------------- */
-
-export type RideStatus =
-    | "unassigned"
-    | "assigned"
-    | "on_my_way"
-    | "on_location"
-    | "pob"
-    | "clear"
-    | "completed";
-
-export type RideType = "reservation" | "asap";
-
-export type GeoPoint = {
-    type: "Point";
-    coordinates: [number, number]; // [lon, lat]
-};
-
-export type Ride = {
-    _id: string;
-    creatorId?: string | null;
-    clientId?: string | null;
-    from: string;
-    to: string;
-    stops?: string[];
-    fromLocation?: GeoPoint;
-    toLocation?: GeoPoint;
-    stopLocations?: GeoPoint[];
-    fromPlaceId?: string;
-    toPlaceId?: string;
-    geocoder?: "mapbox" | "google" | "nominatim" | "pelias";
-    geoAccuracy?: number;
-    geocodedAt?: string;
-
-    datetime: string; // ISO
-    type: RideType;
-    queue: string[];
-    assignedDriverId?: string | null;
-    coveredVisible: boolean;
-    status: RideStatus;
-    notes?: string;
-
-    payment?: {
-        method?: "cash" | "zelle" | "card" | "qr";
-        paid?: boolean;
-        driverPaid?: boolean;
-        amountCents?: number;
-    };
-
-    createdAt: string;
-    updatedAt: string;
-};
-
-export type CreateRideRequest = {
-    creatorId?: string;
-    clientId?: string;
-    assignedDriverId?: string;
-    driverEmail?: string; // optional convenience
-    from: string;
-    to: string;
-    stops?: string[];
-    datetime: string; // ISO
-    type?: RideType; // server can infer
-    status?: RideStatus; // server defaults based on assignment
-    notes?: string;
-    coveredVisible?: boolean;
-
-    fromLocation?: GeoPoint;
-    toLocation?: GeoPoint;
-    stopLocations?: GeoPoint[];
-    fromPlaceId?: string;
-    toPlaceId?: string;
-    geocoder?: "mapbox" | "google" | "nominatim" | "pelias";
-    geoAccuracy?: number;
-    geocodedAt?: string;
-
-    payment?: {
-        method?: "cash" | "zelle" | "card" | "qr";
-        paid?: boolean;
-        driverPaid?: boolean;
-        amountCents?: number;
-    };
-};
 
 export type UpdateRideRequest = Partial<CreateRideRequest>;
 
