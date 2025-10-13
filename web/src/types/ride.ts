@@ -44,6 +44,7 @@ export type Ride = {
     fromPlaceId?: string;
     toPlaceId?: string;
     geoAccuracy?: number;
+    distance?: number;
     geocodedAt?: string;
 
     datetime: string; // ISO

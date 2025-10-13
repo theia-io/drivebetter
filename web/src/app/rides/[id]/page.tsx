@@ -148,7 +148,7 @@ export default function RideDetailsPage() {
                                     <div className="flex items-center text-sm text-gray-700">
                                         <Navigation className="w-4 h-4 mr-2 text-gray-400" />
                                         <span className="font-medium mr-1">Distance:</span>
-                                        {km((ride as any).distanceMeters)}
+                                        {km(ride.distance)}
                                     </div>
                                     <div className="flex items-center text-sm text-gray-700">
                                         <User className="w-4 h-4 mr-2 text-gray-400" />

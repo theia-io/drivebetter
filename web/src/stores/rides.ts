@@ -29,8 +29,6 @@ export type RidePage = {
     pages: number;
 };
 
-/* ------------------------------ Utilities ----------------------------- */
-
 const q = (params?: Record<string, any>) => {
     if (!params) return "";
     const sp = new URLSearchParams();
@@ -41,8 +39,6 @@ const q = (params?: Record<string, any>) => {
     const s = sp.toString();
     return s ? `?${s}` : "";
 };
-
-/* -------------------------------- API -------------------------------- */
 
 export const listRides = (params?: RideListQuery) =>
     apiGet<RidePage>(`/rides${q(params)}`);
@@ -71,13 +67,10 @@ export const assignRide = (id: string, driverId: string) =>
 export const setRideStatus = (id: string, status: RideStatus) =>
     apiPost<{ ok: true; ride: Ride }>(`/rides/${id}/status`, { status });
 
-/* -------------------------------- Hooks ------------------------------- */
-// Revalidate all rides-related caches
 const revalidateRides = async () => {
     await globalMutate((key) => typeof key === "string" && key.startsWith("/rides"));
 };
 
-/* ---------------------------- Create (POST) ---------------------------- */
 export function useCreateRide() {
     const m = useSWRMutation(
         "/rides",
@@ -94,7 +87,6 @@ export function useCreateRide() {
     };
 }
 
-/* ----------------------------- Replace (PUT) ---------------------------- */
 export function useReplaceRide(id?: string) {
     const key = id ? `/rides/${id}` : null;
     const m = useSWRMutation(

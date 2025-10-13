@@ -105,6 +105,7 @@ export default function NewRidePage() {
                 status: "unassigned",
                 notes: values.notes,
                 coveredVisible: values.coveredVisible,
+                distance: distanceMeters,
                 fromLocation: pickupHit
                     ? { type: "Point", coordinates: [pickupHit.lon, pickupHit.lat] }
                     : undefined,

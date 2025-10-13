@@ -101,6 +101,7 @@ router.get("/", async (req: Request, res: Response) => {
  *             properties:
  *               creatorId: { type: string, description: "Dispatcher/User ID" }
  *               clientId: { type: string }
+ *               distance: { type: number }
  *               driverEmail: { type: string, format: email, description: "Assign by driver email (optional)" }
  *               assignedDriverId: { type: string, description: "Assign by driver id (optional)" }
  *               from: { type: string }
@@ -172,10 +173,9 @@ router.post("/", async (req: Request, res: Response) => {
             stopLocations: body.stopLocations,
             fromPlaceId: body.fromPlaceId,
             toPlaceId: body.toPlaceId,
-            geocoder: body.geocoder,
-            geoAccuracy: body.geoAccuracy,
             geocodedAt: body.geocodedAt,
             payment: body.payment,
+            distance: body.distance,
         });
 
         res.status(201).json(doc);

@@ -24,8 +24,8 @@ export interface IRide extends Document {
     // Optional provider metadata
     fromPlaceId?: string;
     toPlaceId?: string;
-    geocoder?: "mapbox" | "google" | "nominatim" | "pelias";
-    geoAccuracy?: number; // meters (lower is better)
+    distance: number;
+    geoAccuracy?: number;
     geocodedAt?: Date;
 
     datetime: Date;
@@ -88,7 +88,7 @@ const RideSchema = new Schema<IRide>(
         // Provider metadata
         fromPlaceId:      { type: String },
         toPlaceId:        { type: String },
-        geocoder:         { type: String, enum: ["mapbox", "google", "nominatim", "pelias"] },
+        distance:         { type: Number, min: 0 },
         geoAccuracy:      { type: Number, min: 0 },
         geocodedAt:       { type: Date },
 
