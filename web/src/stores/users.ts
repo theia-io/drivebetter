@@ -12,6 +12,7 @@ export type CreateUserRequest = {
     email: string;
     phone?: string;
     roles?: Role[];
+    password: string;
 };
 
 export type ReplaceUserRequest = {

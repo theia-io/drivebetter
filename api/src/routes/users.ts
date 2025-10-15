@@ -1,5 +1,7 @@
 import { Router, Request, Response } from "express";
 import User from "../models/user.model";
+import bcrypt from "bcryptjs";
+import {hashPassword} from "@/src/lib/crypto";
 
 const router = Router();
 
@@ -130,28 +132,77 @@ router.get("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [name, email]
  *             properties:
  *               name:
  *                 type: string
+ *                 example: Jane Doe
  *               email:
  *                 type: string
+ *                 format: email
+ *                 example: jane@example.com
  *               phone:
  *                 type: string
+ *                 example: "+1 555 123 4567"
  *               roles:
  *                 type: array
  *                 items:
  *                   type: string
+ *                   enum: [driver, dispatcher, client, admin]
+ *                 example: ["driver"]
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 description: Plaintext password; stored as a bcrypt hash server-side.
+ *                 example: "secret123"
  *     responses:
  *       201:
  *         description: User created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ *       409:
+ *         description: Email already in use
+ *       400:
+ *         description: Validation error
  */
 router.post("/", async (req: Request, res: Response) => {
     try {
-        const { name, email, phone, roles } = req.body;
-        const user = await User.create({ name, email, phone, roles });
-        res.status(201).json(user);
+        const { name, email, phone, roles, password } = req.body || {};
+
+        if (!name || !email) {
+            return res.status(400).json({ error: "name and email are required" });
+        }
+
+        // Ensure unique email
+        const exists = await User.findOne({ email }).lean();
+        if (exists) {
+            return res.status(409).json({ error: "Email already in use" });
+        }
+
+        let passwordHash: string | undefined = undefined;
+        if (password != null) {
+            if (typeof password !== "string" || password.length < 6) {
+                return res.status(400).json({ error: "password must be a string with at least 6 characters" });
+            }
+            passwordHash = await hashPassword(password);
+        }
+
+        const userDoc = await User.create({
+            name,
+            email,
+            phone,
+            roles,
+            passwordHash: passwordHash
+        });
+
+        const user = userDoc.toObject();
+        delete (user as any).passwordHash;
+
+        return res.status(201).json(user);
     } catch (err: any) {
-        res.status(400).json({ error: err.message });
+        return res.status(400).json({ error: err.message });
     }
 });
 

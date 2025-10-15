@@ -1,10 +1,7 @@
-// Common role definitions for users
 export type Role = "driver" | "dispatcher" | "client" | "admin";
 
-// Ride types
 export type RideType = "reservation" | "asap";
 
-// Ride statuses (aligned with MVP spec)
 export type RideStatus =
     | "unassigned"
     | "assigned"
@@ -13,10 +10,8 @@ export type RideStatus =
     | "pob"
     | "clear";
 
-// Payment methods
 export type PaymentMethod = "cash" | "card" | "qr";
 
-// Generic ID type (Mongo ObjectId as string)
 export type ID = string;
 
 // Basic place type

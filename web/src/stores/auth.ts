@@ -32,7 +32,18 @@ export const useAuthStore = create<AuthState>()(
                 } catch (e) {
                     console.error("[auth] login failed:", e);
                     set({ isAuthenticated: false, isLoading: false, user: null });
-                    return false;
+                    let errorMessage = "Login failed. Please try again.";
+
+                    if (e && typeof e === 'object') {
+                        if (e.error && typeof e.error === 'string') {
+                            errorMessage = e.error;
+                        }
+                        else if (e.message && typeof e.message === 'string') {
+                            errorMessage = e.message;
+                        }
+                    }
+
+                    throw new Error(errorMessage);
                 }
             },
 

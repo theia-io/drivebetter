@@ -10,16 +10,52 @@ const navigation = [
   // { name: 'Dashboard', href: '/dashboard' },
   // { name: 'Calendar', href: '/calendar' },
   // { name: 'Groups', href: '/groups' },
-  { name: 'Rides', href: '/rides' },
-  { name: 'Users', href: '/users' },
-  { name: 'Account', href: '/account' },
+    { name: 'Rides', href: '/rides', requiredRoles: ['driver', 'dispatcher', 'admin'] },
+    { name: 'Users', href: '/users', requiredRoles: ['admin', 'dispatcher'] },
+    { name: 'Account', href: '/account', requiredRoles: null },
 ]
 
-export default function Navigation() {
-  const pathname = usePathname()
-  const { user, logout } = useAuthStore()
+const getNavigationForUser= (item: typeof navigation[0], userRoles: string[] | undefined) => {
+    if (item.name !== 'Users') {
+        return item;
+    }
 
-  return (
+    const roles = userRoles || [];
+    const isAdmin = roles.includes('admin');
+    const isDispatcher = roles.includes('dispatcher');
+    if (isAdmin) {
+        return item;
+    }
+
+    if (isDispatcher) {
+        return {
+            ...item,
+            name: 'Drivers',
+            href: '/users?role=driver',
+        };
+    }
+
+    return item;
+};
+
+
+const hasRequiredRole = (userRoles: string[] | undefined, requiredRoles: string[] | null): boolean => {
+    if (!requiredRoles || requiredRoles.length === 0) {
+        return true;
+    }
+
+    return Array.isArray(userRoles) &&
+        requiredRoles.some(role => userRoles.includes(role));
+}
+
+
+
+export default function Navigation() {
+  const pathname = usePathname();
+  const { user, logout } = useAuthStore();
+  const userRoles = user?.roles;
+
+    return (
     <nav className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
@@ -28,7 +64,10 @@ export default function Navigation() {
               <h1 className="text-xl font-bold text-gray-900">DriveBetter</h1>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-              {navigation.map((item) => {
+              {navigation
+                  .filter(item => hasRequiredRole(userRoles, item.requiredRoles))
+                  .map(item => getNavigationForUser(item, userRoles))
+                  .map((item) => {
                 const isActive = pathname === item.href
                 return (
                   <Link

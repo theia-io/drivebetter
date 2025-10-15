@@ -166,9 +166,9 @@ router.post("/login", async (req: Request, res: Response) => {
     const ok = await verifyPassword(password, user.passwordHash);
     if (!ok) return res.status(401).json({ error: "Invalid credentials" });
 
-    if (REQUIRE_EMAIL_VERIFICATION && !user.emailVerified) {
-        return res.status(403).json({ error: "Email not verified" });
-    }
+    // if (REQUIRE_EMAIL_VERIFICATION && !user.emailVerified) {
+    //     return res.status(403).json({ error: "Email not verified" });
+    // }
 
     const accessToken = signAccessToken({ id: user.id, email: user.email, roles: user.roles });
     const refreshToken = signRefreshToken({ id: user.id, email: user.email, roles: user.roles });

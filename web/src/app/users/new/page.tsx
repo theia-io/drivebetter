@@ -4,19 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import { ArrowLeft, Save } from "lucide-react";
+import {ArrowLeft, Eye, EyeOff, Save} from "lucide-react";
 import {createUser, Role} from "@/stores/users";
 import { apiPost } from "@/services/http";
 import {VehicleType} from "@/types/driver-details";
 import { Field, FieldLabel, FieldError, inputClass } from "@/components/ui/commmon";
-
-/* ------------------------------- Types ------------------------------- */
 
 type NewUserForm = {
     name: string;
     email: string;
     phone: string;
     roles: string[];
+    password: string;
 };
 
 type DriverDetailsForm = {
@@ -45,13 +44,12 @@ type DriverDetailsForm = {
     licenseExpiry: string; // YYYY-MM-DD
 };
 
-/* ----------------------------- Initial State ----------------------------- */
-
 const initialUser: NewUserForm = {
     name: "",
     email: "",
     phone: "",
-    roles: ["driver"], // default new user as driver; adjust as needed
+    roles: ["driver"],
+    password: "",
 };
 
 const initialDriver: DriverDetailsForm = {
@@ -88,6 +86,7 @@ export default function NewUserWithDriverDetailsPage() {
     const [driver, setDriver] = useState<DriverDetailsForm>(initialDriver);
     const [submitting, setSubmitting] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [showPassword, setShowPassword] = useState(false);
 
     const setU = <K extends keyof NewUserForm>(k: K, v: NewUserForm[K]) =>
         setUser((s) => ({ ...s, [k]: v }));
@@ -99,7 +98,13 @@ export default function NewUserWithDriverDetailsPage() {
         if (!user.name.trim()) e.name = "Name is required";
         if (!user.email.trim()) e.email = "Email is required";
         if (!user.roles.length) e.roles = "At least one role";
-        // if includes driver, validate minimal driver fields
+
+        if (!user.password) {
+            e.password = "Password is required";
+        } else if (user.password.length < 8) {
+            e.password = "Password must be at least 8 characters";
+        }
+
         if (user.roles.includes("driver")) {
             if (!driver.vehicleType) e.vehicleType = "Vehicle type required";
             if (!driver.seatsTotal) e.seatsTotal = "Seats total required";
@@ -122,9 +127,9 @@ export default function NewUserWithDriverDetailsPage() {
                 email: user.email.trim(),
                 phone: user.phone.trim() || undefined,
                 roles: user.roles as Role[],
+                password: user.password,
             });
 
-            // 2) if role includes driver -> create driver details
             if (user.roles.includes("driver")) {
                 const payload = {
                     userId: created._id,
@@ -244,6 +249,29 @@ export default function NewUserWithDriverDetailsPage() {
                                             className={inputClass()}
                                             placeholder="+1 555 000 0000"
                                         />
+                                    </Field>
+                                    <Field>
+                                        <FieldLabel htmlFor="password">Password</FieldLabel>
+                                        {/* Wrapper for input and icon */}
+                                        <div className="relative">
+                                            <input
+                                                id="password"
+                                                type={showPassword ? "text" : "password"}
+                                                value={user.password}
+                                                onChange={(e) => setU("password", e.target.value)}
+                                                className={inputClass(errors.password) + " pr-10"} // Add padding for the icon
+                                                placeholder="Min. 8 characters"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(s => !s)}
+                                                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
+                                                aria-label={showPassword ? "Hide password" : "Show password"}
+                                            >
+                                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                            </button>
+                                        </div>
+                                        <FieldError message={errors.password} />
                                     </Field>
                                     <Field>
                                         <FieldLabel>Roles</FieldLabel>

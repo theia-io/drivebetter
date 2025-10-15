@@ -8,6 +8,7 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { Plus, Search, Users, Trash2, PencilLine, Eye } from "lucide-react";
 import { useUsers, deleteUser } from "@/stores/users";
+import {useAuthStore} from "@/stores";
 
 const qstring = (params: Record<string, any>) => {
     const sp = new URLSearchParams();
@@ -22,9 +23,17 @@ const qstring = (params: Record<string, any>) => {
 export default function UsersPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { user } = useAuthStore();
+    const userRoles = user?.roles || [];
+    const isAdmin = userRoles.includes("admin");
+    const isDispatcher = userRoles.includes("dispatcher");
+
+    // Define the role that should be forced in the query
+    // If Admin, forcedRole is null. If Dispatcher, forcedRole is 'driver'.
+    const forcedRole = isAdmin ? null : (isDispatcher ? "driver" : null);
 
     const [q, setQ] = useState(searchParams.get("q") || "");
-    const [role, setRole] = useState(searchParams.get("role") || "");
+    const [role, setRole] = useState(isAdmin ? (searchParams.get("role") || "") : (forcedRole || ""));
     const [page, setPage] = useState(Number(searchParams.get("page") || 1));
     const [limit, setLimit] = useState(Number(searchParams.get("limit") || 20));
 
@@ -43,7 +52,8 @@ export default function UsersPage() {
     }
 
     function applyFilters() {
-        const s = qstring({ q, role, page: 1, limit });
+        const effectiveRole = isAdmin ? role : forcedRole;
+        const s = qstring({ q, role: effectiveRole, page: 1, limit });
         router.replace(`/users${s}`);
         setPage(1);
         mutate();
@@ -61,18 +71,20 @@ export default function UsersPage() {
                             </div>
                             <div className="min-w-0">
                                 <Typography variant="h1" className="text-xl sm:text-3xl font-bold text-gray-900">
-                                    Users
+                                    {isAdmin ? "Users" : (isDispatcher ? "Drivers" : "Users")}
                                 </Typography>
                                 <Typography variant="body1" className="text-gray-600 text-sm">
                                     {isLoading ? "Loading…" : `${total} total`}
                                 </Typography>
                             </div>
                         </div>
-                        <div>
-                            <Button leftIcon={<Plus className="w-4 h-4" />}>
-                                <Link href="/users/new">New User</Link>
-                            </Button>
-                        </div>
+                        {isAdmin && (
+                            <div>
+                                <Button leftIcon={<Plus className="w-4 h-4" />}>
+                                    <Link href="/users/new">New User</Link>
+                                </Button>
+                            </div>
+                        )}
                     </div>
 
                     {/* Filters */}
@@ -89,17 +101,19 @@ export default function UsersPage() {
                                         className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                                     />
                                 </div>
-                                <select
-                                    value={role}
-                                    onChange={(e) => setRole(e.target.value)}
-                                    className="w-full sm:w-52 px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                                >
-                                    <option value="">All roles</option>
-                                    <option value="driver">driver</option>
-                                    <option value="dispatcher">dispatcher</option>
-                                    <option value="client">client</option>
-                                    <option value="admin">admin</option>
-                                </select>
+                                {isAdmin && (
+                                    <select
+                                        value={role}
+                                        onChange={(e) => setRole(e.target.value)}
+                                        className="w-full sm:w-52 px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                                    >
+                                        <option value="">All roles</option>
+                                        <option value="driver">driver</option>
+                                        <option value="dispatcher">dispatcher</option>
+                                        <option value="client">client</option>
+                                        <option value="admin">admin</option>
+                                    </select>
+                                )}
                                 <select
                                     value={limit}
                                     onChange={(e) => setLimit(Number(e.target.value))}
@@ -149,17 +163,21 @@ export default function UsersPage() {
                                                 <Link href={`/users/${u._id}`}>
                                                     <Button variant="outline" size="sm" leftIcon={<Eye className="w-4 h-4" />}>Details</Button>
                                                 </Link>
-                                                <Link href={`/users/${u._id}/edit`}>
-                                                    <Button variant="outline" size="sm" leftIcon={<PencilLine className="w-4 h-4" />}>Edit</Button>
-                                                </Link>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    leftIcon={<Trash2 className="w-4 h-4" />}
-                                                    onClick={() => onDelete(u._id)}
-                                                >
-                                                    Delete
-                                                </Button>
+                                                {isAdmin && (
+                                                    <>
+                                                        <Link href={`/users/${u._id}/edit`}>
+                                                            <Button variant="outline" size="sm" leftIcon={<PencilLine className="w-4 h-4" />}>Edit</Button>
+                                                        </Link>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            leftIcon={<Trash2 className="w-4 h-4" />}
+                                                            onClick={() => onDelete(u._id)}
+                                                        >
+                                                            Delete
+                                                        </Button>
+                                                    </>
+                                                )}
                                             </div>
                                         </Td>
                                     </tr>

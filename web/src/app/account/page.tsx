@@ -21,6 +21,7 @@ import {
   TrendingUp,
   Award
 } from 'lucide-react'
+import Link from "next/link";
 
 export default function AccountPage() {
   const { user } = useAuthStore()
@@ -60,7 +61,7 @@ export default function AccountPage() {
                 size="sm"
                 className="w-full sm:w-auto"
               >
-                Edit Profile
+                  <Link href={`/users/${user?._id}/edit`}>Edit Profile</Link>
               </Button>
             </div>
           </div>
@@ -88,7 +89,15 @@ export default function AccountPage() {
                     </Typography>
                     <div className="flex items-center mt-1 sm:mt-2">
                       <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400 mr-2" />
-                      <span className="text-xs sm:text-sm text-gray-600">{user?.roles || 'Driver'}</span>
+                        <div className="flex flex-wrap items-center">
+                            {user?.roles.map((role, index) => (
+                                <span
+                                    key={index}
+                                    className="ml-1 text-gray-600/80 bg-gray-100 px-2 py-0.5 rounded-full text-xs font-medium">
+                              {role.trim()}
+                            </span>
+                            ))}
+                        </div>
                     </div>
                   </div>
                   <div className="mt-3 sm:mt-0">
@@ -232,7 +241,7 @@ export default function AccountPage() {
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                       </label>
                     </div>
-                    
+
                     <div className="flex items-center justify-between">
                       <div className="flex items-center">
                         <Car className="w-5 h-5 text-gray-400 mr-3" />
