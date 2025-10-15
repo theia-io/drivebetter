@@ -9,7 +9,10 @@ type GeoPoint = {
 
 export interface IRide extends Document {
     creatorId?: Types.ObjectId | null;
-    clientId?: Types.ObjectId | null;
+    customer?: {
+        name: string;
+        phone?: string;
+    };
 
     // Display strings
     from: string;
@@ -73,7 +76,10 @@ const PointSchema = new Schema<GeoPoint>(
 const RideSchema = new Schema<IRide>(
     {
         creatorId:        { type: Schema.Types.ObjectId, ref: "User", default: null },
-        clientId:         { type: Schema.Types.ObjectId, ref: "Client", default: null },
+        customer: {
+            name:  { type: String, trim: true, required: false },
+            phone: { type: String, trim: true, required: false },
+        },
 
         // Display strings
         from:             { type: String, required: true },

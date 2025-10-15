@@ -100,7 +100,13 @@ router.get("/", async (req: Request, res: Response) => {
  *             required: [from, to, datetime]
  *             properties:
  *               creatorId: { type: string, description: "Dispatcher/User ID" }
- *               clientId: { type: string }
+ *               customer: {
+ *                 type: object,
+ *                 properties: {
+ *                   name:  { type: string },
+ *                   phone: { type: string }
+ *                 }
+ *               }
  *               distance: { type: number }
  *               driverEmail: { type: string, format: email, description: "Assign by driver email (optional)" }
  *               assignedDriverId: { type: string, description: "Assign by driver id (optional)" }
@@ -157,7 +163,10 @@ router.post("/", async (req: Request, res: Response) => {
 
         const doc = await Ride.create({
             creatorId: body.creatorId && isObjectId(body.creatorId) ? body.creatorId : undefined,
-            clientId: body.clientId && isObjectId(body.clientId) ? body.clientId : undefined,
+            customer: body.customer ? {
+                name: String(body.customer.name || "").trim(),
+                phone: body.customer.phone ? String(body.customer.phone).trim() : undefined,
+            } : undefined,
             from: body.from,
             to: body.to,
             stops: Array.isArray(body.stops) ? body.stops : [],

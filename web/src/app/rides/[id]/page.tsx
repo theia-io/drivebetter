@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import {ArrowLeft, Calendar, Clock, DollarSign, MapPin, Navigation, Trash2, User} from "lucide-react";
+import {ArrowLeft, Calendar, Clock, DollarSign, MapPin, Navigation, PhoneIcon, Trash2, User} from "lucide-react";
 import LeafletMap from "@/components/ui/maps/LeafletMap";
 import { useRide, useSetRideStatus, useDeleteRide } from "@/stores/rides";
 import { getRoute } from "@/stores/routes";
@@ -113,6 +113,11 @@ export default function RideDetailsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                 <div className="space-y-3">
                                     <div className="flex items-center text-sm text-gray-700">
+                                        <User className="w-4 h-4 mr-2 text-gray-400" />
+                                        <span className="font-medium mr-1">Customer Name:</span>
+                                        {ride.customer.name}
+                                    </div>
+                                    <div className="flex items-center text-sm text-gray-700">
                                         <Calendar className="w-4 h-4 mr-2 text-gray-400" />
                                         <span className="font-medium mr-1">When:</span>
                                         {fmtDate(ride.datetime)} • {fmtTime(ride.datetime)}
@@ -135,6 +140,11 @@ export default function RideDetailsPage() {
                                 </div>
 
                                 <div className="space-y-3">
+                                    <div className="flex items-center text-sm text-gray-700">
+                                        <PhoneIcon className="w-4 h-4 mr-2 text-gray-400" />
+                                        <span className="font-medium mr-1">Customer Phone:</span>
+                                        {ride.customer.phone}
+                                    </div>
                                     <div className="flex items-center text-sm text-gray-700">
                                         <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
                                         <span className="font-medium mr-1">Fare:</span>

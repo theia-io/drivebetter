@@ -34,7 +34,10 @@ export type EligibleDriverBody = {
 export type Ride = {
     _id: string;
     creatorId?: string | null;
-    clientId?: string | null;
+    customer?: {
+        name: string;
+        phone: string;
+    } | null;
     from: string;
     to: string;
     stops?: string[];
@@ -68,7 +71,10 @@ export type Ride = {
 
 export type CreateRideRequest = {
     creatorId?: string;
-    clientId?: string;
+    customer?: {
+        name: string;
+        phone: string;
+    };
     assignedDriverId?: string;
     driverEmail?: string; // optional convenience
     from: string;

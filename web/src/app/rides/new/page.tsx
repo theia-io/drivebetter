@@ -14,11 +14,15 @@ import { currentHourTimeInput, todayDateInput } from "@/services/datetime";
 import { VehicleType } from "@/types/driver-details";
 import { RideStatus, RideType } from "@/types/ride";
 import { Field, FieldLabel, FieldError, inputClass } from "@/components/ui/commmon";
+import {underline} from "next/dist/lib/picocolors";
 
 /* ------------------------------- Types ------------------------------- */
 
 interface RideFormValues {
-    clientId?: string;
+    customer?: {
+        name: string;
+        phone: string;
+    };
     fromLabel: string;
     toLabel: string;
     date: string; // YYYY-MM-DD
@@ -40,7 +44,10 @@ interface RideFormValues {
 /* ----------------------------- Initial State ----------------------------- */
 
 const initialValues: RideFormValues = {
-    clientId: undefined,
+    customer: {
+        name: "",
+        phone: "",
+    },
     fromLabel: "",
     toLabel: "",
     date: todayDateInput(),
@@ -97,7 +104,7 @@ export default function NewRidePage() {
 
             // Stage 1: create UNASSIGNED ride (no assignedDriverId here)
             const payload: any = {
-                clientId: values.clientId || undefined,
+                customer: values.customer || undefined,
                 from: values.fromLabel,
                 to: values.toLabel,
                 datetime: iso,
@@ -187,14 +194,30 @@ export default function NewRidePage() {
                             {/* Client (optional) */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <Field>
-                                    <FieldLabel htmlFor="client">Client (optional)</FieldLabel>
+                                    <FieldLabel htmlFor="client">Client Name</FieldLabel>
                                     <input
-                                        id="client"
+                                        id="customerName"
                                         type="text"
-                                        value={values.clientId || ""}
-                                        onChange={(e) => set("clientId", e.target.value)}
+                                        value={values.customer.name || ""}
+                                        onChange={(e) =>
+                                            set("customer", { ...(values.customer ?? { name: "", phone: "" }), name: e.target.value })
+                                        }
                                         className={inputClass()}
-                                        placeholder="Client name / phone / ID"
+                                        placeholder="Client name"
+                                    />
+                                </Field>
+
+                                <Field>
+                                    <FieldLabel htmlFor="client">Client Phone</FieldLabel>
+                                    <input
+                                        id="customerPhone"
+                                        type="text"
+                                        value={values.customer.phone || ""}
+                                        onChange={(e) =>
+                                            set("customer", { ...(values.customer ?? { name: "", phone: "" }), phone: e.target.value })
+                                        }
+                                        className={inputClass()}
+                                        placeholder="Client phone"
                                     />
                                 </Field>
 
