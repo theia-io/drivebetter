@@ -83,6 +83,9 @@ export const deleteUser = (id: string) =>
 export const listDriversPublic = () =>
     apiGet<DriverPublic[]>(`/users/drivers`);
 
+export const listDriverByIdPublic = (id: string) =>
+    apiGet<DriverPublic>(`/users/drivers/${id}`);
+
 /* -------------------------------- Hooks ------------------------------- */
 
 export function useUsers(params?: UsersListQuery) {
@@ -93,6 +96,10 @@ export function useUsers(params?: UsersListQuery) {
 export function useUser(id?: string) {
     const key = id ? `/users/${id}` : null;
     return useSWR<User>(key, () => getUser(id as string));
+}
+
+export function useDriverByIdPublic(id?: string) {
+    return useSWR<DriverPublic>(`${id}`, listDriverByIdPublic);
 }
 
 export function useDriversPublic() {

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useRidesInfinite } from "@/stores/rides";
 import {Ride} from "@/types";
+import AssignedDriverBadge from "@/components/ui/AssignedDriverBadge";
 
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
@@ -198,6 +199,7 @@ export default function RidesPage() {
                                             <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 text-gray-400 shrink-0" />
                                             <span className="truncate">{mins((ride as any).durationMinutes)}</span>
                                         </div>
+                                        <AssignedDriverBadge userId={ride.assignedDriverId as string | undefined} />
                                     </div>
 
                                     {/* Actions: full-width on mobile */}

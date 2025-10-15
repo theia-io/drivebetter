@@ -121,6 +121,7 @@ router.get("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
 });
 
 /**
+/**
  * @openapi
  * /users:
  *   post:
@@ -296,6 +297,44 @@ router.get("/drivers", async (_req: Request, res: Response) => {
         .lean();
     res.json(drivers);
 });
+
+/**
+ * @openapi
+ * /users/drivers/{id}:
+ *   get:
+ *     summary: List driver by ID (public fields)
+ *     tags: [Users]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Drivers
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   _id:   { type: string }
+ *                   name:  { type: string }
+ *                   email: { type: string }
+ *                   phone: { type: string }
+ *                   roles:
+ *                     type: array
+ *                     items: { type: string }
+ */
+router.get("/drivers/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
+    console.log(req.params.id);
+    const drivers = await User.findById(req.params.id)
+        .select({ _id: 1, name: 1, email: 1, phone: 1, roles: 1 })
+        .lean();
+    res.json(drivers);
+});
+
 
 /**
  * @openapi
