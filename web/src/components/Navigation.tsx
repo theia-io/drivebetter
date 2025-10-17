@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useMemo } from 'react'
 import { useAuthStore } from '@/stores/auth'
-import { ThemeToggle } from './ThemeToggle'
 import { Button } from './ui'
 import { Menu, X } from 'lucide-react'
 
@@ -96,7 +95,6 @@ export default function Navigation() {
                             >
                                 {user?.name}
                             </Link>
-                            <ThemeToggle />
                             <Button variant="outline" size="sm" onClick={logout}>
                                 Logout
                             </Button>
