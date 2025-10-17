@@ -80,11 +80,11 @@ export const updateUser = (id: string, payload: UpdateUserRequest) =>
 export const deleteUser = (id: string) =>
     apiDelete<void>(`/users/${id}`);
 
-export const listDriversPublic = () =>
-    apiGet<DriverPublic[]>(`/users/drivers`);
-
-export const listDriverByIdPublic = (id: string) =>
+export const getDriverByIdPublic = (id: string) =>
     apiGet<DriverPublic>(`/users/drivers/${id}`);
+
+export const listAllDriversPublic = () =>
+    apiGet<DriverPublic[]>(`/users/drivers`);
 
 export const getUserGroups = (id: string) =>
     apiGet<Group[]>(`/users/${id}/groups`);
@@ -99,7 +99,6 @@ export function useUsers(params?: UsersListQuery) {
     return useSWR<UsersPage>(key, () => listUsers(params));
 }
 
-
 export function useUser(id?: string) {
     const key = id ? `/users/${id}` : null;
     return useSWR<User>(key, () => getUser(id as string));
@@ -111,11 +110,11 @@ export function useUserGroups(id?: string) {
 }
 
 export function useDriverByIdPublic(id?: string) {
-    return useSWR<DriverPublic>(`${id}`, listDriverByIdPublic);
+    return useSWR<DriverPublic>(`/users/drivers/${id}`, getDriverByIdPublic);
 }
 
 export function useDriversPublic() {
-    return useSWR<DriverPublic[]>(`/users/drivers`, listDriversPublic);
+    return useSWR<DriverPublic[]>(`/users/drivers`, listAllDriversPublic);
 }
 export function useDriversPublicBatch(ids?: string[]) {
     const key =
@@ -129,7 +128,6 @@ export function useDriversPublicBatch(ids?: string[]) {
     );
 }
 
-// (optional) convenience: map by id for O(1) lookups in UI
 export function useDriversPublicBatchMap(ids?: string[]) {
     const { data, error, isLoading, mutate } = useDriversPublicBatch(ids);
     const map = (data || []).reduce<Record<string, DriverPublic>>((acc, d) => {

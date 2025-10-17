@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useState, useMemo } from 'react'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from './ui'
-import { Menu, X } from 'lucide-react'
+import {Menu, User, X} from 'lucide-react'
 
 type NavItem = {
     name: string
@@ -93,7 +93,7 @@ export default function Navigation() {
                                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                                 }`}
                             >
-                                {user?.name}
+                               <User size={24}/> {user?.name}
                             </Link>
                             <Button variant="outline" size="sm" onClick={logout}>
                                 Logout

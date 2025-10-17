@@ -1,8 +1,7 @@
-// src/routes/groups.router.ts
 import { Router, Request, Response } from "express";
 import { Types } from "mongoose";
 import { requireAuth, requireRole } from "../lib/auth";
-import Group from "@/src/models/group.model"; // <- replace with yours
+import Group from "../models/group.model";
 
 
 function pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Partial<T> {

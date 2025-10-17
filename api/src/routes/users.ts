@@ -1,10 +1,10 @@
 import { Router, Request, Response } from "express";
 import User from "../models/user.model";
 import bcrypt from "bcryptjs";
-import {hashPassword} from "@/src/lib/crypto";
+import {hashPassword} from "../lib/crypto";
 import {Types} from "mongoose";
-import {requireAuth} from "@/src/lib/auth";
-import Group from "@/src/models/group.model";
+import {requireAuth} from "../lib/auth";
+import Group from "../models/group.model";
 
 const router = Router();
 

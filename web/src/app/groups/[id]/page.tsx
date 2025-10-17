@@ -18,7 +18,7 @@ import {
     leaveGroup as apiLeaveGroup,
     updateGroupMembers as apiUpdateGroupMembers,
 } from "@/stores/groups";
-import {DriverPublic, useDriverByIdPublic, useDriversPublicBatch, useDriversPublicBatchMap} from "@/stores/users";
+import {useDriversPublicBatchMap} from "@/stores/users";
 
 type MemberLike =
     | string

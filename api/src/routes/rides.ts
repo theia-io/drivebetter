@@ -2,9 +2,9 @@ import { Router, Request, Response } from "express";
 import { Types } from "mongoose";
 import Ride from "../models/ride.model";
 import User from "../models/user.model";
-import {requireAuth, requireRole} from "@/src/lib/auth";
-import {hasRideExpired, IRideShare, RideShare} from "@/src/models/rideShare.model";
-import Group from "@/src/models/group.model";
+import {requireAuth, requireRole} from "../lib/auth";
+import {hasRideExpired, IRideShare, RideShare} from "../models/rideShare.model";
+import Group from "../models/group.model";
 
 const router = Router();
 const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
