@@ -2,9 +2,12 @@ import { Router, Request, Response } from "express";
 import { Types } from "mongoose";
 import Ride from "../models/ride.model";
 import User from "../models/user.model";
+import {requireAuth, requireRole} from "@/src/lib/auth";
+import {hasRideExpired, IRideShare, RideShare} from "@/src/models/rideShare.model";
+import Group from "@/src/models/group.model";
 
 const router = Router();
-
+const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
 const isObjectId = (v: any) => Types.ObjectId.isValid(String(v));
 
 /**
@@ -474,5 +477,203 @@ router.post("/:id([0-9a-fA-F]{24})/status", async (req: Request, res: Response) 
     if (!ride) return res.status(404).json({ error: "Ride not found" });
     res.json({ ok: true, ride });
 });
+
+
+/**
+ * @openapi
+ * /rides/{id}/share:
+ *   post:
+ *     summary: Create a ride share (link/ACL)
+ *     tags: [Rides, Shares]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [visibility]
+ *             properties:
+ *               visibility: { type: string, enum: ["public","groups","drivers"] }
+ *               groupIds:
+ *                 type: array
+ *                 items: { type: string }
+ *               driverIds:
+ *                 type: array
+ *                 items: { type: string }
+ *               expiresAt: { type: string, format: date-time, nullable: true }
+ *               maxClaims: { type: integer, minimum: 1 }
+ *               syncQueue: { type: boolean, default: true }
+ *     responses:
+ *       201:
+ *         description: Share created
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 shareId: { type: string }
+ *                 url: { type: string }
+ *                 visibility: { type: string }
+ *                 expiresAt: { type: string, format: date-time, nullable: true }
+ *                 maxClaims: { type: integer, nullable: true }
+ *                 status: { type: string }
+ *       400: { description: Validation error }
+ *       404: { description: Ride not found }
+ *       409: { description: Ride completed / cannot share }
+ */
+router.post(
+    "/rides/:id([0-9a-fA-F]{24})/share",
+    requireAuth,
+    requireRole(["dispatcher", "admin"]),
+    async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const { visibility, groupIds, driverIds, expiresAt, maxClaims, syncQueue = true } = req.body || {};
+        const ride = await Ride.findById(id).lean();
+        if (!ride) return res.status(404).json({ error: "Ride not found" });
+        if (["completed", "clear"].includes(ride.status)) {
+            return res.status(409).json({ error: "Ride is already completed/closed" });
+        }
+
+        // validate vis + targets
+        if (!["public", "groups", "drivers"].includes(visibility)) {
+            return res.status(400).json({ error: "Invalid visibility" });
+        }
+        if (visibility === "groups" && (!Array.isArray(groupIds) || groupIds.length === 0)) {
+            return res.status(400).json({ error: "groupIds required for groups visibility" });
+        }
+        if (visibility === "drivers" && (!Array.isArray(driverIds) || driverIds.length === 0)) {
+            return res.status(400).json({ error: "driverIds required for drivers visibility" });
+        }
+
+        // optional: pre-validate groups/drivers exist
+        if (visibility === "groups") {
+            const cnt = await Group.countDocuments({ _id: { $in: groupIds } });
+            if (cnt !== groupIds.length) return res.status(400).json({ error: "Some groups not found" });
+        }
+        if (visibility === "drivers") {
+            const cnt = await User.countDocuments({ _id: { $in: driverIds }, roles: { $in: ["driver"] } });
+            if (cnt !== driverIds.length) return res.status(400).json({ error: "Some drivers not found" });
+        }
+
+        const share = await RideShare.create({
+            rideId: id,
+            visibility,
+            groupIds,
+            driverIds,
+            expiresAt: expiresAt ? new Date(expiresAt) : null,
+            maxClaims: maxClaims ?? null,
+            syncQueue: !!syncQueue,
+            status: "active",
+            createdBy: (req as any).user.id,
+        });
+
+        // optionally sync queue: for drivers visibility, set queue to those drivers (keep existing order)
+        if (share.syncQueue && visibility === "drivers" && driverIds?.length) {
+            await Ride.findByIdAndUpdate(id, { $set: { queue: driverIds } });
+        }
+
+        const url = `${APP_BASE_URL}/ride-share/${share._id}`;
+        return res.status(201).json({
+            shareId: share._id,
+            url,
+            visibility: share.visibility,
+            expiresAt: share.expiresAt,
+            maxClaims: share.maxClaims ?? null,
+            status: share.status,
+        });
+    }
+);
+
+/**
+ * @openapi
+ * /rides/{id}/share:
+ *   get:
+ *     summary: Get active share(s) for ride
+ *     tags: [Rides, Shares]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Active shares
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   shareId: { type: string }
+ *                   visibility: { type: string }
+ *                   expiresAt: { type: string, format: date-time, nullable: true }
+ *                   maxClaims: { type: integer, nullable: true }
+ *                   claimsCount: { type: integer }
+ *                   status: { type: string }
+ *       404: { description: None }
+ */
+router.get(
+    "/rides/:id([0-9a-fA-F]{24})/share",
+    requireAuth,
+    requireRole(["dispatcher", "admin"]),
+    async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const shares = await RideShare.find({ rideId: id, status: { $in: ["active"] } })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        if (!shares.length) return res.status(404).json({ error: "No active shares" });
+
+        return res.json(
+            shares.map((s) => ({
+                shareId: s._id,
+                visibility: s.visibility,
+                expiresAt: s.expiresAt,
+                maxClaims: s.maxClaims ?? null,
+                claimsCount: s.claimsCount,
+                status: s.status,
+            }))
+        );
+    }
+);
+
+/**
+ * @openapi
+ * /rides/{id}/share:
+ *   delete:
+ *     summary: Revoke all active shares for a ride
+ *     tags: [Rides, Shares]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: Revoked, content: { application/json: { schema: { type: object, properties: { status: { type: string } } } } } }
+ *       404: { description: None }
+ */
+router.delete(
+    "/rides/:id([0-9a-fA-F]{24})/share",
+    requireAuth,
+    requireRole(["dispatcher", "admin"]),
+    async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const { modifiedCount } = await RideShare.updateMany(
+            { rideId: id, status: "active" },
+            { $set: { status: "revoked" } }
+        );
+        if (!modifiedCount) return res.status(404).json({ error: "No active shares" });
+        return res.json({ status: "revoked" });
+    }
+);
 
 export default router;

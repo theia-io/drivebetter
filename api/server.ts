@@ -7,6 +7,7 @@ import { env, validateEnv, getCorsOrigins, isDevelopment } from "./src/lib/env";
 
 import users from "./src/routes/users";
 import rides from "./src/routes/rides";
+import ridesShares from "./src/routes/ridesShares";
 import auth from "./src/routes/auth";
 import oauth from "./src/routes/oauth";
 import groups from "./src/routes/groups";
@@ -45,6 +46,7 @@ app.prepare().then(async () => {
   server.use("/api/v1/users", users);
     server.use("/api/v1/driver-details", drivers);
   server.use("/api/v1/rides", rides);
+  server.use("/api/v1/ride-shares", ridesShares);
   server.use("/api/v1/auth", auth);
   server.use("/api/v1/oauth", oauth);
   server.use("/api/v1/groups", groups);
