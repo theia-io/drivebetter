@@ -1,296 +1,342 @@
+// app/groups/new/page.tsx
 "use client";
 
-import useSWR from "swr";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import { Users, Plus, Search, Trash2, PencilLine, Eye } from "lucide-react";
-import { apiGet, apiDelete } from "@/services/http";
-import {Group} from "@/types";
+import { ArrowLeft, Save, Users as UsersIcon, Plus, X } from "lucide-react";
+import DriverCombobox from "@/components/ui/DriverCombobox";
+import { createGroup as apiCreateGroup } from "@/stores/groups";
+import type {CreateGroupRequest} from "@/types"; // uses your existing store/service
 
-/* ----------------------------- Types ----------------------------- */
+type Visibility = "public" | "private";
 
-type PageResp<T> = {
-    items: T[];
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
+type Form = {
+    name: string;
+    description: string;
+    type: string;
+    city: string;
+    location: string;
+    visibility: Visibility;
+    isInviteOnly: boolean;
+    tagsText: string;     // comma-separated
+    members: Array<{ _id: string; name?: string; email?: string }>;
 };
 
-/* ----------------------------- Helpers ----------------------------- */
-const qstring = (params: Record<string, any>) => {
-    const sp = new URLSearchParams();
-    Object.entries(params).forEach(([k, v]) => {
-        if (v === undefined || v === null || v === "") return;
-        sp.set(k, String(v));
-    });
-    const s = sp.toString();
-    return s ? `?${s}` : "";
+const initialForm: Form = {
+    name: "",
+    description: "",
+    type: "",
+    city: "",
+    location: "",
+    visibility: "public",
+    isInviteOnly: false,
+    tagsText: "",
+    members: [],
 };
 
-function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-    return (
-        <th
-            scope="col"
-            className={`px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider ${className}`}
-        >
-            {children}
-        </th>
-    );
-}
-function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-    return <td className={`px-4 py-3 text-sm text-gray-900 ${className}`}>{children}</td>;
-}
-
-/* ----------------------------- Page ----------------------------- */
-export default function GroupsPage() {
+export default function NewGroupPage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
+    const [form, setForm] = useState<Form>(initialForm);
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [saving, setSaving] = useState(false);
+    const [selectedDriver, setSelectedDriver] = useState<any | null>(null);
 
-    const [q, setQ] = useState(searchParams.get("q") || "");
-    const [type, setType] = useState(searchParams.get("type") || "");
-    const [active, setActive] = useState(searchParams.get("active") || "");
-    const [page, setPage] = useState(Number(searchParams.get("page") || 1));
-    const [limit, setLimit] = useState(Number(searchParams.get("limit") || 20));
+    const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((s) => ({ ...s, [k]: v }));
 
-    const key = useMemo(
-        () => `/groups${qstring({ q, type, active, page, limit })}`,
-        [q, type, active, page, limit]
-    );
-    const { data, isLoading, mutate } = useSWR<PageResp<Group>>(key, () => apiGet<PageResp<Group>>(key));
-
-    const items = data?.items ?? [];
-    const pages = data?.pages ?? 1;
-    const total = data?.total ?? 0;
-
-    async function onDelete(id: string) {
-        if (!confirm("Delete this group?")) return;
-        await apiDelete(`/groups/${id}`);
-        await mutate();
+    function validate(): Record<string, string> {
+        const e: Record<string, string> = {};
+        if (!form.name.trim()) e.name = "Name is required";
+        return e;
     }
 
-    function applyFilters() {
-        const s = qstring({ q, type, active, page: 1, limit });
-        router.replace(`/groups${s}`);
-        setPage(1);
-        mutate();
+    async function onSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        const eMap = validate();
+        setErrors(eMap);
+        if (Object.keys(eMap).length) return;
+
+        setSaving(true);
+        try {
+            const payload = {
+                name: form.name.trim(),
+                description: form.description.trim() || undefined,
+                type: form.type || undefined,
+                city: form.city || undefined,
+                location: form.location || undefined,
+                visibility: form.visibility as Visibility,
+                isInviteOnly: !!form.isInviteOnly,
+                tags: splitCSV(form.tagsText),
+                members: form.members.map((m) => m._id),
+            };
+
+            const created = await apiCreateGroup(payload as CreateGroupRequest);
+            if (!created) throw new Error("Failed to create group");
+            router.push(`/groups/${created._id}`);
+        } catch (err) {
+            console.error(err);
+            setErrors({ form: "Failed to create group" });
+            setSaving(false);
+        }
+    }
+
+    function onAddMember() {
+        if (!selectedDriver?._id) return;
+        const exists = form.members.some((m) => m._id === selectedDriver._id);
+        if (exists) {
+            setSelectedDriver(null);
+            return;
+        }
+        set("members", [
+            ...form.members,
+            { _id: selectedDriver._id, name: selectedDriver.name, email: selectedDriver.email },
+        ]);
+        setSelectedDriver(null);
+    }
+
+    function onRemoveMember(id: string) {
+        set("members", form.members.filter((m) => m._id !== id));
     }
 
     return (
         <ProtectedLayout>
-            <Container className="px-4 sm:px-6 lg:px-8">
-                <div className="space-y-6 sm:space-y-8">
-                    {/* Header */}
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Container className="px-3 sm:px-6 lg:px-8">
+                <div className="space-y-4 sm:space-y-6 max-w-3xl">
+                    {/* Toolbar */}
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+                            <Link href="/groups">Back</Link>
+                        </Button>
                         <div className="flex items-center gap-2">
                             <div className="p-2 bg-indigo-50 rounded-xl border border-indigo-200">
-                                <Users className="w-5 h-5 text-indigo-600" />
+                                <UsersIcon className="w-5 h-5 text-indigo-600" />
                             </div>
-                            <div className="min-w-0">
-                                <Typography variant="h1" className="text-xl sm:text-3xl font-bold text-gray-900">
-                                    Groups
-                                </Typography>
-                                <Typography variant="body1" className="text-gray-600 text-sm">
-                                    {isLoading ? "Loading…" : `${total} total`}
-                                </Typography>
-                            </div>
-                        </div>
-                        <div>
-                            <Button leftIcon={<Plus className="w-4 h-4" />}>
-                                <Link href="/groups/new">New Group</Link>
-                            </Button>
+                            <Typography className="text-base sm:text-2xl font-bold text-gray-900">
+                                Create Group
+                            </Typography>
                         </div>
                     </div>
 
-                    {/* Filters */}
+                    {errors.form && (
+                        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                            {errors.form}
+                        </div>
+                    )}
+
                     <Card variant="elevated">
                         <CardBody className="p-4 sm:p-6">
-                            <div className="flex flex-col sm:flex-row gap-3">
-                                <div className="relative flex-1">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                    <input
-                                        type="text"
-                                        value={q}
-                                        onChange={(e) => setQ(e.target.value)}
-                                        placeholder="Search by group name/city"
-                                        className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                                    />
+                            <form onSubmit={onSubmit} className="space-y-6" noValidate>
+                                {/* Basics */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Field>
+                                        <FieldLabel htmlFor="name">Name</FieldLabel>
+                                        <input
+                                            id="name"
+                                            value={form.name}
+                                            onChange={(e) => set("name", e.target.value)}
+                                            className={inputClass(errors.name)}
+                                            placeholder="Team LA Drivers"
+                                        />
+                                        <FieldError message={errors.name} />
+                                    </Field>
+
+                                    <Field>
+                                        <FieldLabel htmlFor="type">Type</FieldLabel>
+                                        <input
+                                            id="type"
+                                            value={form.type}
+                                            onChange={(e) => set("type", e.target.value)}
+                                            className={inputClass()}
+                                            placeholder="e.g., airport, corporate, nightly"
+                                        />
+                                    </Field>
+
+                                    <Field className="sm:col-span-2">
+                                        <FieldLabel htmlFor="description">Description</FieldLabel>
+                                        <textarea
+                                            id="description"
+                                            rows={3}
+                                            value={form.description}
+                                            onChange={(e) => set("description", e.target.value)}
+                                            className={inputClass()}
+                                            placeholder="Short description of what this group is about"
+                                        />
+                                    </Field>
                                 </div>
-                                <select
-                                    value={type}
-                                    onChange={(e) => setType(e.target.value)}
-                                    className="w-full sm:w-48 px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                                >
-                                    <option value="">All types</option>
-                                    <option value="local">local</option>
-                                    <option value="corporate">corporate</option>
-                                    <option value="global">global</option>
-                                </select>
-                                <select
-                                    value={active}
-                                    onChange={(e) => setActive(e.target.value)}
-                                    className="w-full sm:w-40 px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                                >
-                                    <option value="">All states</option>
-                                    <option value="true">Active</option>
-                                    <option value="false">Inactive</option>
-                                </select>
-                                <select
-                                    value={limit}
-                                    onChange={(e) => setLimit(Number(e.target.value))}
-                                    className="w-full sm:w-32 px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                                >
-                                    {[10, 20, 50, 100].map((n) => (
-                                        <option key={n} value={n}>
-                                            {n}/page
-                                        </option>
-                                    ))}
-                                </select>
-                                <Button variant="outline" onClick={applyFilters}>
-                                    Apply
-                                </Button>
-                            </div>
+
+                                {/* Location-ish */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Field>
+                                        <FieldLabel htmlFor="city">City</FieldLabel>
+                                        <input
+                                            id="city"
+                                            value={form.city}
+                                            onChange={(e) => set("city", e.target.value)}
+                                            className={inputClass()}
+                                            placeholder="Los Angeles"
+                                        />
+                                    </Field>
+                                    <Field>
+                                        <FieldLabel htmlFor="location">Location/Area</FieldLabel>
+                                        <input
+                                            id="location"
+                                            value={form.location}
+                                            onChange={(e) => set("location", e.target.value)}
+                                            className={inputClass()}
+                                            placeholder="LAX / Westside"
+                                        />
+                                    </Field>
+                                </div>
+
+                                {/* Visibility / Invite */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <Field>
+                                        <FieldLabel htmlFor="visibility">Visibility</FieldLabel>
+                                        <select
+                                            id="visibility"
+                                            value={form.visibility}
+                                            onChange={(e) => set("visibility", e.target.value as Visibility)}
+                                            className={inputClass()}
+                                        >
+                                            <option value="public">Public</option>
+                                            <option value="private">Private</option>
+                                        </select>
+                                    </Field>
+
+                                    <Field>
+                                        <FieldLabel htmlFor="invite">Invite Only</FieldLabel>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                id="invite"
+                                                type="checkbox"
+                                                checked={form.isInviteOnly}
+                                                onChange={(e) => set("isInviteOnly", e.target.checked)}
+                                            />
+                                            <span className="text-sm text-gray-700">Require invitations to join</span>
+                                        </div>
+                                    </Field>
+                                </div>
+
+                                {/* Tags */}
+                                <Field>
+                                    <FieldLabel htmlFor="tags">Tags (comma-separated)</FieldLabel>
+                                    <input
+                                        id="tags"
+                                        value={form.tagsText}
+                                        onChange={(e) => set("tagsText", e.target.value)}
+                                        className={inputClass()}
+                                        placeholder="airport, luxury, nights"
+                                    />
+                                </Field>
+
+                                {/* Members add */}
+                                <div className="space-y-2">
+                                    <FieldLabel>Initial Members (optional)</FieldLabel>
+                                    <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                                        <div className="flex-1 min-w-0">
+                                            <DriverCombobox
+                                                id="add-driver"
+                                                valueEmail={selectedDriver?.email || ""}
+                                                onChange={(driver: any | null) => setSelectedDriver(driver)}
+                                            />
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            leftIcon={<Plus className="w-4 h-4" />}
+                                            type="button"
+                                            onClick={onAddMember}
+                                            disabled={!selectedDriver?._id}
+                                        >
+                                            Add member
+                                        </Button>
+                                    </div>
+
+                                    {/* Chips */}
+                                    {!!form.members.length && (
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                            {form.members.map((m) => (
+                                                <span
+                                                    key={m._id}
+                                                    className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs bg-white"
+                                                    title={m.email || m._id}
+                                                >
+                          <span className="font-medium text-gray-900 truncate max-w-[10rem]">
+                            {m.name || m.email || `User ${m._id.slice(-6)}`}
+                          </span>
+                                                    {m.email && <span className="text-gray-600 truncate max-w-[10rem]">• {m.email}</span>}
+                                                    <button
+                                                        type="button"
+                                                        className="p-0.5 rounded hover:bg-gray-100"
+                                                        onClick={() => onRemoveMember(m._id)}
+                                                        aria-label={`Remove ${m.name || m.email || m._id}`}
+                                                    >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                                    <Button variant="outline">
+                                        <Link href="/groups">Cancel</Link>
+                                    </Button>
+                                    <Button type="submit" leftIcon={<Save className="w-4 h-4" />} disabled={saving}>
+                                        {saving ? "Creating…" : "Create Group"}
+                                    </Button>
+                                </div>
+                            </form>
                         </CardBody>
                     </Card>
-
-                    {/* Table (desktop) */}
-                    <div className="hidden md:block">
-                        <div className="overflow-hidden rounded-lg border border-gray-200">
-                            <table className="min-w-full divide-y divide-gray-200 bg-white">
-                                <thead className="bg-gray-50">
-                                <tr>
-                                    <Th>Name</Th>
-                                    <Th>Type</Th>
-                                    <Th>City</Th>
-                                    <Th>Members</Th>
-                                    <Th>Active</Th>
-                                    <Th className="text-right pr-4">Actions</Th>
-                                </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                {items.map((g) => (
-                                    <tr key={g._id} className="hover:bg-gray-50">
-                                        <Td className="font-medium">{g.name}</Td>
-                                        <Td className="capitalize">{g.type}</Td>
-                                        <Td>{g.city || "—"}</Td>
-                                        <Td>{typeof g.membersCount === "number" ? g.membersCount : g.members?.length ?? 0}</Td>
-                                        <Td>{g.isActive === false ? "No" : "Yes"}</Td>
-                                        <Td className="text-right">
-                                            <div className="flex items-center justify-end gap-2 pr-1">
-                                                <Link href={`/groups/${g._id}`}>
-                                                    <Button variant="outline" size="sm" leftIcon={<Eye className="w-4 h-4" />}>
-                                                        Details
-                                                    </Button>
-                                                </Link>
-                                                <Link href={`/groups/${g._id}/edit`}>
-                                                    <Button variant="outline" size="sm" leftIcon={<PencilLine className="w-4 h-4" />}>
-                                                        Edit
-                                                    </Button>
-                                                </Link>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    leftIcon={<Trash2 className="w-4 h-4" />}
-                                                    onClick={() => onDelete(g._id)}
-                                                >
-                                                    Delete
-                                                </Button>
-                                            </div>
-                                        </Td>
-                                    </tr>
-                                ))}
-                                {!items.length && (
-                                    <tr>
-                                        <td colSpan={6} className="p-6 text-center text-sm text-gray-600">
-                                            No groups
-                                        </td>
-                                    </tr>
-                                )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* Cards (mobile) */}
-                    <div className="grid md:hidden grid-cols-1 gap-3">
-                        {items.map((g) => (
-                            <Card key={g._id} variant="elevated" className="hover:shadow-lg transition-shadow">
-                                <CardBody className="p-4">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="min-w-0">
-                                            <div className="font-semibold text-gray-900">{g.name}</div>
-                                            <div className="text-sm text-gray-700">{g.city || "—"} • {g.type}</div>
-                                            <div className="text-xs text-gray-600 mt-1">
-                                                Members: {typeof g.membersCount === "number" ? g.membersCount : g.members?.length ?? 0} •{" "}
-                                                {g.isActive === false ? "Inactive" : "Active"}
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <Link href={`/groups/${g._id}`}>
-                                                <Button variant="outline" size="sm" leftIcon={<Eye className="w-4 h-4" />}>
-                                                    View
-                                                </Button>
-                                            </Link>
-                                            <Link href={`/groups/${g._id}/edit`}>
-                                                <Button variant="outline" size="sm" leftIcon={<PencilLine className="w-4 h-4" />}>
-                                                    Edit
-                                                </Button>
-                                            </Link>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                leftIcon={<Trash2 className="w-4 h-4" />}
-                                                onClick={() => onDelete(g._id)}
-                                            >
-                                                Delete
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </CardBody>
-                            </Card>
-                        ))}
-                        {!items.length && <div className="p-6 text-center text-sm text-gray-600">No groups</div>}
-                    </div>
-
-                    {/* Pagination */}
-                    <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-600">
-                            Page {page} / {pages}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    const p = Math.max(1, page - 1);
-                                    setPage(p);
-                                    router.replace(`/groups${qstring({ q, type, active, page: p, limit })}`);
-                                    mutate();
-                                }}
-                                disabled={page <= 1 || isLoading}
-                            >
-                                Prev
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    const p = Math.min(pages, page + 1);
-                                    setPage(p);
-                                    router.replace(`/groups${qstring({ q, type, active, page: p, limit })}`);
-                                    mutate();
-                                }}
-                                disabled={page >= pages || isLoading}
-                            >
-                                Next
-                            </Button>
-                        </div>
-                    </div>
                 </div>
             </Container>
         </ProtectedLayout>
     );
+}
+
+/* ----------------------------- UI primitives ---------------------------- */
+
+function Field({
+                   children,
+                   className = "",
+               }: {
+    children: React.ReactNode;
+    className?: string;
+}) {
+    return <div className={`space-y-1.5 ${className}`}>{children}</div>;
+}
+
+function FieldLabel({ htmlFor, children }: { htmlFor?: string; children: React.ReactNode }) {
+    return (
+        <label htmlFor={htmlFor} className="flex items-center text-sm font-medium text-gray-700">
+            {children}
+        </label>
+    );
+}
+
+function FieldError({ message }: { message?: string }) {
+    if (!message) return null;
+    return <p className="text-sm text-red-600">{message}</p>;
+}
+
+function inputClass(error?: string) {
+    return [
+        "w-full rounded-lg border px-3 py-2.5 text-sm sm:text-base",
+        "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
+        error ? "border-red-300" : "border-gray-300",
+    ].join(" ");
+}
+
+/* ----------------------------- helpers ---------------------------- */
+
+function splitCSV(s?: string): string[] | undefined {
+    if (!s) return [];
+    return s
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
 }
