@@ -3,6 +3,8 @@ import User from "../models/user.model";
 import bcrypt from "bcryptjs";
 import {hashPassword} from "@/src/lib/crypto";
 import {Types} from "mongoose";
+import {requireAuth} from "@/src/lib/auth";
+import Group from "@/src/models/group.model";
 
 const router = Router();
 
@@ -267,6 +269,81 @@ router.get("/", async (req: Request, res: Response) => {
 
     res.json({ items, page, limit, total, pages: Math.ceil(total / limit) });
 });
+
+/**
+ * @openapi
+ * /users/{id}/groups:
+ *   get:
+ *     summary: List groups a user belongs to
+ *     description: Returns groups where the user is a member. The caller must be the same user or have the `admin` or `dispatcher` role.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: List of groups
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   _id:          { type: string }
+ *                   name:         { type: string }
+ *                   description:  { type: string }
+ *                   type:         { type: string, enum: ["public", "private", "partner", "other"] }
+ *                   city:         { type: string }
+ *                   location:     { type: string }
+ *                   visibility:   { type: string, enum: ["public", "private", "restricted"] }
+ *                   isInviteOnly: { type: boolean }
+ *                   tags:
+ *                     type: array
+ *                     items: { type: string }
+ *                   createdAt:    { type: string, format: date-time }
+ *                   updatedAt:    { type: string, format: date-time }
+ *       401:
+ *         description: Unauthorized (missing/invalid token)
+ *       403:
+ *         description: Forbidden (not the same user and lacks admin/dispatcher)
+ */
+router.get("/:id([0-9a-fA-F]{24})/groups", requireAuth,
+    async (req: Request, res: Response) => {
+        const targetUserId = req.params.id;
+        console.log(targetUserId);
+        const me = (req as any).user as { id: string; roles: string[] };
+
+        const isSelf = me?.id === targetUserId;
+        const isPrivileged = me?.roles?.some((r) => r === "admin" || r === "dispatcher");
+        if (!isSelf && !isPrivileged) {
+            return res.status(403).json({ error: "Forbidden" });
+        }
+
+        const groups = await Group.find({ members: targetUserId })
+            .select({
+                _id: 1,
+                name: 1,
+                description: 1,
+                type: 1,
+                city: 1,
+                location: 1,
+                visibility: 1,
+                isInviteOnly: 1,
+                tags: 1,
+                createdAt: 1,
+                updatedAt: 1,
+            })
+            .lean();
+
+        return res.json(groups);
+    }
+);
 
 /**
  * @openapi

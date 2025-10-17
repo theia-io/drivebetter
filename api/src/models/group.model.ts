@@ -48,6 +48,7 @@ const GroupSchema = new Schema<IGroup>(
 
 GroupSchema.index({ name: "text", description: "text", city: "text", location: "text", tags: "text" });
 GroupSchema.index({ visibility: 1, isInviteOnly: 1, type: 1, city: 1 });
+GroupSchema.index({ members: 1 });
 
 const Group: Model<IGroup> = mongoose.models.Group || mongoose.model<IGroup>("Group", GroupSchema);
 export default Group;

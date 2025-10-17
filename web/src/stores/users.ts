@@ -1,7 +1,7 @@
 // web/ui/src/services/users.ts
 import useSWR from "swr";
 import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from "@/services/http";
-import {User} from "@/types";
+import {Group, User} from "@/types";
 
 /* ------------------------------- Types ------------------------------- */
 
@@ -86,6 +86,9 @@ export const listDriversPublic = () =>
 export const listDriverByIdPublic = (id: string) =>
     apiGet<DriverPublic>(`/users/drivers/${id}`);
 
+export const getUserGroups = (id: string) =>
+    apiGet<Group[]>(`/users/${id}/groups`);
+
 export const listDriversPublicBatch = (ids: string[]) =>
     apiPost<DriverPublic[]>(`/users/drivers/batch`, { ids });
 
@@ -100,6 +103,11 @@ export function useUsers(params?: UsersListQuery) {
 export function useUser(id?: string) {
     const key = id ? `/users/${id}` : null;
     return useSWR<User>(key, () => getUser(id as string));
+}
+
+export function useUserGroups(id?: string) {
+    const key = id ? `/users/${id}/groups` : null;
+    return useSWR<Group[]>(key, () => getUserGroups(id as string));
 }
 
 export function useDriverByIdPublic(id?: string) {

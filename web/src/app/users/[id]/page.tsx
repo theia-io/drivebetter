@@ -2,10 +2,10 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import {useParams, useRouter} from "next/navigation";
 import {useMemo, useState, useEffect} from "react";
 import ProtectedLayout from "@/components/ProtectedLayout";
-import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
+import {Button, Card, CardBody, Container, Typography} from "@/components/ui";
 import {
     ArrowLeft,
     PencilLine,
@@ -15,20 +15,21 @@ import {
     Car,
     GaugeCircle,
     ChevronDown,
-    ChevronRight, Settings, Languages
+    ChevronRight, Settings, Languages, TagIcon, UsersIcon, MapPin, Globe, Lock
 } from "lucide-react";
-import { useUser, deleteUser } from "@/stores/users";
+import {useUser, deleteUser, useUserGroups} from "@/stores/users";
 import {useDriverDetailsByUser} from "@/stores/driver-details";
 import {arr, KV, num, Section, bool} from "@/components/ui/commmon";
 
 const dt = (iso?: string) => (iso ? new Date(iso).toLocaleString() : "—");
 
 export default function UserDetailsPage() {
-    const { id } = useParams<{ id: string }>();
+    const {id} = useParams<{ id: string }>();
     const router = useRouter();
-    const { data: user, isLoading, mutate } = useUser(id);
+    const {data: user, isLoading, mutate} = useUser(id);
 
     const isDriver = useMemo(() => (user?.roles || []).includes("driver"), [user]);
+    const { data: groups, isLoading: groupsLoading } = useUserGroups(id);
 
     const [showDriver, setShowDriver] = useState(false);
     const {
@@ -58,14 +59,14 @@ export default function UserDetailsPage() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                leftIcon={<ArrowLeft className="w-4 h-4" />}
+                                leftIcon={<ArrowLeft className="w-4 h-4"/>}
                                 onClick={() => router.push("/users")}
                             >
                                 Back
                             </Button>
                             <div className="flex items-center gap-2 min-w-0">
                                 <div className="p-2 bg-indigo-50 rounded-xl border border-indigo-200">
-                                    <Users className="w-5 h-5 text-indigo-600" />
+                                    <Users className="w-5 h-5 text-indigo-600"/>
                                 </div>
                                 <div className="min-w-0">
                                     <Typography className="text-xs text-gray-500">User</Typography>
@@ -80,14 +81,14 @@ export default function UserDetailsPage() {
                         </div>
                         <div className="flex items-center gap-2">
                             <Link href={`/users/${id}/edit`}>
-                                <Button variant="outline" size="sm" leftIcon={<PencilLine className="w-4 h-4" />}>
+                                <Button variant="outline" size="sm" leftIcon={<PencilLine className="w-4 h-4"/>}>
                                     Edit
                                 </Button>
                             </Link>
                             <Button
                                 variant="outline"
                                 size="sm"
-                                leftIcon={<Trash2 className="w-4 h-4" />}
+                                leftIcon={<Trash2 className="w-4 h-4"/>}
                                 onClick={onDelete}
                                 disabled={isLoading || !user}
                             >
@@ -101,9 +102,9 @@ export default function UserDetailsPage() {
                         <CardBody className="p-4 sm:p-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                 <div className="space-y-3">
-                                    <KV k="Name" v={user?.name} />
-                                    <KV k="Email" v={user?.email} />
-                                    <KV k="Phone" v={user?.phone || "—"} />
+                                    <KV k="Name" v={user?.name}/>
+                                    <KV k="Email" v={user?.email}/>
+                                    <KV k="Phone" v={user?.phone || "—"}/>
                                     <div>
                                         <div className="text-sm text-gray-500">Roles</div>
                                         <div className="mt-1 flex flex-wrap gap-1">
@@ -119,12 +120,103 @@ export default function UserDetailsPage() {
                                 </div>
 
                                 <div className="space-y-3">
-                                    <KV k="Created" v={dt(user?.createdAt)} />
-                                    <KV k="Updated" v={dt(user?.updatedAt)} />
+                                    <KV k="Created" v={dt(user?.createdAt)}/>
+                                    <KV k="Updated" v={dt(user?.updatedAt)}/>
                                 </div>
                             </div>
                         </CardBody>
                     </Card>
+                    {/* Groups */}
+                    <Card variant="elevated">
+                        <CardBody className="p-4 sm:p-6">
+                            <div className="flex items-center gap-2 mb-3">
+                                <UsersIcon className="w-4 h-4 text-indigo-600" />
+                                <Typography className="font-semibold text-gray-900">Groups</Typography>
+                            </div>
+
+                            {groupsLoading ? (
+                                <div className="text-sm text-gray-600">Loading groups…</div>
+                            ) : !groups?.length ? (
+                                <div className="text-sm text-gray-600">This user is not a member of any groups.</div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                                    {groups.map((g) => {
+                                        const isPrivate = g.visibility === "private" || g.isInviteOnly;
+                                        const memberCount = (g as any).members?.length ?? (g as any).membersCount ?? undefined;
+                                        return (
+                                            <div
+                                                key={g._id}
+                                                className="group rounded-xl border border-gray-200 bg-white p-4 hover:shadow-md transition-shadow"
+                                            >
+                                                {/* Header */}
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <Link
+                                                        href={`/groups/${g._id}`}
+                                                        className="font-semibold text-gray-900 hover:text-indigo-700 hover:underline truncate"
+                                                        title={g.name}
+                                                    >
+                                                        {g.name}
+                                                    </Link>
+                                                    <span
+                                                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium border
+                    ${isPrivate
+                                                            ? "bg-amber-50 text-amber-800 border-amber-200"
+                                                            : "bg-green-50 text-green-800 border-green-200"}`}
+                                                        title={isPrivate ? "Invite only / private" : "Public"}
+                                                    >
+                  {isPrivate ? <Lock className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}
+                                                        {isPrivate ? "Private" : "Public"}
+                </span>
+                                                </div>
+
+                                                {/* Meta */}
+                                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                                                    {(g.city || g.location) && (
+                                                        <span className="inline-flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                    <span className="truncate">{g.city || g.location}</span>
+                  </span>
+                                                    )}
+                                                    {typeof memberCount === "number" && (
+                                                        <span className="inline-flex items-center gap-1">
+                    <UsersIcon className="w-3.5 h-3.5 text-gray-400" />
+                                                            {memberCount}
+                  </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Description */}
+                                                {g.description && (
+                                                    <p className="mt-2 text-sm text-gray-700 line-clamp-2">{g.description}</p>
+                                                )}
+
+                                                {/* Tags */}
+                                                {!!g.tags?.length && (
+                                                    <div className="mt-3 flex flex-wrap gap-1.5">
+                  <span className="inline-flex items-center gap-1 text-[11px] text-gray-500">
+                    <TagIcon className="w-3.5 h-3.5" /> Tags:
+                  </span>
+                                                        {g.tags.slice(0, 6).map((t) => (
+                                                            <span
+                                                                key={t}
+                                                                className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-700"
+                                                            >
+                      {t}
+                    </span>
+                                                        ))}
+                                                        {g.tags.length > 6 && (
+                                                            <span className="text-[11px] text-gray-500">+{g.tags.length - 6} more</span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </CardBody>
+                    </Card>
+
                     {isDriver && (
                         <Card variant="elevated">
                             <CardBody className="p-4 sm:p-6">
@@ -134,16 +226,16 @@ export default function UserDetailsPage() {
                                     className="w-full flex items-center justify-between text-left"
                                 >
                                     <div className="flex items-center gap-2">
-                                        <CircleUser className="w-4 h-4 text-gray-600" />
+                                        <CircleUser className="w-4 h-4 text-gray-600"/>
                                         <Typography className="font-semibold text-gray-900">Driver Details</Typography>
                                         <span className="text-xs text-gray-500">
                       {ddLoading ? "Loading…" : dd ? "" : "(no profile yet)"}
                     </span>
                                     </div>
                                     {showDriver ? (
-                                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                                        <ChevronDown className="w-4 h-4 text-gray-500"/>
                                     ) : (
-                                        <ChevronRight className="w-4 h-4 text-gray-500" />
+                                        <ChevronRight className="w-4 h-4 text-gray-500"/>
                                     )}
                                 </button>
 
@@ -151,7 +243,8 @@ export default function UserDetailsPage() {
                                     <div className="mt-4 space-y-4">
                                         {/* If no profile */}
                                         {!dd && !ddLoading && (
-                                            <div className="flex items-center justify-between rounded-lg border border-dashed border-gray-300 p-4">
+                                            <div
+                                                className="flex items-center justify-between rounded-lg border border-dashed border-gray-300 p-4">
                                                 <div className="text-sm text-gray-700">
                                                     This user doesn’t have driver details yet.
                                                 </div>
@@ -164,29 +257,29 @@ export default function UserDetailsPage() {
                                         {/* Compact summary when present */}
                                         {dd && (
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                                                <Section title="Vehicle" icon={<Car className="w-4 h-4" />}>
-                                                    <KV k="Make" v={dd.vehicle?.make} />
-                                                    <KV k="Model" v={dd.vehicle?.model} />
-                                                    <KV k="Year" v={num(dd.vehicle?.year)} />
-                                                    <KV k="Type" v={dd.vehicle?.type} />
-                                                    <KV k="Plate" v={dd.vehicle?.plate} />
+                                                <Section title="Vehicle" icon={<Car className="w-4 h-4"/>}>
+                                                    <KV k="Make" v={dd.vehicle?.make}/>
+                                                    <KV k="Model" v={dd.vehicle?.model}/>
+                                                    <KV k="Year" v={num(dd.vehicle?.year)}/>
+                                                    <KV k="Type" v={dd.vehicle?.type}/>
+                                                    <KV k="Plate" v={dd.vehicle?.plate}/>
                                                 </Section>
 
-                                                <Section title="Capacity" icon={<GaugeCircle className="w-4 h-4" />}>
-                                                    <KV k="Seats" v={num(dd.capacity?.seatsTotal)} />
-                                                    <KV k="Max Pax" v={num(dd.capacity?.maxPassengers)} />
-                                                    <KV k="Luggage (L)" v={num(dd.capacity?.luggageCapacity)} />
+                                                <Section title="Capacity" icon={<GaugeCircle className="w-4 h-4"/>}>
+                                                    <KV k="Seats" v={num(dd.capacity?.seatsTotal)}/>
+                                                    <KV k="Max Pax" v={num(dd.capacity?.maxPassengers)}/>
+                                                    <KV k="Luggage (L)" v={num(dd.capacity?.luggageCapacity)}/>
                                                 </Section>
 
-                                                <Section title="Features" icon={<Settings className="w-4 h-4" />}>
-                                                    <KV k="Pet Friendly" v={bool(dd.features?.petFriendly)} />
-                                                    <KV k="Baby Seat" v={bool(dd.features?.babySeat)} />
-                                                    <KV k="Wheelchair" v={bool(dd.features?.wheelchairAccessible)} />
+                                                <Section title="Features" icon={<Settings className="w-4 h-4"/>}>
+                                                    <KV k="Pet Friendly" v={bool(dd.features?.petFriendly)}/>
+                                                    <KV k="Baby Seat" v={bool(dd.features?.babySeat)}/>
+                                                    <KV k="Wheelchair" v={bool(dd.features?.wheelchairAccessible)}/>
                                                 </Section>
 
-                                                <Section title="Languages" icon={<Languages className="w-4 h-4" />}>
-                                                    <KV k="Primary" v={dd.languages?.primary} />
-                                                    <KV k="Other" v={arr(dd.languages?.list)} />
+                                                <Section title="Languages" icon={<Languages className="w-4 h-4"/>}>
+                                                    <KV k="Primary" v={dd.languages?.primary}/>
+                                                    <KV k="Other" v={arr(dd.languages?.list)}/>
                                                 </Section>
                                             </div>
                                         )}
@@ -196,7 +289,8 @@ export default function UserDetailsPage() {
                                                 <Button variant="outline" size="sm">Open Full Profile</Button>
                                             </Link>
                                             <Link href={`/driver-details/by-user/${id}/edit`}>
-                                                <Button size="sm" variant="outline" leftIcon={<PencilLine className="w-4 h-4" />}>
+                                                <Button size="sm" variant="outline"
+                                                        leftIcon={<PencilLine className="w-4 h-4"/>}>
                                                     Edit
                                                 </Button>
                                             </Link>
