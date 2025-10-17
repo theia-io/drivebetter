@@ -86,12 +86,16 @@ export const listDriversPublic = () =>
 export const listDriverByIdPublic = (id: string) =>
     apiGet<DriverPublic>(`/users/drivers/${id}`);
 
+export const listDriversPublicBatch = (ids: string[]) =>
+    apiPost<DriverPublic[]>(`/users/drivers/batch`, { ids });
+
 /* -------------------------------- Hooks ------------------------------- */
 
 export function useUsers(params?: UsersListQuery) {
     const key = `/users${qs(params)}`;
     return useSWR<UsersPage>(key, () => listUsers(params));
 }
+
 
 export function useUser(id?: string) {
     const key = id ? `/users/${id}` : null;
@@ -104,4 +108,25 @@ export function useDriverByIdPublic(id?: string) {
 
 export function useDriversPublic() {
     return useSWR<DriverPublic[]>(`/users/drivers`, listDriversPublic);
+}
+export function useDriversPublicBatch(ids?: string[]) {
+    const key =
+        ids && ids.length
+            ? [`/users/drivers/batch`, ...ids] // include ids in the SWR key for caching
+            : null;
+
+    return useSWR<DriverPublic[]>(
+        key,
+        () => listDriversPublicBatch(ids as string[])
+    );
+}
+
+// (optional) convenience: map by id for O(1) lookups in UI
+export function useDriversPublicBatchMap(ids?: string[]) {
+    const { data, error, isLoading, mutate } = useDriversPublicBatch(ids);
+    const map = (data || []).reduce<Record<string, DriverPublic>>((acc, d) => {
+        acc[d._id] = d;
+        return acc;
+    }, {});
+    return { data, map, error, isLoading, mutate };
 }

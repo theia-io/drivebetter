@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import User from "../models/user.model";
 import bcrypt from "bcryptjs";
 import {hashPassword} from "@/src/lib/crypto";
+import {Types} from "mongoose";
 
 const router = Router();
 
@@ -333,6 +334,96 @@ router.get("/drivers/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) 
         .select({ _id: 1, name: 1, email: 1, phone: 1, roles: 1 })
         .lean();
     res.json(drivers);
+});
+
+/**
+ * @openapi
+ * /users/drivers/batch:
+ *   post:
+ *     summary: Get public driver fields by a list of user IDs
+ *     description: |
+ *       Returns public fields for the provided user IDs. Results are ordered to match the input list.
+ *       Invalid ObjectIds and non-existent IDs are ignored.
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [ids]
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 minItems: 1
+ *                 maxItems: 200
+ *                 items:
+ *                   type: string
+ *                   description: MongoDB ObjectId of a user
+ *             example:
+ *               ids: ["60f7c2a9d2c3a31b8c8b4567", "60f7c2a9d2c3a31b8c8b4568"]
+ *     responses:
+ *       200:
+ *         description: Array of public driver fields, ordered like the input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   _id:   { type: string }
+ *                   name:  { type: string }
+ *                   email: { type: string }
+ *                   phone: { type: string }
+ *                   roles:
+ *                     type: array
+ *                     items: { type: string }
+ *       400:
+ *         description: Bad request (e.g., missing or too many IDs)
+ */
+router.post("/drivers/batch", async (req: Request, res: Response) => {
+    try {
+        const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
+
+        if (!ids.length) {
+            return res.status(400).json({ error: "ids must be a non-empty array of strings" });
+        }
+        if (ids.length > 200) {
+            return res.status(400).json({ error: "Too many ids; max 200 per request" });
+        }
+
+        // Validate ObjectIds and dedupe while keeping first occurrence order
+        const seen = new Set<string>();
+        const validIds: string[] = [];
+        for (const id of ids) {
+            if (typeof id !== "string") continue;
+            if (!Types.ObjectId.isValid(id)) continue;
+            if (!seen.has(id)) {
+                seen.add(id);
+                validIds.push(id);
+            }
+        }
+
+        if (!validIds.length) {
+            return res.json([]); // nothing valid to fetch
+        }
+
+        const docs = await User.find({ _id: { $in: validIds } })
+            .select({ _id: 1, name: 1, email: 1, phone: 1, roles: 1 })
+            .lean();
+
+        // Map results by id for O(1) lookups, then order as per input (skipping missing)
+        const byId = new Map(docs.map((d: any) => [String(d._id), d]));
+        const ordered = ids
+            .filter((id: string) => byId.has(id))
+            .map((id: string) => byId.get(id));
+
+        res.json(ordered);
+    } catch (err: any) {
+        console.error("drivers batch error:", err);
+        res.status(500).json({ error: "Internal server error" });
+    }
 });
 
 

@@ -9,7 +9,7 @@ import { Button } from './ui'
 const navigation = [
   // { name: 'Dashboard', href: '/dashboard' },
   // { name: 'Calendar', href: '/calendar' },
-  // { name: 'Groups', href: '/groups' },
+    { name: 'Groups', href: '/groups', requiredRoles: ['driver', 'dispatcher', 'admin'] },
     { name: 'Rides', href: '/rides', requiredRoles: ['driver', 'dispatcher', 'admin'] },
     { name: 'Users', href: '/users', requiredRoles: ['admin', 'dispatcher'] },
     { name: 'Account', href: '/account', requiredRoles: null },

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
-import { Button, Card, CardBody, Container, Typography, Badge } from "@/components/ui";
+import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { Users, Plus, Search, Trash2, PencilLine, Eye } from "lucide-react";
 import { apiGet, apiDelete } from "@/services/http";
 import {Group} from "@/types";

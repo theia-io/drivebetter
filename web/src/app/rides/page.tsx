@@ -171,14 +171,13 @@ export default function RidesPage() {
                                                 </div>
                                             </div>
                                         </div>
-                                        <span
-                                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] sm:text-xs font-medium border ${getStatusColor(
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] sm:text-xs font-medium border ${getStatusColor(
                                                 ride.status
-                                            )}`}
-                                        >
+                                            )}`}>
                   {getStatusIcon(ride.status)}
-                                            <span className="ml-1 capitalize">{ride.status.replace(/_/g, " ")}</span>
-                </span>
+                                            <span className="ml-1 capitalize">{ride.status.replace(/_/g, " ")}
+                                            </span>
+                                        </span>
                                     </div>
 
                                     {/* Secondary meta: stack on mobile */}

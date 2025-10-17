@@ -1,311 +1,79 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
+// web/ui/src/services/groups.ts
+import useSWR from "swr";
+import { apiGet, apiPost, apiPatch, apiDelete } from "@/services/http";
 import type { Group, CreateGroupRequest, UpdateGroupRequest, GroupActivity } from "@/types/group";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api/v1";
+/* ------------------------------ Helpers ------------------------------ */
 
-interface GroupsState {
-  groups: Group[];
-  groupActivity: GroupActivity[];
-  isLoading: boolean;
-  error: string | null;
-  
-  // Actions
-  fetchGroups: () => Promise<void>;
-  fetchGroup: (id: string) => Promise<Group | null>;
-  createGroup: (group: CreateGroupRequest) => Promise<Group | null>;
-  updateGroup: (id: string, updates: UpdateGroupRequest) => Promise<Group | null>;
-  deleteGroup: (id: string) => Promise<boolean>;
-  joinGroup: (groupId: string) => Promise<boolean>;
-  leaveGroup: (groupId: string) => Promise<boolean>;
-  
-  // Activity
-  fetchGroupActivity: () => Promise<void>;
-  
-  // Filtering and search
-  searchGroups: (query: string) => Group[];
-  filterGroupsByType: (type: string) => Group[];
-  filterGroupsByCity: (city: string) => Group[];
-  
-  // Clear state
-  clearError: () => void;
-  clearGroups: () => void;
-}
-
-const getAuthHeaders = () => {
-  const token = localStorage.getItem("accessToken");
-  return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-  };
+const qs = (params?: Record<string, any>) => {
+    if (!params) return "";
+    const sp = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+        if (v === undefined || v === null || v === "") return;
+        sp.set(k, String(v));
+    });
+    const s = sp.toString();
+    return s ? `?${s}` : "";
 };
 
-export const useGroupsStore = create<GroupsState>()(
-  persist(
-    (set, get) => ({
-      groups: [],
-      groupActivity: [],
-      isLoading: false,
-      error: null,
+/* -------------------------------- API -------------------------------- */
 
-      async fetchGroups() {
-        set({ isLoading: true, error: null });
-        try {
-          const res = await fetch(`${API_BASE}/groups`, {
-            headers: getAuthHeaders(),
-          });
-          
-          if (!res.ok) {
-            throw new Error(`Failed to fetch groups: ${res.statusText}`);
-          }
-          
-          const groups: Group[] = await res.json();
-          set({ groups, isLoading: false });
-        } catch (error) {
-          console.error("[groups] fetchGroups failed:", error);
-          set({ 
-            error: error instanceof Error ? error.message : "Failed to fetch groups",
-            isLoading: false 
-          });
-        }
-      },
+export type GroupsListQuery = {
+    q?: string;
+    type?: string;
+    city?: string;
+    page?: number;   // optional if your API supports paging
+    limit?: number;  // optional
+};
 
-      async fetchGroup(id: string) {
-        set({ isLoading: true, error: null });
-        try {
-          const res = await fetch(`${API_BASE}/groups/${id}`, {
-            headers: getAuthHeaders(),
-          });
-          
-          if (!res.ok) {
-            throw new Error(`Failed to fetch group: ${res.statusText}`);
-          }
-          
-          const group: Group = await res.json();
-          set({ isLoading: false });
-          
-          // Update the group in the list if it exists
-          const { groups } = get();
-          const updatedGroups = groups.map(g => g.id === id ? group : g);
-          set({ groups: updatedGroups });
-          
-          return group;
-        } catch (error) {
-          console.error("[groups] fetchGroup failed:", error);
-          set({ 
-            error: error instanceof Error ? error.message : "Failed to fetch group",
-            isLoading: false 
-          });
-          return null;
-        }
-      },
+export const listGroups = (params?: GroupsListQuery) =>
+    apiGet<Group[]>(`/groups${qs(params)}`);
 
-      async createGroup(groupData: CreateGroupRequest) {
-        set({ isLoading: true, error: null });
-        try {
-          const res = await fetch(`${API_BASE}/groups`, {
-            method: "POST",
-            headers: getAuthHeaders(),
-            body: JSON.stringify(groupData),
-          });
-          
-          if (!res.ok) {
-            throw new Error(`Failed to create group: ${res.statusText}`);
-          }
-          
-          const newGroup: Group = await res.json();
-          const { groups } = get();
-          set({ 
-            groups: [newGroup, ...groups],
-            isLoading: false 
-          });
-          
-          return newGroup;
-        } catch (error) {
-          console.error("[groups] createGroup failed:", error);
-          set({ 
-            error: error instanceof Error ? error.message : "Failed to create group",
-            isLoading: false 
-          });
-          return null;
-        }
-      },
+export const getGroup = (id: string) =>
+    apiGet<Group>(`/groups/${id}`);
 
-      async updateGroup(id: string, updates: UpdateGroupRequest) {
-        set({ isLoading: true, error: null });
-        try {
-          const res = await fetch(`${API_BASE}/groups/${id}`, {
-            method: "PATCH",
-            headers: getAuthHeaders(),
-            body: JSON.stringify(updates),
-          });
-          
-          if (!res.ok) {
-            throw new Error(`Failed to update group: ${res.statusText}`);
-          }
-          
-          const updatedGroup: Group = await res.json();
-          const { groups } = get();
-          const updatedGroups = groups.map(g => g.id === id ? updatedGroup : g);
-          set({ 
-            groups: updatedGroups,
-            isLoading: false 
-          });
-          
-          return updatedGroup;
-        } catch (error) {
-          console.error("[groups] updateGroup failed:", error);
-          set({ 
-            error: error instanceof Error ? error.message : "Failed to update group",
-            isLoading: false 
-          });
-          return null;
-        }
-      },
+export const createGroup = (payload: CreateGroupRequest) =>
+    apiPost<Group>(`/groups`, payload);
 
-      async deleteGroup(id: string) {
-        set({ isLoading: true, error: null });
-        try {
-          const res = await fetch(`${API_BASE}/groups/${id}`, {
-            method: "DELETE",
-            headers: getAuthHeaders(),
-          });
-          
-          if (!res.ok) {
-            throw new Error(`Failed to delete group: ${res.statusText}`);
-          }
-          
-          const { groups } = get();
-          const updatedGroups = groups.filter(g => g.id !== id);
-          set({ 
-            groups: updatedGroups,
-            isLoading: false 
-          });
-          
-          return true;
-        } catch (error) {
-          console.error("[groups] deleteGroup failed:", error);
-          set({ 
-            error: error instanceof Error ? error.message : "Failed to delete group",
-            isLoading: false 
-          });
-          return false;
-        }
-      },
+export const updateGroup = (id: string, payload: UpdateGroupRequest) =>
+    apiPatch<Group>(`/groups/${id}`, payload);
 
-      async joinGroup(groupId: string) {
-        set({ isLoading: true, error: null });
-        try {
-          const res = await fetch(`${API_BASE}/groups/${groupId}/join`, {
-            method: "POST",
-            headers: getAuthHeaders(),
-          });
-          
-          if (!res.ok) {
-            throw new Error(`Failed to join group: ${res.statusText}`);
-          }
-          
-          // Refresh the group data
-          await get().fetchGroup(groupId);
-          set({ isLoading: false });
-          
-          return true;
-        } catch (error) {
-          console.error("[groups] joinGroup failed:", error);
-          set({ 
-            error: error instanceof Error ? error.message : "Failed to join group",
-            isLoading: false 
-          });
-          return false;
-        }
-      },
+export const deleteGroup = (id: string) =>
+    apiDelete<void>(`/groups/${id}`);
 
-      async leaveGroup(groupId: string) {
-        set({ isLoading: true, error: null });
-        try {
-          const res = await fetch(`${API_BASE}/groups/${groupId}/leave`, {
-            method: "POST",
-            headers: getAuthHeaders(),
-          });
-          
-          if (!res.ok) {
-            throw new Error(`Failed to leave group: ${res.statusText}`);
-          }
-          
-          // Refresh the group data
-          await get().fetchGroup(groupId);
-          set({ isLoading: false });
-          
-          return true;
-        } catch (error) {
-          console.error("[groups] leaveGroup failed:", error);
-          set({ 
-            error: error instanceof Error ? error.message : "Failed to leave group",
-            isLoading: false 
-          });
-          return false;
-        }
-      },
+/** Add/remove members in one call (POST /groups/:id/members) */
+export const updateGroupMembers = (id: string, add: string[], remove: string[]) =>
+    apiPost<Group>(`/groups/${id}/members`, { add, remove });
 
-      async fetchGroupActivity() {
-        set({ isLoading: true, error: null });
-        try {
-          const res = await fetch(`${API_BASE}/groups/activity`, {
-            headers: getAuthHeaders(),
-          });
-          
-          if (!res.ok) {
-            throw new Error(`Failed to fetch group activity: ${res.statusText}`);
-          }
-          
-          const activity: GroupActivity[] = await res.json();
-          set({ groupActivity: activity, isLoading: false });
-        } catch (error) {
-          console.error("[groups] fetchGroupActivity failed:", error);
-          set({ 
-            error: error instanceof Error ? error.message : "Failed to fetch group activity",
-            isLoading: false 
-          });
-        }
-      },
+/** Membership helpers */
+export const joinGroup = (groupId: string) =>
+    apiPost<{ ok: true }>(`/groups/${groupId}/join`, {});
 
-      searchGroups(query: string) {
-        const { groups } = get();
-        if (!query.trim()) return groups;
-        
-        const lowercaseQuery = query.toLowerCase();
-        return groups.filter(group => 
-          group.name.toLowerCase().includes(lowercaseQuery) ||
-          group.description?.toLowerCase().includes(lowercaseQuery) ||
-          group.location?.toLowerCase().includes(lowercaseQuery) ||
-          group.city?.toLowerCase().includes(lowercaseQuery)
-        );
-      },
+export const leaveGroup = (groupId: string) =>
+    apiPost<{ ok: true }>(`/groups/${groupId}/leave`, {});
 
-      filterGroupsByType(type: string) {
-        const { groups } = get();
-        return groups.filter(group => group.type === type);
-      },
+/** Activity feed (if exposed by your API) */
+export const listGroupActivity = () =>
+    apiGet<GroupActivity[]>(`/groups/activity`);
 
-      filterGroupsByCity(city: string) {
-        const { groups } = get();
-        return groups.filter(group => group.city === city);
-      },
+/* -------------------------------- Hooks ------------------------------- */
 
-      clearError() {
-        set({ error: null });
-      },
+export function useGroups(params?: GroupsListQuery) {
+    const key = `/groups${qs(params)}`;
+    return useSWR<Group[]>(key, () => listGroups(params));
+}
 
-      clearGroups() {
-        set({ groups: [], groupActivity: [], error: null });
-      },
-    }),
-    {
-      name: "groups-storage",
-      partialize: (state) => ({
-        groups: state.groups,
-        groupActivity: state.groupActivity,
-      }),
-    }
-  )
-);
+export function useGroup(id?: string) {
+    const key = id ? `/groups/${id}` : null;
+    return useSWR<Group>(key, () => getGroup(id as string));
+}
+
+export function useDeleteGroup(id?: string) {
+    const key = id ? `/groups/${id}` : null;
+    return useSWR<void>(key, () => deleteGroup(id as string));
+}
+
+export function useGroupActivity() {
+    const key = `/groups/activity`;
+    return useSWR<GroupActivity[]>(key, listGroupActivity);
+}

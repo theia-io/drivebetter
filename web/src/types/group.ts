@@ -1,37 +1,44 @@
-export type GroupType = "local" | "corporate" | "global";
+export type GroupType = "fleet" | "coop" | "airport" | "city" | "custom";
+
+export const GROUP_VISIBILITY_OPTIONS = ["public", "private", "restricted"];
+export const GROUP_TYPE_OPTIONS = ["fleet", "coop", "airport", "city", "custom"];
 
 export interface Group {
-  id: string;
+  _id: string;
   name: string;
   type: GroupType;
   members: string[];
   city?: string;
-  // Additional fields from UI mocks
+  isActive?: boolean;
+  membersCount?: number;
   description?: string;
   activeRides?: number;
   totalRides?: number;
   rating?: number;
   location?: string;
   created?: string;
+  visibility?: GroupVisibility;
+  tags?: string[];
+  isInviteOnly?: boolean;
   status?: "active" | "inactive";
   createdAt: string;
   updatedAt: string;
 }
 
-export interface CreateGroupRequest {
-  name: string;
-  type: GroupType;
-  city?: string;
-  description?: string;
-}
+export type UpdateGroupRequest = Omit<Group, "_id" | "createdAt" | "updatedAt" | "isActive">;
 
-export interface UpdateGroupRequest {
-  name?: string;
-  type?: GroupType;
-  city?: string;
-  description?: string;
-  members?: string[];
-}
+export type GroupVisibility = "public" | "private" | "restricted";
+
+export type CreateGroupRequest = {
+    name: string;
+    type: "fleet" | "coop" | "airport" | "city" | "custom";
+    description?: string;
+    city?: string;
+    location?: string;
+    visibility?: GroupVisibility;     // default "private"
+    isInviteOnly?: boolean;           // default false
+    tags?: string[];
+};
 
 export interface GroupActivity {
   id: string;
