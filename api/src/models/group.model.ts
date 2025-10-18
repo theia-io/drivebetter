@@ -1,7 +1,7 @@
 import mongoose, {Schema, Document, Model, Types, model} from "mongoose";
 
 export type GroupVisibility = "public" | "private" | "restricted";
-export type GroupType = "fleet" | "coop" | "airport" | "city" | "custom";
+export type GroupType = "fleet" | "coop" | "airport" | "city" | "custom" | "global";
 
 export interface IGroup extends Document {
     name: string;
@@ -23,7 +23,7 @@ const GroupSchema = new Schema<IGroup>(
     {
         name: { type: String, required: true, trim: true },
         description: { type: String, trim: true },
-        type: { type: String, enum: ["fleet", "coop", "airport", "city", "custom"], required: true, default: "custom" },
+        type: { type: String, enum: ["fleet", "coop", "airport", "city", "custom", "global"], required: true, default: "custom" },
         city: { type: String, trim: true },
         location: { type: String, trim: true },
 

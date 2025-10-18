@@ -1,7 +1,7 @@
 [
   {
     "name": "Morning Commuters",
-    "type": "local",
+    "type": "fleet",
     "city": "Los Angeles",
     "description": "Early morning drivers serving downtown area",
     "members": [],
@@ -14,7 +14,7 @@
   },
   {
     "name": "Evening Shift",
-    "type": "local",
+    "type": "fleet",
     "city": "Los Angeles",
     "description": "Night shift drivers for late night rides",
     "members": [],
@@ -27,7 +27,7 @@
   },
   {
     "name": "Weekend Warriors",
-    "type": "local",
+    "type": "fleet",
     "city": "Los Angeles",
     "description": "Weekend drivers for special events",
     "members": [],
@@ -40,7 +40,7 @@
   },
   {
     "name": "Airport Express",
-    "type": "local",
+    "type": "fleet",
     "city": "Los Angeles",
     "description": "Specialized airport transfer service",
     "members": [],
@@ -53,7 +53,7 @@
   },
   {
     "name": "Corporate HQ",
-    "type": "corporate",
+    "type": "coop",
     "city": "New York",
     "description": "Corporate transportation services",
     "members": [],
