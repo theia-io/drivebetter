@@ -34,7 +34,10 @@ export default function GroupDetailsPage() {
 
     const canManage = user?.roles?.some((r) => r === "admin" || r === "dispatcher");
 
-    const membersIds = (group?.members ?? []) as MemberLike[];
+    const membersIds = useMemo(() => {
+       return (group?.members ?? []) as MemberLike[];
+    }, [group]);
+
     const {map: driversMap, isLoading: driversLoading} = useDriversPublicBatchMap(group?.members);
 
     const memberId = (m: MemberLike) =>

@@ -110,7 +110,8 @@ export function useUserGroups(id?: string) {
 }
 
 export function useDriverByIdPublic(id?: string) {
-    return useSWR<DriverPublic>(`/users/drivers/${id}`, getDriverByIdPublic);
+    const key = id ? `/users/drivers/${id}` : null;
+    return useSWR<DriverPublic>(key, () => getDriverByIdPublic(id as string));
 }
 
 export function useDriversPublic() {

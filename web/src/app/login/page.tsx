@@ -23,7 +23,7 @@ export default function LoginPage() {
         router.push("/dashboard");
       }
     })();
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, user, router, fetchMe]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

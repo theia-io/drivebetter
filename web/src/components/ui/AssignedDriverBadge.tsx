@@ -4,9 +4,9 @@ import Link from "next/link";
 import {useDriverByIdPublic} from "@/stores/users";
 
 export default function AssignedDriverBadge({ userId }: { userId?: string }) {
-    if (!userId) return <>—</>;
-
     const { data: data, isLoading: isLoading } = useDriverByIdPublic(userId);
+
+    if (!userId) return <>—</>;
 
     if (isLoading) return <span className="text-xs text-gray-500">Loading…</span>;
     if (!data) return <>—</>;

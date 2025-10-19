@@ -20,7 +20,7 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
         router.push("/login");
       }
     })();
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, user, router, fetchMe]);
 
   if (!isAuthenticated || !user) {
     return (

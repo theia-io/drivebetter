@@ -22,7 +22,7 @@ export default function DriverCombobox({
     const inputRef = useRef<HTMLInputElement | null>(null);
     const listRef = useRef<HTMLDivElement | null>(null);
 
-    const drivers = data || [];
+    const drivers = useMemo(() => data || [], [data]);
     const selected = useMemo(
         () => drivers.find((d) => d.email === valueEmail) || null,
         [drivers, valueEmail]
