@@ -1,9 +1,13 @@
 import mongoose, {Model, Schema, Types} from "mongoose";
+import { customAlphabet } from "nanoid";
 
 export type RideVisibility = "public" | "groups" | "drivers";
 
+const nanoid = customAlphabet("0123456789ABCDEFGHJKLMNPQRSTUVWXYZ", 12);
+
 export interface IRideShare extends Document {
     rideId: Types.ObjectId;
+    shareId: string;
     visibility: RideVisibility;
     groupIds?: Types.ObjectId[];
     driverIds?: Types.ObjectId[];
@@ -12,6 +16,7 @@ export interface IRideShare extends Document {
     claimsCount: number;
     syncQueue: boolean;
     status: "active" | "revoked" | "expired" | "closed";
+    revokedAt?: Date | null;
     createdBy: Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
@@ -23,21 +28,46 @@ export function hasRideExpired(s: IRideShare) {
 
 export const RideShareSchema = new Schema<IRideShare>(
     {
-        rideId: { type: Schema.Types.ObjectId, ref: "Ride", required: true, index: true },
+        rideId:     { type: Schema.Types.ObjectId, ref: "Ride", required: true, index: true },
+
+        shareId:    { type: String, required: true, unique: true, index: true },
+
         visibility: { type: String, enum: ["public", "groups", "drivers"], required: true },
-        groupIds: [{ type: Schema.Types.ObjectId, ref: "Group" }],
-        driverIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
-        expiresAt: { type: Date, default: null },
-        maxClaims: { type: Number, min: 1, default: null },
-        claimsCount: { type: Number, default: 0 },
-        syncQueue: { type: Boolean, default: true },
-        status: { type: String, enum: ["active", "revoked", "expired", "closed"], default: "active", index: true },
-        createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+        groupIds:   [{ type: Schema.Types.ObjectId, ref: "Group" }],
+        driverIds:  [{ type: Schema.Types.ObjectId, ref: "User" }],
+
+        expiresAt:  { type: Date, default: null },
+        maxClaims:  { type: Number, min: 1, default: null },
+        claimsCount:{ type: Number, default: 0 },
+        syncQueue:  { type: Boolean, default: true },
+
+        status:     { type: String, enum: ["active", "revoked", "expired", "closed"], default: "active", index: true },
+
+        // NEW: when revoked
+        revokedAt:  { type: Date, default: null },
+
+        createdBy:  { type: Schema.Types.ObjectId, ref: "User", required: true },
     },
     { timestamps: true }
 );
 
+// Existing index stays
 RideShareSchema.index({ rideId: 1, status: 1 });
+
+// Auto-generate shareId on first create
+RideShareSchema.pre("validate", function (next) {
+    if (!this.shareId) this.shareId = nanoid();
+    next();
+});
+
+// Optional: keep revokedAt in sync with status transitions
+RideShareSchema.pre("save", function (next) {
+    if (this.isModified("status")) {
+        if (this.status === "revoked" && !this.revokedAt) this.revokedAt = new Date();
+        if (this.status !== "revoked") this.revokedAt = null;
+    }
+    next();
+});
 
 export const RideShare: Model<IRideShare> =
     mongoose.models.RideShare || mongoose.model<IRideShare>("RideShare", RideShareSchema);

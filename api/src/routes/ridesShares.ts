@@ -42,7 +42,7 @@ async function ensureAcl(share: IRideShare, driverId: string) {
  * /ride-shares/{shareId}:
  *   get:
  *     summary: Resolve a public/group/driver share (driver auth)
- *     tags: [Shares]
+ *     tags: [RideShares]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
@@ -109,7 +109,7 @@ router.get(
  * /ride-shares/{shareId}/claim:
  *   post:
  *     summary: Claim a ride via share (driver)
- *     tags: [Shares, Rides]
+ *     tags: [RideShares]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
@@ -181,6 +181,73 @@ router.post(
         await share.save();
 
         return res.json({ status: "claimed", rideId: String(ride._id), assignedDriverId: driverId });
+    }
+);
+
+/**
+ * @openapi
+ * /ride-shares/{shareId}:
+ *   delete:
+ *     summary: Revoke a specific ride share
+ *     description: Revokes a single active ride share identified by its shareId. Idempotent — if already revoked, returns 200.
+ *     tags: [RideShares]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: shareId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The public identifier of the ride share (not the Mongo _id).
+ *     responses:
+ *       200:
+ *         description: Share revoked (or already revoked)
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 shareId:   { type: string }
+ *                 rideId:    { type: string }
+ *                 status:    { type: string, enum: ["revoked"] }
+ *                 revokedAt: { type: string, format: date-time }
+ *       404:
+ *         description: Share not found
+ */
+router.delete(
+    "/ride-shares/:shareId",
+    requireAuth,
+    requireRole(["dispatcher", "admin"]),
+    async (req: Request, res: Response) => {
+        const { shareId } = req.params;
+
+        const share = await RideShare.findOne({ shareId }).lean();
+        if (!share) return res.status(404).json({ error: "Share not found" });
+
+        // If already revoked, respond idempotently
+        if (share.status === "revoked") {
+            return res.json({
+                shareId: share.shareId,
+                rideId: String(share.rideId),
+                status: "revoked",
+                revokedAt: share.revokedAt ?? new Date(0).toISOString(),
+            });
+        }
+
+        // Update to revoked
+        const updated = await RideShare.findOneAndUpdate(
+            { shareId },
+            { $set: { status: "revoked", revokedAt: new Date() } },
+            { new: true }
+        ).lean();
+
+        return res.json({
+            shareId: updated!.shareId,
+            rideId: String(updated!.rideId),
+            status: "revoked",
+            revokedAt: updated!.revokedAt,
+        });
     }
 );
 

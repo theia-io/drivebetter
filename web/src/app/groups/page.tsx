@@ -8,17 +8,8 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography, Badge } from "@/components/ui";
 import { Users, Plus, Search, Trash2, PencilLine, Eye } from "lucide-react";
 import { apiGet, apiDelete } from "@/services/http";
-import {Group} from "@/types";
-
-/* ----------------------------- Types ----------------------------- */
-
-type PageResp<T> = {
-    items: T[];
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-};
+import {Group, PageResp} from "@/types";
+import {useGroups} from "@/stores/groups";
 
 /* ----------------------------- Helpers ----------------------------- */
 const qstring = (params: Record<string, any>) => {
@@ -45,7 +36,6 @@ function Td({ children, className = "" }: { children: React.ReactNode; className
     return <td className={`px-4 py-3 text-sm text-gray-900 ${className}`}>{children}</td>;
 }
 
-/* ----------------------------- Page ----------------------------- */
 export default function GroupsPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -56,11 +46,7 @@ export default function GroupsPage() {
     const [page, setPage] = useState(Number(searchParams.get("page") || 1));
     const [limit, setLimit] = useState(Number(searchParams.get("limit") || 20));
 
-    const key = useMemo(
-        () => `/groups${qstring({ q, type, active, page, limit })}`,
-        [q, type, active, page, limit]
-    );
-    const { data, isLoading, mutate } = useSWR<PageResp<Group>>(key, () => apiGet<PageResp<Group>>(key));
+    const { data, isLoading, mutate } = useGroups({q: q, type: type, page: page, limit: limit});
 
     const items = data?.items ?? [];
     const pages = data?.pages ?? 1;

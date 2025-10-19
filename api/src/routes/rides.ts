@@ -484,7 +484,7 @@ router.post("/:id([0-9a-fA-F]{24})/status", async (req: Request, res: Response) 
  * /rides/{id}/share:
  *   post:
  *     summary: Create a ride share (link/ACL)
- *     tags: [Rides, Shares]
+ *     tags: [Rides]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
@@ -528,7 +528,7 @@ router.post("/:id([0-9a-fA-F]{24})/status", async (req: Request, res: Response) 
  *       409: { description: Ride completed / cannot share }
  */
 router.post(
-    "/rides/:id([0-9a-fA-F]{24})/share",
+    "/:id([0-9a-fA-F]{24})/share",
     requireAuth,
     requireRole(["dispatcher", "admin"]),
     async (req: Request, res: Response) => {
@@ -595,7 +595,7 @@ router.post(
  * /rides/{id}/share:
  *   get:
  *     summary: Get active share(s) for ride
- *     tags: [Rides, Shares]
+ *     tags: [Rides]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
@@ -621,7 +621,7 @@ router.post(
  *       404: { description: None }
  */
 router.get(
-    "/rides/:id([0-9a-fA-F]{24})/share",
+    "/:id([0-9a-fA-F]{24})/share",
     requireAuth,
     requireRole(["dispatcher", "admin"]),
     async (req: Request, res: Response) => {
@@ -650,7 +650,7 @@ router.get(
  * /rides/{id}/share:
  *   delete:
  *     summary: Revoke all active shares for a ride
- *     tags: [Rides, Shares]
+ *     tags: [Rides]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
@@ -662,7 +662,7 @@ router.get(
  *       404: { description: None }
  */
 router.delete(
-    "/rides/:id([0-9a-fA-F]{24})/share",
+    "/:id([0-9a-fA-F]{24})/share",
     requireAuth,
     requireRole(["dispatcher", "admin"]),
     async (req: Request, res: Response) => {

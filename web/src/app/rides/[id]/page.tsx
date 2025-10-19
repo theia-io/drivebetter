@@ -5,13 +5,27 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import {ArrowLeft, Calendar, Clock, DollarSign, MapPin, Navigation, PhoneIcon, Trash2, User} from "lucide-react";
+import {
+    ArrowLeft,
+    Calendar,
+    Clock, Copy,
+    DollarSign, Link2,
+    MapPin,
+    Navigation,
+    PhoneIcon,
+    Share2,
+    Trash2,
+    User
+} from "lucide-react";
 import LeafletMap from "@/components/ui/maps/LeafletMap";
 import { useRide, useSetRideStatus, useDeleteRide } from "@/stores/rides";
 import { getRoute } from "@/stores/routes";
 import {Ride} from "@/types";
 import Link from "next/link";
 import {useUser} from "@/stores/users";
+import {useAuthStore} from "@/stores";
+import {KV} from "@/components/ui/commmon";
+import {useRevokeRideShare, useRideShares} from "@/stores/rideShares";
 
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
@@ -22,15 +36,21 @@ const mins = (m?: number) => (m ? `${m} min` : "—");
 const STATUS: Ride["status"][] = ["unassigned","assigned","on_my_way","on_location","pob","clear","completed"];
 
 export default function RideDetailsPage() {
+    const { user } = useAuthStore();
+    const canShare = user?.roles?.some((r) => r === "admin" || r === "dispatcher");
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
     const { data: ride, mutate } = useRide(id);
     const { setRideStatus, isSettingStatus } = useSetRideStatus(id);
     const { deleteRide, isDeleting } = useDeleteRide(id);
+    const { data: shares = [], isLoading: sharesLoading, mutate: mutateShares } = useRideShares(id);
     const assignedDriverId = ride?.assignedDriverId;
     const { data: driver } = useUser(assignedDriverId);
 
     const [routeLine, setRouteLine] = useState<[number, number][]>([]);
+    const [revokingId, setRevokingId] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
     const hasA = !!ride?.fromLocation?.coordinates?.length;
     const hasB = !!ride?.toLocation?.coordinates?.length;
 
@@ -52,6 +72,21 @@ export default function RideDetailsPage() {
         if (!ride) return "";
         return `${ride.from} → ${ride.to}`;
     }, [ride]);
+
+    async function onRevokeShare(shareId: string) {
+        const ok = confirm(`Revoke this share? `);
+        if (!ok) return;
+        setRevokingId(shareId);
+        setError(null);
+        try {
+            await useRevokeRideShare(shareId);
+            await mutate();
+        } catch (e: any) {
+            setError(e?.message || "Failed to revoke share");
+        } finally {
+            setRevokingId(null);
+        }
+    }
 
     async function onChangeStatus(next: Ride["status"]) {
         const res = await setRideStatus({ status: next });
@@ -105,6 +140,13 @@ export default function RideDetailsPage() {
                                 Delete
                             </Button>
                         </div>
+                        {canShare && (
+                            <Link href={`/rides/${id}/share`}>
+                                <Button variant="outline" size="sm" leftIcon={<Share2 className="w-4 h-4" />}>
+                                    Share
+                                </Button>
+                            </Link>
+                        )}
                     </div>
 
                     {/* Summary */}
@@ -194,6 +236,84 @@ export default function RideDetailsPage() {
                             </div>
                         </CardBody>
                     </Card>
+
+                    {canShare && (
+                        <Card variant="elevated" className="mt-4">
+                            <CardBody className="p-4 sm:p-6 space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <Share2 className="w-4 h-4 text-indigo-600" />
+                                    <Typography className="font-semibold text-gray-900">Ride Shares</Typography>
+                                </div>
+
+                                {sharesLoading ? (
+                                    <div className="text-sm text-gray-600">Loading shares…</div>
+                                ) : shares?.length === 0 ? (
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-sm text-gray-600">No active shares.</div>
+                                        <Link href={`/rides/${id}/share`}>
+                                            <Button size="sm" leftIcon={<Share2 className="w-4 h-4" />}>
+                                                Create Share
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {shares?.map((s) => (
+                                            <div key={s.shareId} className="rounded-lg border p-3 space-y-2 bg-white">
+                                                <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs capitalize">
+                  {s.visibility}
+                </span>
+                                                    {typeof s.maxClaims === "number" && (
+                                                        <span className="text-xs text-gray-600">Max claims: {s.maxClaims}</span>
+                                                    )}
+                                                    <span className="text-xs text-gray-600">
+                  Expires: {s.expiresAt ? new Date(s.expiresAt).toLocaleString() : "—"}
+                </span>
+                                                    <span className="text-xs text-gray-600">Status: {s.status || "active"}</span>
+                                                </div>
+
+                                                {s.url && (
+                                                    <div className="flex items-center gap-2 rounded-md border p-2">
+                                                        <Link2 className="w-4 h-4 text-gray-500 shrink-0" />
+                                                        <div className="truncate text-sm">{s.url}</div>
+                                                        <button
+                                                            type="button"
+                                                            className="ml-auto inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
+                                                            onClick={() => navigator.clipboard.writeText(s.url!)}
+                                                        >
+                                                            <Copy className="w-3.5 h-3.5" /> Copy
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                <div className="flex flex-wrap gap-2">
+                                                    <Link href={`/rides/${id}/share?shareId=${encodeURIComponent(s.shareId)}`}>
+                                                        <Button variant="outline" size="sm">Manage</Button>
+                                                    </Link>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        leftIcon={<Trash2 className="w-4 h-4" />}
+                                                        onClick={() => onRevokeShare(s.shareId)}
+                                                        disabled={revokingId === s.shareId}
+                                                    >
+                                                        {revokingId === s.shareId ? "Revoking…" : "Revoke"}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        <div className="pt-1">
+                                            <Link href={`/rides/${id}/share`}>
+                                                <Button size="sm" variant="outline">Create Another Share</Button>
+                                            </Link>
+                                        </div>
+                                    </div>
+                                )}
+                            </CardBody>
+                        </Card>
+                    )}
 
                     {/* Map */}
                     {(hasA || hasB) && (

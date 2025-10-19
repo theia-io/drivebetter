@@ -2,6 +2,7 @@
 import useSWR from "swr";
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/services/http";
 import type { Group, CreateGroupRequest, UpdateGroupRequest, GroupActivity } from "@/types/group";
+import {PageResp} from "@/types";
 
 /* ------------------------------ Helpers ------------------------------ */
 
@@ -27,7 +28,7 @@ export type GroupsListQuery = {
 };
 
 export const listGroups = (params?: GroupsListQuery) =>
-    apiGet<Group[]>(`/groups${qs(params)}`);
+    apiGet<PageResp<Group>>(`/groups${qs(params)}`);
 
 export const getGroup = (id: string) =>
     apiGet<Group>(`/groups/${id}`);
@@ -60,7 +61,7 @@ export const listGroupActivity = () =>
 
 export function useGroups(params?: GroupsListQuery) {
     const key = `/groups${qs(params)}`;
-    return useSWR<Group[]>(key, () => listGroups(params));
+    return useSWR<PageResp<Group>>(key, () => listGroups(params));
 }
 
 export function useGroup(id?: string) {
