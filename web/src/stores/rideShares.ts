@@ -27,6 +27,8 @@ export type CreateShareRequest = {
     syncQueue?: boolean; // default true
 };
 
+/* -------------------------------- API -------------------------------- */
+
 export const getRideShare = (rideId: string) =>
     apiGet<RideShare[]>(`/rides/${rideId}/share`);
 
@@ -44,6 +46,8 @@ export function useRideShares(rideId?: string) {
 const revalidateRideShares = async () => {
     await globalMutate((key) => typeof key === "string" && key.startsWith("/ride-shares"));
 };
+
+/* -------------------------------- Hooks ------------------------------- */
 
 export function useCreateRideShare(rideId: string, payload: CreateShareRequest) {
     const key = `/rides/${rideId}/share`;

@@ -221,7 +221,7 @@ router.delete(
     async (req: Request, res: Response) => {
         const { shareId } = req.params;
 
-        const share = await RideShare.findOne({ shareId }).lean();
+        const share = await RideShare.findOne({ _id: shareId }).lean();
         if (!share) return res.status(404).json({ error: "Share not found" });
 
         // If already revoked, respond idempotently
@@ -236,13 +236,13 @@ router.delete(
 
         // Update to revoked
         const updated = await RideShare.findOneAndUpdate(
-            { shareId },
+            { _id: shareId },
             { $set: { status: "revoked", revokedAt: new Date() } },
             { new: true }
         ).lean();
 
         return res.json({
-            shareId: updated!.shareId,
+            shareId: updated!._id,
             rideId: String(updated!.rideId),
             status: "revoked",
             revokedAt: updated!.revokedAt,

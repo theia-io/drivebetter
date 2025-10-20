@@ -6,8 +6,8 @@ export type RideVisibility = "public" | "groups" | "drivers";
 const nanoid = customAlphabet("0123456789ABCDEFGHJKLMNPQRSTUVWXYZ", 12);
 
 export interface IRideShare extends Document {
-    rideId: Types.ObjectId;
     shareId: string;
+    rideId: Types.ObjectId;
     visibility: RideVisibility;
     groupIds?: Types.ObjectId[];
     driverIds?: Types.ObjectId[];

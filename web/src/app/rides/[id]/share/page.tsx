@@ -1,31 +1,31 @@
 // app/rides/[id]/share/page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import {useMemo, useState} from "react";
+import {useParams, useRouter, useSearchParams} from "next/navigation";
 import Link from "next/link";
 import ProtectedLayout from "@/components/ProtectedLayout";
-import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import { ArrowLeft, Copy, Link2, Share2, Trash2 } from "lucide-react";
+import {Button, Card, CardBody, Container, Typography} from "@/components/ui";
+import {ArrowLeft, Copy, Link2, Share2, Trash2} from "lucide-react";
 import DriverCombobox from "@/components/ui/DriverCombobox";
-import { dt, KV } from "@/components/ui/commmon";
+import {dt, KV} from "@/components/ui/commmon";
 
 import {
     useRideShares,
     useCreateRideShare,
     useRevokeRideShare,
-    type RideShareVisibility,
+    type RideShareVisibility, revokeRideShare,
 } from "@/stores/rideShares";
-import { useGroups } from "@/stores/groups";
+import {useGroups} from "@/stores/groups";
 
 type DriverPick = { _id: string; email?: string; name?: string };
 
 export default function RideSharePage() {
-    const { id: rideId } = useParams<{ id: string }>();
+    const {id: rideId} = useParams<{ id: string }>();
     const router = useRouter();
     const sp = useSearchParams();
 
-    const { data: shares = [], isLoading, mutate } = useRideShares(rideId);
+    const {data: shares = [], isLoading, mutate} = useRideShares(rideId);
 
     const selectedShareId = sp.get("shareId") || "";
     const selectedShare = useMemo(
@@ -43,7 +43,7 @@ export default function RideSharePage() {
     const [revokingId, setRevokingId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    const { data: groupsData } = useGroups({});
+    const {data: groupsData} = useGroups({});
     const groups = groupsData?.items ?? [];
 
     function setQueryShareId(shareId?: string) {
@@ -64,7 +64,7 @@ export default function RideSharePage() {
                 maxClaims: maxClaims ? Number(maxClaims) : undefined,
                 syncQueue,
             };
-            const { data: created } = useCreateRideShare(rideId, payload);
+            const {data: created} = useCreateRideShare(rideId, payload);
             await mutate();
             setQueryShareId(created.shareId);
             setSelectedGroupIds([]);
@@ -78,13 +78,14 @@ export default function RideSharePage() {
         }
     }
 
-    function onRevoke(shareId: string) {
+    async function onRevoke(shareId: string) {
         const ok = confirm(`Revoke this share? ${shareId}`);
         if (!ok) return;
         setRevokingId(shareId);
         setError(null);
         try {
-            useRevokeRideShare(shareId);
+            await revokeRideShare(shareId);
+            await mutate();
             if (selectedShareId === shareId) setQueryShareId(undefined);
         } catch (e: any) {
             setError(e?.message || "Failed to revoke share");
@@ -102,10 +103,11 @@ export default function RideSharePage() {
                     {/* Toolbar */}
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+                            <Button variant="outline" size="sm" leftIcon={<ArrowLeft className="w-4 h-4"/>}>
                                 <Link href={`/rides/${rideId}`}>Back</Link>
                             </Button>
-                            <Typography className="text-base sm:text-2xl font-bold text-gray-900">Ride Shares</Typography>
+                            <Typography className="text-base sm:text-2xl font-bold text-gray-900">Ride
+                                Shares</Typography>
                         </div>
                     </div>
 
@@ -119,7 +121,7 @@ export default function RideSharePage() {
                     <Card variant="elevated">
                         <CardBody className="p-4 sm:p-6 space-y-3">
                             <div className="flex items-center gap-2">
-                                <Share2 className="w-4 h-4 text-indigo-600" />
+                                <Share2 className="w-4 h-4 text-indigo-600"/>
                                 <Typography className="font-semibold text-gray-900">Active Shares</Typography>
                             </div>
 
@@ -141,12 +143,14 @@ export default function RideSharePage() {
                             {s.visibility}
                           </span>
                                                     {typeof s.maxClaims === "number" && (
-                                                        <span className="text-xs text-gray-600">Max claims: {s.maxClaims}</span>
+                                                        <span
+                                                            className="text-xs text-gray-600">Max claims: {s.maxClaims}</span>
                                                     )}
                                                     <span className="text-xs text-gray-600">
                             Expires: {s.expiresAt ? dt(s.expiresAt) : "—"}
                           </span>
-                                                    <span className="text-xs text-gray-600">Status: {s.status || "active"}</span>
+                                                    <span
+                                                        className="text-xs text-gray-600">Status: {s.status || "active"}</span>
                                                     <span className="ml-auto inline-flex gap-2">
                             <Button
                                 variant={isSelected ? "solid" : "outline"}
@@ -158,7 +162,7 @@ export default function RideSharePage() {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                leftIcon={<Trash2 className="w-4 h-4" />}
+                                leftIcon={<Trash2 className="w-4 h-4"/>}
                                 onClick={() => onRevoke(s.shareId)}
                                 disabled={revokingId === s.shareId}
                             >
@@ -169,14 +173,14 @@ export default function RideSharePage() {
 
                                                 {s.url && (
                                                     <div className="mt-2 flex items-center gap-2 rounded-md border p-2">
-                                                        <Link2 className="w-4 h-4 text-gray-500 shrink-0" />
+                                                        <Link2 className="w-4 h-4 text-gray-500 shrink-0"/>
                                                         <div className="truncate text-sm">{s.url}</div>
                                                         <button
                                                             type="button"
                                                             className="ml-auto inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
                                                             onClick={() => navigator.clipboard.writeText(s.url!)}
                                                         >
-                                                            <Copy className="w-3.5 h-3.5" /> Copy
+                                                            <Copy className="w-3.5 h-3.5"/> Copy
                                                         </button>
                                                     </div>
                                                 )}
@@ -202,9 +206,9 @@ export default function RideSharePage() {
                             <CardBody className="p-4 sm:p-6 space-y-4">
                                 <Typography className="font-semibold text-gray-900">Share Details</Typography>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                                    <KV k="Share ID" v={selectedShare.shareId} />
-                                    <KV k="Visibility" v={selectedShare.visibility} />
-                                    <KV k="Expires" v={selectedShare.expiresAt ? dt(selectedShare.expiresAt) : "—"} />
+                                    <KV k="Share ID" v={selectedShare.shareId}/>
+                                    <KV k="Visibility" v={selectedShare.visibility}/>
+                                    <KV k="Expires" v={selectedShare.expiresAt ? dt(selectedShare.expiresAt) : "—"}/>
                                     <KV
                                         k="Max Claims"
                                         v={
@@ -214,10 +218,10 @@ export default function RideSharePage() {
                                         }
                                     />
                                     {selectedShare.groupIds?.length ? (
-                                        <KV k="Groups" v={`${selectedShare.groupIds.length}`} />
+                                        <KV k="Groups" v={`${selectedShare.groupIds.length}`}/>
                                     ) : null}
                                     {selectedShare.driverIds?.length ? (
-                                        <KV k="Drivers" v={`${selectedShare.driverIds.length}`} />
+                                        <KV k="Drivers" v={`${selectedShare.driverIds.length}`}/>
                                     ) : null}
                                 </div>
                             </CardBody>
@@ -230,7 +234,8 @@ export default function RideSharePage() {
                             <CardBody className="p-4 sm:p-6 space-y-6">
                                 <form onSubmit={onCreate} className="space-y-6">
                                     <div>
-                                        <Typography className="text-sm font-semibold text-gray-900">Visibility</Typography>
+                                        <Typography
+                                            className="text-sm font-semibold text-gray-900">Visibility</Typography>
                                         <div className="mt-2 flex flex-wrap gap-4 text-sm">
                                             {(["public", "groups", "drivers"] as RideShareVisibility[]).map((v) => (
                                                 <label key={v} className="inline-flex items-center gap-2">
@@ -249,7 +254,8 @@ export default function RideSharePage() {
 
                                     {visibility === "groups" && (
                                         <div>
-                                            <Typography className="text-sm font-semibold text-gray-900">Select Groups</Typography>
+                                            <Typography className="text-sm font-semibold text-gray-900">Select
+                                                Groups</Typography>
                                             <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                 {groups.map((g) => {
                                                     const checked = selectedGroupIds.includes(g._id);
@@ -280,7 +286,8 @@ export default function RideSharePage() {
 
                                     {visibility === "drivers" && (
                                         <div>
-                                            <Typography className="text-sm font-semibold text-gray-900">Select Drivers</Typography>
+                                            <Typography className="text-sm font-semibold text-gray-900">Select
+                                                Drivers</Typography>
 
                                             <div className="mt-2 flex flex-col gap-3">
                                                 <DriverCombobox
@@ -290,7 +297,11 @@ export default function RideSharePage() {
                                                         if (driver && driver._id && !pickedDrivers.some((d) => d._id === driver._id)) {
                                                             setPickedDrivers((prev) => [
                                                                 ...prev,
-                                                                { _id: driver._id, name: driver.name, email: driver.email },
+                                                                {
+                                                                    _id: driver._id,
+                                                                    name: driver.name,
+                                                                    email: driver.email
+                                                                },
                                                             ]);
                                                         }
                                                     }}
@@ -299,7 +310,8 @@ export default function RideSharePage() {
                                                 {/* Chips */}
                                                 <div className="flex flex-wrap gap-2">
                                                     {pickedDrivers.length === 0 && (
-                                                        <div className="text-sm text-gray-600">No drivers selected.</div>
+                                                        <div className="text-sm text-gray-600">No drivers
+                                                            selected.</div>
                                                     )}
                                                     {pickedDrivers.map((d) => (
                                                         <span
@@ -327,7 +339,8 @@ export default function RideSharePage() {
 
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Expires At (optional)</label>
+                                            <label className="block text-sm font-medium text-gray-700">Expires At
+                                                (optional)</label>
                                             <input
                                                 type="datetime-local"
                                                 value={expiresAt}
@@ -337,7 +350,8 @@ export default function RideSharePage() {
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700">Max Claims (optional)</label>
+                                            <label className="block text-sm font-medium text-gray-700">Max Claims
+                                                (optional)</label>
                                             <input
                                                 type="number"
                                                 min={1}
@@ -359,7 +373,8 @@ export default function RideSharePage() {
                                     </div>
 
                                     <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-                                        <Button type="button" variant="outline" onClick={() => router.push(`/rides/${rideId}`)}>
+                                        <Button type="button" variant="outline"
+                                                onClick={() => router.push(`/rides/${rideId}`)}>
                                             Cancel
                                         </Button>
                                         <Button type="submit" disabled={creating}>
