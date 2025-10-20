@@ -44,6 +44,15 @@ export type InboxItem = {
     };
 };
 
+export type UpdateShareRequest = Partial<{
+    visibility: RideShareVisibility;
+    groupIds: string[];
+    driverIds: string[];
+    expiresAt: string | null;
+    maxClaims: number | null;
+    syncQueue: boolean;
+}>;
+
 /* -------------------------------- API -------------------------------- */
 
 export const getRideShare = (rideId: string) =>
@@ -67,10 +76,12 @@ export const claimRideShare = (shareId: string) =>
         {}
     );
 
-
 const revalidateRideShares = async () => {
     await globalMutate((key) => typeof key === "string" && key.startsWith("/ride-shares"));
 };
+
+export const updateRideShare = (shareId: string, payload: UpdateShareRequest) =>
+    apiPost<RideShare>(`/ride-shares/${shareId}`, payload); // if you prefer PATCH, switch apiPost->apiPatch
 
 /* -------------------------------- Hooks ------------------------------- */
 
@@ -111,4 +122,13 @@ export function useRevokeRideShare(shareId?: string) {
         deleteResult: m.data, // { ok: true }
         deleteError: m.error as Error | undefined,
     };
+}
+
+export function useUpdateRideShare(shareId?: string) {
+    const key = shareId ? `/ride-shares/${shareId}:update` : null;
+    return useSWRMutation(
+        key,
+        async (_key, { arg }: { arg: UpdateShareRequest }) => updateRideShare(shareId as string, arg),
+        { onSuccess: async (_d, _k, _c) => { await globalMutate((k) => typeof k === "string" && k.startsWith("/rides/")); } }
+    );
 }

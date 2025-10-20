@@ -135,5 +135,6 @@ export function useDriversPublicBatchMap(ids?: string[]) {
         acc[d._id] = d;
         return acc;
     }, {});
-    return { data, map, error, isLoading, mutate };
+    return { map, isLoading };
+
 }

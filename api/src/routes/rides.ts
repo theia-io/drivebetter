@@ -657,6 +657,8 @@ router.get(
                 expiresAt: s.expiresAt ?? null,
                 maxClaims: typeof s.maxClaims === "number" ? s.maxClaims : null,
                 claimsCount: s.claimsCount ?? 0,
+                driverIds: s.driverIds,
+                groupIds: s.groupIds,
                 status: s.status,
                 revokedAt: s.revokedAt ?? null,
             }))
