@@ -27,10 +27,30 @@ export type CreateShareRequest = {
     syncQueue?: boolean; // default true
 };
 
+export type InboxItem = {
+    shareId: string | null;
+    visibility: "public" | "groups" | "drivers" | null;
+    expiresAt: string | null;
+    maxClaims: number | null;
+    claimsCount: number;
+    status?: "active" | "revoked" | "expired" | "closed" | null;
+    ride: {
+        _id: string;
+        from: string;
+        to: string;
+        datetime: string;
+        status: string;
+        customer?: { name: string; phone: string };
+    };
+};
+
 /* -------------------------------- API -------------------------------- */
 
 export const getRideShare = (rideId: string) =>
     apiGet<RideShare[]>(`/rides/${rideId}/share`);
+
+export const getRevokedRideShares = (rideId: string) =>
+    apiGet<RideShare[]>(`/rides/${rideId}/share?status=revoked`);
 
 export const createRideShare = (rideId: string, payload: CreateShareRequest) =>
     apiPost<RideShare>(`/rides/${rideId}/share`, payload);
@@ -38,10 +58,15 @@ export const createRideShare = (rideId: string, payload: CreateShareRequest) =>
 export const revokeRideShare = (shareId: string) =>
     apiDelete<void>(`/ride-shares/${shareId}`);
 
-export function useRideShares(rideId?: string) {
-    const key = `/rides/${rideId}/share`;
-    return useSWR<RideShare[]>(key, () => getRideShare(rideId));
-}
+export const getDriverInbox = (tab: "available" | "claimed" = "available") =>
+    apiGet<InboxItem[]>(`/ride-shares/inbox?tab=${tab}`);
+
+export const claimRideShare = (shareId: string) =>
+    apiPost<{ status: "claimed"; rideId: string; assignedDriverId: string }>(
+        `/ride-shares/${shareId}/claim`,
+        {}
+    );
+
 
 const revalidateRideShares = async () => {
     await globalMutate((key) => typeof key === "string" && key.startsWith("/ride-shares"));
@@ -52,6 +77,16 @@ const revalidateRideShares = async () => {
 export function useCreateRideShare(rideId: string, payload: CreateShareRequest) {
     const key = `/rides/${rideId}/share`;
     return useSWR<RideShare>(key, () => createRideShare(rideId, payload));
+}
+
+export function useRideShares(rideId?: string) {
+    const key = `/rides/${rideId}/share`;
+    return useSWR<RideShare[]>(key, () => getRideShare(rideId));
+}
+
+export function useDriverInbox(tab: "available" | "claimed") {
+    const key = `/ride-shares/inbox?tab=${tab}`;
+    return useSWR<InboxItem[]>(key, () => getDriverInbox(tab));
 }
 
 export function useRevokeRideShare(shareId?: string) {

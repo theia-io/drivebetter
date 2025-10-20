@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import Ride from "../models/ride.model";
 import {requireAuth, requireRole} from "../lib/auth";
 import {hasRideExpired, IRideShare, RideShare} from "../models/rideShare.model";
@@ -247,6 +247,151 @@ router.delete(
             status: "revoked",
             revokedAt: updated!.revokedAt,
         });
+    }
+);
+
+/**
+ * @openapi
+ * /ride-shares/inbox:
+ *   get:
+ *     summary: Driver inbox of shared rides (available or claimed)
+ *     tags: [RideShares]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: tab
+ *         required: false
+ *         schema: { type: string, enum: [available, claimed], default: available }
+ *     responses:
+ *       200:
+ *         description: List of shared rides for the driver
+ */
+router.get(
+    "/inbox",
+    requireAuth,
+    requireRole(["driver"]),
+    async (req: Request, res: Response) => {
+        const driverId = (req as any).user.id;
+        const tab = (req.query.tab as "available" | "claimed") ?? "available";
+        const now = new Date();
+
+        // groups the driver belongs to
+        const groupIds = await Group.find({ members: driverId }).select("_id").lean();
+        const groupIdList = groupIds.map((g) => g._id);
+
+        if (tab === "available") {
+            const shares = await RideShare.find({
+                status: "active",
+                $or: [
+                    { visibility: "public" },
+                    { visibility: "drivers", driverIds: driverId },
+                    { visibility: "groups", groupIds: { $in: groupIdList } },
+                    { expiresAt: null }, { expiresAt: { $gt: now } }
+                ],
+            })
+                .sort({ createdAt: -1 })
+                .lean();
+
+            // expire on the fly (lightweight)
+            const expiredIds = shares
+                .filter((s) => hasRideExpired(s as any))
+                .map((s) => s._id);
+            if (expiredIds.length) {
+                await RideShare.updateMany({ _id: { $in: expiredIds } }, { $set: { status: "expired" } });
+            }
+
+            // fetch rides for those shares that are still active & unassigned
+            const activeShares = shares.filter((s) => !expiredIds.includes(s._id));
+            const rideIds = activeShares.map((s) => s.rideId);
+            const rides = await Ride.find({
+                _id: { $in: rideIds },
+                assignedDriverId: { $in: [null, undefined] },
+                status: { $ne: "completed" },
+            })
+                .select("_id from to datetime status fromLocation toLocation customer")
+                .lean();
+            const rideMap = new Map(rides.map((r) => [String(r._id), r]));
+
+            const items = activeShares
+                .map((s) => {
+                    const ride = rideMap.get(String(s.rideId));
+                    if (!ride) return null;
+                    return {
+                        shareId: s.shareId ?? String(s._id),
+                        visibility: s.visibility,
+                        expiresAt: s.expiresAt,
+                        maxClaims: s.maxClaims ?? null,
+                        claimsCount: s.claimsCount ?? 0,
+                        ride: {
+                            _id: String(ride._id),
+                            from: ride.from,
+                            to: ride.to,
+                            datetime: ride.datetime,
+                            status: ride.status,
+                            fromLocation: ride.fromLocation,
+                            toLocation: ride.toLocation,
+                            customer: ride.customer ? { name: ride.customer.name ?? "", phone: ride.customer.phone ?? "" } : undefined,
+                        },
+                    };
+                })
+                .filter(Boolean);
+
+            return res.json(items);
+        }
+
+        // CLAIMED tab: rides assigned to this driver that originated from a share the driver had access to
+        const claimedRides = await Ride.find({
+            assignedDriverId: driverId,
+        })
+            .select("_id from to datetime status fromLocation toLocation customer")
+            .lean();
+
+        if (!claimedRides.length) return res.json([]);
+
+        const rideIds = claimedRides.map((r) => r._id);
+        const shares = await RideShare.find({
+            rideId: { $in: rideIds },
+            $or: [
+                { visibility: "public" },
+                { visibility: "drivers", driverIds: driverId },
+                { visibility: "groups", groupIds: { $in: groupIdList } },
+            ],
+        })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        const lastShareByRide = new Map<string, any>();
+        for (const s of shares) {
+            const key = String(s.rideId);
+            // keep the most recent share per ride
+            if (!lastShareByRide.has(key) || lastShareByRide.get(key).createdAt < s.createdAt) {
+                lastShareByRide.set(key, s);
+            }
+        }
+
+        const items = claimedRides.map((r) => {
+            const s = lastShareByRide.get(String(r._id));
+            return {
+                shareId: s ? s.shareId ?? String(s._id) : null,
+                visibility: s?.visibility ?? null,
+                expiresAt: s?.expiresAt ?? null,
+                maxClaims: s?.maxClaims ?? null,
+                claimsCount: s?.claimsCount ?? 0,
+                status: s?.status ?? null,
+                ride: {
+                    _id: String(r._id),
+                    from: r.from,
+                    to: r.to,
+                    datetime: r.datetime,
+                    status: r.status,
+                    fromLocation: r.fromLocation,
+                    toLocation: r.toLocation,
+                    customer: r.customer ? { name: r.customer.name ?? "", phone: r.customer.phone ?? "" } : undefined,
+                },
+            };
+        });
+
+        return res.json(items);
     }
 );
 

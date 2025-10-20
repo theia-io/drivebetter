@@ -594,7 +594,7 @@ router.post(
  * @openapi
  * /rides/{id}/share:
  *   get:
- *     summary: Get active share(s) for ride
+ *     summary: Get shares for a ride (active or revoked)
  *     tags: [Rides]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
@@ -602,9 +602,17 @@ router.post(
  *         name: id
  *         required: true
  *         schema: { type: string }
+ *       - in: query
+ *         name: status
+ *         description: Filter by status. Defaults to "active".
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [active, revoked]
+ *           default: active
  *     responses:
  *       200:
- *         description: Active shares
+ *         description: Shares for the requested status
  *         content:
  *           application/json:
  *             schema:
@@ -612,13 +620,15 @@ router.post(
  *               items:
  *                 type: object
  *                 properties:
- *                   shareId: { type: string }
- *                   visibility: { type: string }
- *                   expiresAt: { type: string, format: date-time, nullable: true }
- *                   maxClaims: { type: integer, nullable: true }
+ *                   shareId:     { type: string }
+ *                   visibility:  { type: string }
+ *                   expiresAt:   { type: string, format: date-time, nullable: true }
+ *                   maxClaims:   { type: integer, nullable: true }
  *                   claimsCount: { type: integer }
- *                   status: { type: string }
- *       404: { description: None }
+ *                   status:      { type: string, enum: [active, revoked] }
+ *                   revokedAt:   { type: string, format: date-time, nullable: true }
+ *       404:
+ *         description: None
  */
 router.get(
     "/:id([0-9a-fA-F]{24})/share",
@@ -626,20 +636,29 @@ router.get(
     requireRole(["dispatcher", "admin"]),
     async (req: Request, res: Response) => {
         const { id } = req.params;
-        const shares = await RideShare.find({ rideId: id, status: { $in: ["active"] } })
+        const raw = String(req.query.status ?? "active");
+        const status = raw === "revoked" ? "revoked" : "active";
+
+        const shares = await RideShare.find({ rideId: id, status })
             .sort({ createdAt: -1 })
             .lean();
 
-        if (!shares.length) return res.status(404).json({ error: "No active shares" });
+        if (!shares.length) {
+            return res
+                .status(404)
+                .json({ error: `No ${status} shares` });
+        }
 
         return res.json(
             shares.map((s) => ({
-                shareId: s._id,
+                // prefer the public shareId, fallback to _id if ever absent
+                shareId: s.shareId ?? String(s._id),
                 visibility: s.visibility,
-                expiresAt: s.expiresAt,
-                maxClaims: s.maxClaims ?? null,
-                claimsCount: s.claimsCount,
+                expiresAt: s.expiresAt ?? null,
+                maxClaims: typeof s.maxClaims === "number" ? s.maxClaims : null,
+                claimsCount: s.claimsCount ?? 0,
                 status: s.status,
+                revokedAt: s.revokedAt ?? null,
             }))
         );
     }

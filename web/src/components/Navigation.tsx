@@ -16,6 +16,7 @@ type NavItem = {
 const navigation: NavItem[] = [
     { name: 'Groups', href: '/groups', requiredRoles: ['driver', 'dispatcher', 'admin'] },
     { name: 'Rides', href: '/rides', requiredRoles: ['driver', 'dispatcher', 'admin'] },
+    { name: 'Active Rides', href: '/shared-rides', requiredRoles: ['driver', 'dispatcher', 'admin'] },
     { name: 'Users', href: '/users', requiredRoles: ['admin', 'dispatcher'] },
 ]
 

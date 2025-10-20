@@ -143,7 +143,7 @@ export default function RideDetailsPage() {
                         {canShare && (
                             <Link href={`/rides/${id}/share`}>
                                 <Button variant="outline" size="sm" leftIcon={<Share2 className="w-4 h-4" />}>
-                                    Share
+                                    Manage Shares
                                 </Button>
                             </Link>
                         )}
@@ -305,6 +305,13 @@ export default function RideDetailsPage() {
                                         ))}
 
                                         <div className="pt-1">
+                                            {canShare && (
+                                                <Link href={`/rides/${id}/share`}>
+                                                    <Button variant="outline" size="sm">
+                                                        Manage Shares
+                                                    </Button>
+                                                </Link>
+                                            )}
                                             <Link href={`/rides/${id}/share`}>
                                                 <Button size="sm" variant="outline">Create Another Share</Button>
                                             </Link>
