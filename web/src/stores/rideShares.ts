@@ -1,10 +1,7 @@
 import { apiGet, apiPost, apiDelete } from "@/services/http";
 import useSWR from "swr";
-import {type Group, PageResp} from "@/types";
-import {GroupsListQuery, listGroups} from "@/stores/groups";
 import useSWRMutation from "swr/mutation";
 import {mutate as globalMutate} from "swr/_internal";
-import {deleteRide} from "@/stores/rides";
 
 export type RideShareVisibility = "public" | "groups" | "drivers";
 
@@ -48,8 +45,14 @@ const revalidateRideShares = async () => {
     await globalMutate((key) => typeof key === "string" && key.startsWith("/ride-shares"));
 };
 
+export function useCreateRideShare(rideId: string, payload: CreateShareRequest) {
+    const key = `/rides/${rideId}/share`;
+    return useSWR<RideShare>(key, () => createRideShare(rideId, payload));
+}
+
 export function useRevokeRideShare(shareId?: string) {
     const key = shareId ? `/ride-shares/${shareId}` : null;
+    console.log(key);
     const m = useSWRMutation(
         key,
         async () => {

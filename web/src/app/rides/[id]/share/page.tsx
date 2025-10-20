@@ -12,10 +12,9 @@ import { dt, KV } from "@/components/ui/commmon";
 
 import {
     useRideShares,
-    createRideShare,
-    revokeRideShare,
-    type RideShare,
-    type RideShareVisibility, useRevokeRideShare,
+    useCreateRideShare,
+    useRevokeRideShare,
+    type RideShareVisibility,
 } from "@/stores/rideShares";
 import { useGroups } from "@/stores/groups";
 
@@ -44,7 +43,6 @@ export default function RideSharePage() {
     const [revokingId, setRevokingId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    // Groups for "groups" visibility
     const { data: groupsData } = useGroups({});
     const groups = groupsData?.items ?? [];
 
@@ -66,10 +64,9 @@ export default function RideSharePage() {
                 maxClaims: maxClaims ? Number(maxClaims) : undefined,
                 syncQueue,
             };
-            const created = await createRideShare(rideId, payload);
-            await mutate(); // refresh list
-            setQueryShareId(created.shareId); // jump to managing the newly created one
-            // reset minimal fields (optional)
+            const { data: created } = useCreateRideShare(rideId, payload);
+            await mutate();
+            setQueryShareId(created.shareId);
             setSelectedGroupIds([]);
             setPickedDrivers([]);
             setMaxClaims("");
@@ -81,15 +78,14 @@ export default function RideSharePage() {
         }
     }
 
-    async function onRevoke(shareId: string) {
-        const ok = confirm(`Revoke this share? `);
+    function onRevoke(shareId: string) {
+        const ok = confirm(`Revoke this share? ${shareId}`);
         if (!ok) return;
         setRevokingId(shareId);
         setError(null);
         try {
-            await useRevokeRideShare(shareId);
-            await mutate();
-            if (selectedShareId === shareId) setQueryShareId(undefined); // if we were viewing this share, clear selection
+            useRevokeRideShare(shareId);
+            if (selectedShareId === shareId) setQueryShareId(undefined);
         } catch (e: any) {
             setError(e?.message || "Failed to revoke share");
         } finally {
@@ -97,7 +93,7 @@ export default function RideSharePage() {
         }
     }
 
-    const canCreateAnother = true; // multiple shares supported
+    const canCreateAnother = true;
 
     return (
         <ProtectedLayout>

@@ -44,7 +44,7 @@ app.prepare().then(async () => {
   );
   // mount REST
   server.use("/api/v1/users", users);
-    server.use("/api/v1/driver-details", drivers);
+  server.use("/api/v1/driver-details", drivers);
   server.use("/api/v1/rides", rides);
   server.use("/api/v1/ride-shares", ridesShares);
   server.use("/api/v1/auth", auth);

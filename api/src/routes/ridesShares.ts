@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
 import { Types } from "mongoose";
 import Ride from "../models/ride.model";
-import User from "../models/user.model";
 import {requireAuth, requireRole} from "../lib/auth";
 import {hasRideExpired, IRideShare, RideShare} from "../models/rideShare.model";
 import Group from "../models/group.model";
@@ -69,7 +68,7 @@ async function ensureAcl(share: IRideShare, driverId: string) {
  *       404: { description: Not found / expired / revoked }
  */
 router.get(
-    "/ride-shares/:shareId([0-9a-fA-F]{24})",
+    "/:shareId([0-9a-fA-F]{24})",
     requireAuth,
     requireRole(["driver"]),
     async (req: Request, res: Response) => {
@@ -134,7 +133,7 @@ router.get(
  *       409: { description: Already assigned / maxClaims reached }
  */
 router.post(
-    "/ride-shares/:shareId([0-9a-fA-F]{24})/claim",
+    "/:shareId([0-9a-fA-F]{24})/claim",
     requireAuth,
     requireRole(["driver"]),
     async (req: Request, res: Response) => {
@@ -216,7 +215,7 @@ router.post(
  *         description: Share not found
  */
 router.delete(
-    "/ride-shares/:shareId",
+    "/:shareId",
     requireAuth,
     requireRole(["dispatcher", "admin"]),
     async (req: Request, res: Response) => {
