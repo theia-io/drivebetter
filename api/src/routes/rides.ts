@@ -651,8 +651,7 @@ router.get(
 
         return res.json(
             shares.map((s) => ({
-                // prefer the public shareId, fallback to _id if ever absent
-                shareId: s.shareId ?? String(s._id),
+                shareId: String(s._id),
                 visibility: s.visibility,
                 expiresAt: s.expiresAt ?? null,
                 maxClaims: typeof s.maxClaims === "number" ? s.maxClaims : null,

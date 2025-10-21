@@ -438,16 +438,6 @@ export default function RideSharePage() {
                               <Link href={`/users/${uid}`} className="hover:underline font-medium text-gray-900">
                                 {display}
                               </Link>
-                                                            {tab === "active" && (
-                                                                <button
-                                                                    type="button"
-                                                                    className="p-0.5 rounded hover:bg-gray-100"
-                                                                    onClick={() => onRemoveDriverFromShare(uid)}
-                                                                    aria-label={`Remove ${display}`}
-                                                                >
-                                                                    <X className="w-3.5 h-3.5" />
-                                                                </button>
-                                                            )}
                             </span>
                                                     );
                                                 })}

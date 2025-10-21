@@ -3,10 +3,7 @@ import { customAlphabet } from "nanoid";
 
 export type RideVisibility = "public" | "groups" | "drivers";
 
-const nanoid = customAlphabet("0123456789ABCDEFGHJKLMNPQRSTUVWXYZ", 12);
-
 export interface IRideShare extends Document {
-    shareId: string;
     rideId: Types.ObjectId;
     visibility: RideVisibility;
     groupIds?: Types.ObjectId[];
@@ -29,38 +26,23 @@ export function hasRideExpired(s: IRideShare) {
 export const RideShareSchema = new Schema<IRideShare>(
     {
         rideId:     { type: Schema.Types.ObjectId, ref: "Ride", required: true, index: true },
-
-        shareId:    { type: String, required: true, unique: true, index: true },
-
         visibility: { type: String, enum: ["public", "groups", "drivers"], required: true },
         groupIds:   [{ type: Schema.Types.ObjectId, ref: "Group" }],
         driverIds:  [{ type: Schema.Types.ObjectId, ref: "User" }],
-
         expiresAt:  { type: Date, default: null },
         maxClaims:  { type: Number, min: 1, default: null },
         claimsCount:{ type: Number, default: 0 },
         syncQueue:  { type: Boolean, default: true },
-
         status:     { type: String, enum: ["active", "revoked", "expired", "closed"], default: "active", index: true },
-
-        // NEW: when revoked
         revokedAt:  { type: Date, default: null },
-
         createdBy:  { type: Schema.Types.ObjectId, ref: "User", required: true },
     },
     { timestamps: true }
 );
 
-// Existing index stays
 RideShareSchema.index({ rideId: 1, status: 1 });
 
-// Auto-generate shareId on first create
-RideShareSchema.pre("validate", function (next) {
-    if (!this.shareId) this.shareId = nanoid();
-    next();
-});
-
-// Optional: keep revokedAt in sync with status transitions
+// maintain revokedAt
 RideShareSchema.pre("save", function (next) {
     if (this.isModified("status")) {
         if (this.status === "revoked" && !this.revokedAt) this.revokedAt = new Date();
@@ -71,3 +53,4 @@ RideShareSchema.pre("save", function (next) {
 
 export const RideShare: Model<IRideShare> =
     mongoose.models.RideShare || mongoose.model<IRideShare>("RideShare", RideShareSchema);
+

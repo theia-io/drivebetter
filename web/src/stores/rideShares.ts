@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiDelete } from "@/services/http";
+import {apiGet, apiPost, apiDelete, apiPatch} from "@/services/http";
 import useSWR from "swr";
 import useSWRMutation from "swr/mutation";
 import {mutate as globalMutate} from "swr/_internal";
@@ -81,7 +81,7 @@ const revalidateRideShares = async () => {
 };
 
 export const updateRideShare = (shareId: string, payload: UpdateShareRequest) =>
-    apiPost<RideShare>(`/ride-shares/${shareId}`, payload); // if you prefer PATCH, switch apiPost->apiPatch
+    apiPatch<RideShare>(`/ride-shares/${shareId}`, payload); // if you prefer PATCH, switch apiPost->apiPatch
 
 /* -------------------------------- Hooks ------------------------------- */
 

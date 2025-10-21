@@ -9,6 +9,20 @@ const router = Router();
 const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
 const isObjectId = (v: any) => Types.ObjectId.isValid(String(v));
 
+const serializeShare = (s: any) => ({
+    shareId: String(s._id),       // alias for UI compatibility
+    rideId: String(s.rideId),
+    visibility: s.visibility,
+    groupIds: (s.groupIds || []).map(String),
+    driverIds: (s.driverIds || []).map(String),
+    expiresAt: s.expiresAt ?? null,
+    maxClaims: s.maxClaims ?? null,
+    claimsCount: s.claimsCount ?? 0,
+    status: s.status,
+    createdAt: s.createdAt,
+    updatedAt: s.updatedAt,
+});
+
 function sanitizeRideForDriver(ride: any) {
     // Hide sensitive fields if needed; keep essentials
     const {
@@ -67,41 +81,26 @@ async function ensureAcl(share: IRideShare, driverId: string) {
  *       403: { description: Forbidden (ACL) }
  *       404: { description: Not found / expired / revoked }
  */
-router.get(
-    "/:shareId([0-9a-fA-F]{24})",
-    requireAuth,
-    requireRole(["driver"]),
-    async (req: Request, res: Response) => {
-        const { shareId } = req.params;
-        const driverId = (req as any).user.id;
+router.get("/:shareId([0-9a-fA-F]{24})", requireAuth, requireRole(["driver"]), async (req, res) => {
+    const { shareId } = req.params;
+    const driverId = (req as any).user.id;
 
-        const share = await RideShare.findById(shareId);
-        if (!share) return res.status(404).json({ error: "Share not found" });
+    const share = await RideShare.findById(shareId);
+    if (!share) return res.status(404).json({ error: "Share not found" });
 
-        // update status if expired
-        if (share.status === "active" && hasRideExpired(share)) {
-            await RideShare.findByIdAndUpdate(share._id, { $set: { status: "expired" } });
-            return res.status(404).json({ error: "Share expired" });
-        }
-        if (share.status !== "active") return res.status(404).json({ error: "Share inactive" });
-
-        const ok = await ensureAcl(share as any, driverId);
-        if (!ok) return res.status(403).json({ error: "Forbidden" });
-
-        const ride = await Ride.findById(share.rideId).lean();
-        if (!ride) return res.status(404).json({ error: "Ride not found" });
-
-        return res.json({
-            ride: sanitizeRideForDriver(ride),
-            share: {
-                visibility: share.visibility,
-                expiresAt: share.expiresAt,
-                maxClaims: share.maxClaims ?? null,
-                status: share.status,
-            },
-        });
+    if (share.status === "active" && hasRideExpired(share)) {
+        await RideShare.findByIdAndUpdate(share._id, { $set: { status: "expired" } });
+        return res.status(404).json({ error: "Share expired" });
     }
-);
+    if (share.status !== "active") return res.status(404).json({ error: "Share inactive" });
+
+    if (!(await ensureAcl(share as any, driverId))) return res.status(403).json({ error: "Forbidden" });
+
+    const ride = await Ride.findById(share.rideId).lean();
+    if (!ride) return res.status(404).json({ error: "Ride not found" });
+
+    res.json({ ride: sanitizeRideForDriver(ride), share: serializeShare(share) });
+});
 
 /**
  * @openapi
@@ -132,56 +131,136 @@ router.get(
  *       404: { description: Not found / expired / inactive }
  *       409: { description: Already assigned / maxClaims reached }
  */
-router.post(
-    "/:shareId([0-9a-fA-F]{24})/claim",
-    requireAuth,
-    requireRole(["driver"]),
-    async (req: Request, res: Response) => {
-        const { shareId } = req.params;
-        const driverId = (req as any).user.id;
+router.post("/:shareId([0-9a-fA-F]{24})/claim", requireAuth, requireRole(["driver"]), async (req, res) => {
+    const { shareId } = req.params;
+    const driverId = (req as any).user.id;
 
-        const share = await RideShare.findById(shareId);
-        if (!share) return res.status(404).json({ error: "Share not found" });
+    const share = await RideShare.findById(shareId);
+    if (!share) return res.status(404).json({ error: "Share not found" });
 
-        // expiry/status
-        if (share.status === "active" && hasRideExpired(share)) {
-            share.status = "expired";
-            await share.save();
-            return res.status(404).json({ error: "Share expired" });
-        }
-        if (share.status !== "active") return res.status(404).json({ error: "Share inactive" });
-
-        if (!(await ensureAcl(share, driverId))) return res.status(403).json({ error: "Forbidden" });
-
-        // optional maxClaims gate
-        if (share.maxClaims && share.claimsCount >= share.maxClaims) {
-            share.status = "closed";
-            await share.save();
-            return res.status(409).json({ error: "Max claims reached" });
-        }
-
-        // atomic assign if unassigned
-        const ride = await Ride.findOneAndUpdate(
-            { _id: share.rideId, assignedDriverId: { $in: [null, undefined] }, status: { $ne: "completed" } },
-            { $set: { assignedDriverId: driverId, status: "assigned" } },
-            { new: true }
-        );
-
-        if (!ride) {
-            // either already assigned or completed
-            return res.status(409).json({ error: "Ride already assigned or closed" });
-        }
-
-        // increment claims; close if limit reached
-        share.claimsCount += 1;
-        if (share.maxClaims && share.claimsCount >= share.maxClaims) {
-            share.status = "closed";
-        }
+    if (share.status === "active" && hasRideExpired(share)) {
+        share.status = "expired";
         await share.save();
-
-        return res.json({ status: "claimed", rideId: String(ride._id), assignedDriverId: driverId });
+        return res.status(404).json({ error: "Share expired" });
     }
-);
+    if (share.status !== "active") return res.status(404).json({ error: "Share inactive" });
+
+    if (!(await ensureAcl(share, driverId))) return res.status(403).json({ error: "Forbidden" });
+
+    if (share.maxClaims && share.claimsCount >= share.maxClaims) {
+        share.status = "closed";
+        await share.save();
+        return res.status(409).json({ error: "Max claims reached" });
+    }
+
+    const ride = await Ride.findOneAndUpdate(
+        { _id: share.rideId, assignedDriverId: { $in: [null, undefined] }, status: { $ne: "completed" } },
+        { $set: { assignedDriverId: driverId, status: "assigned" } },
+        { new: true }
+    );
+    if (!ride) return res.status(409).json({ error: "Ride already assigned or closed" });
+
+    share.claimsCount += 1;
+    if (share.maxClaims && share.claimsCount >= share.maxClaims) share.status = "closed";
+    await share.save();
+
+    res.json({ status: "claimed", rideId: String(ride._id), assignedDriverId: driverId });
+});
+
+/**
+ * @openapi
+ * /ride-shares/{shareId}:
+ *   patch:
+ *     summary: Update a ride share
+ *     description: Update visibility, ACL lists, expiry/maxClaims, and syncQueue for a share.
+ *     tags: [RideShares]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: shareId
+ *         required: true
+ *         schema: { type: string }
+ *         description: Mongo ObjectId of the ride-share document (24-hex).
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               visibility: { type: string, enum: [public, groups, drivers] }
+ *               groupIds:   { type: array, items: { type: string } }
+ *               driverIds:  { type: array, items: { type: string } }
+ *               expiresAt:  { type: string, format: date-time, nullable: true }
+ *               maxClaims:  { type: integer, minimum: 1, nullable: true }
+ *               syncQueue:  { type: boolean }
+ *     responses:
+ *       200:
+ *         description: Updated share
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 shareId:     { type: string }
+ *                 rideId:      { type: string }
+ *                 visibility:  { type: string, enum: [public, groups, drivers] }
+ *                 groupIds:    { type: array, items: { type: string } }
+ *                 driverIds:   { type: array, items: { type: string } }
+ *                 expiresAt:   { type: string, format: date-time, nullable: true }
+ *                 maxClaims:   { type: integer, nullable: true }
+ *                 claimsCount: { type: integer }
+ *                 status:      { type: string, enum: [active, revoked, expired, closed] }
+ *                 createdAt:   { type: string, format: date-time }
+ *                 updatedAt:   { type: string, format: date-time }
+ *       404: { description: Share not found }
+ *       400: { description: Validation error }
+ */
+router.patch("/:shareId([0-9a-fA-F]{24})", requireAuth, requireRole(["dispatcher", "admin"]), async (req, res) => {
+    const { shareId } = req.params;
+    const share = await RideShare.findById(shareId);
+    if (!share) return res.status(404).json({ error: "Share not found" });
+
+    const { visibility, groupIds, driverIds, expiresAt, maxClaims, syncQueue } = req.body ?? {};
+    const $set: Record<string, any> = {};
+
+    if (visibility) {
+        if (!["public", "groups", "drivers"].includes(visibility))
+            return res.status(400).json({ error: "Invalid visibility" });
+        $set.visibility = visibility;
+        if (visibility !== "groups")  $set.groupIds  = [];
+        if (visibility !== "drivers") $set.driverIds = [];
+    }
+    if (Array.isArray(groupIds))  $set.groupIds  = groupIds.filter(Boolean).map((id: string) => new Types.ObjectId(id));
+    if (Array.isArray(driverIds)) $set.driverIds = driverIds.filter(Boolean).map((id: string) => new Types.ObjectId(id));
+
+    if (expiresAt === null) $set.expiresAt = null;
+    else if (typeof expiresAt === "string" && expiresAt.trim()) {
+        const d = new Date(expiresAt);
+        if (isNaN(d.getTime())) return res.status(400).json({ error: "Invalid expiresAt" });
+        $set.expiresAt = d;
+    }
+
+    if (maxClaims === null) $set.maxClaims = null;
+    else if (typeof maxClaims !== "undefined") {
+        const n = Number(maxClaims);
+        if (!Number.isInteger(n) || n < 1) return res.status(400).json({ error: "Invalid maxClaims" });
+        $set.maxClaims = n;
+    }
+
+    if (typeof syncQueue === "boolean") $set.syncQueue = syncQueue;
+
+    if (Object.keys($set).length === 0) return res.status(400).json({ error: "No updatable fields provided" });
+
+    if (($set.expiresAt || share.expiresAt) && share.status === "active") {
+        const nextExpiry = $set.expiresAt ?? share.expiresAt;
+        if (nextExpiry && nextExpiry.getTime() <= Date.now()) $set.status = "expired";
+    }
+
+    const updated = await RideShare.findByIdAndUpdate(share._id, { $set }, { new: true, runValidators: true }).lean();
+    res.json(serializeShare(updated));
+});
+
 
 /**
  * @openapi
@@ -214,41 +293,33 @@ router.post(
  *       404:
  *         description: Share not found
  */
-router.delete(
-    "/:shareId",
-    requireAuth,
-    requireRole(["dispatcher", "admin"]),
-    async (req: Request, res: Response) => {
-        const { shareId } = req.params;
+router.delete("/:shareId([0-9a-fA-F]{24})", requireAuth, requireRole(["dispatcher", "admin"]), async (req, res) => {
+    const { shareId } = req.params;
+    const share = await RideShare.findById(shareId).lean();
+    if (!share) return res.status(404).json({ error: "Share not found" });
 
-        const share = await RideShare.findOne({ _id: shareId }).lean();
-        if (!share) return res.status(404).json({ error: "Share not found" });
-
-        // If already revoked, respond idempotently
-        if (share.status === "revoked") {
-            return res.json({
-                shareId: share.shareId,
-                rideId: String(share.rideId),
-                status: "revoked",
-                revokedAt: share.revokedAt ?? new Date(0).toISOString(),
-            });
-        }
-
-        // Update to revoked
-        const updated = await RideShare.findOneAndUpdate(
-            { _id: shareId },
-            { $set: { status: "revoked", revokedAt: new Date() } },
-            { new: true }
-        ).lean();
-
+    if (share.status === "revoked") {
         return res.json({
-            shareId: updated!._id,
-            rideId: String(updated!.rideId),
+            shareId: String(share._id),
+            rideId: String(share.rideId),
             status: "revoked",
-            revokedAt: updated!.revokedAt,
+            revokedAt: share.revokedAt ?? new Date(0).toISOString(),
         });
     }
-);
+
+    const updated = await RideShare.findByIdAndUpdate(
+        shareId,
+        { $set: { status: "revoked", revokedAt: new Date() } },
+        { new: true }
+    ).lean();
+
+    res.json({
+        shareId: String(updated!._id),
+        rideId: String(updated!.rideId),
+        status: "revoked",
+        revokedAt: updated!.revokedAt,
+    });
+});
 
 /**
  * @openapi
@@ -317,7 +388,7 @@ router.get(
                     const ride = rideMap.get(String(s.rideId));
                     if (!ride) return null;
                     return {
-                        shareId: s.shareId ?? String(s._id),
+                        shareId: String(s._id),
                         visibility: s.visibility,
                         expiresAt: s.expiresAt,
                         maxClaims: s.maxClaims ?? null,
