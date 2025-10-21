@@ -466,4 +466,83 @@ router.get(
     }
 );
 
+/**
+ * @openapi
+ * /ride-shares/inbox/count:
+ *   get:
+ *     summary: Count of shared rides visible to the driver (available or claimed)
+ *     tags: [RideShares]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: tab
+ *         required: false
+ *         schema: { type: string, enum: [available, claimed], default: available }
+ *     responses:
+ *       200:
+ *         description: Count payload
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 count: { type: integer, example: 3 }
+ */
+router.get(
+    "/inbox/count",
+    requireAuth,
+    requireRole(["driver"]),
+    async (req: Request, res: Response) => {
+        const driverId = (req as any).user.id;
+        const tab = (req.query.tab as "available" | "claimed") ?? "available";
+        const now = new Date();
+
+        const groups = await Group.find({ members: driverId }).select("_id").lean();
+        const groupIds = groups.map((g) => g._id);
+
+        if (tab === "claimed") {
+            const count = await Ride.countDocuments({ assignedDriverId: driverId });
+            return res.json({ count });
+        }
+
+        const result = await RideShare.aggregate([
+            {
+                $match: {
+                    status: "active",
+                    $and: [
+                        {
+                            $or: [
+                                { visibility: "public" },
+                                { visibility: "drivers", driverIds: new Types.ObjectId(driverId) },
+                                { visibility: "groups", groupIds: { $in: groupIds } },
+                            ],
+                        },
+                        {
+                            $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }],
+                        },
+                    ],
+                },
+            },
+            {
+                $lookup: {
+                    from: "rides",
+                    localField: "rideId",
+                    foreignField: "_id",
+                    as: "ride",
+                    pipeline: [
+                        // claimable = not assigned & not completed
+                        { $match: { assignedDriverId: { $in: [null, undefined] }, status: { $ne: "completed" } } },
+                        { $project: { _id: 1 } },
+                    ],
+                },
+            },
+            { $match: { "ride.0": { $exists: true } } },
+            { $count: "count" },
+        ]);
+
+        const count = result[0]?.count ?? 0;
+        return res.json({ count });
+    }
+);
+
 export default router;

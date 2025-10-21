@@ -3,9 +3,11 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useMemo } from 'react'
+import useSWR from 'swr'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from './ui'
-import {Menu, User, X} from 'lucide-react'
+import { Menu, User, X, Bell } from 'lucide-react'
+import {getDriverInboxCount, useDriverInboxCount} from '@/stores/rideShares' // expects: () => Promise<{ count: number }>
 
 type NavItem = {
     name: string
@@ -16,7 +18,7 @@ type NavItem = {
 const navigation: NavItem[] = [
     { name: 'Groups', href: '/groups', requiredRoles: ['driver', 'dispatcher', 'admin'] },
     { name: 'Rides', href: '/rides', requiredRoles: ['driver', 'dispatcher', 'admin'] },
-    { name: 'Active Rides', href: '/shared-rides', requiredRoles: ['driver', 'dispatcher', 'admin'] },
+    { name: 'New Rides', href: '/shared-rides', requiredRoles: ['driver', 'dispatcher', 'admin'] },
     { name: 'Users', href: '/users', requiredRoles: ['admin', 'dispatcher'] },
 ]
 
@@ -50,9 +52,32 @@ export default function Navigation() {
     )
 
     const isActive = (href: string) => {
-        // treat routes with query (?role=driver) as active if pathname matches base
         const base = href.split('?')[0]
         return pathname === href || pathname === base
+    }
+
+    const isDriver = !!userRoles?.includes('driver')
+    const { data: inboxCountData } = useDriverInboxCount('available');
+    const newRidesCount = inboxCountData?.count ?? 0
+
+    const renderNavLabel = (item: NavItem) => {
+        if (item.name !== 'New Rides') return item.name
+
+        return (
+            <span className="inline-flex items-center gap-1.5">
+        <Bell className="h-4 w-4" />
+        <span>New Rides</span>
+                {isDriver && newRidesCount > 0 && (
+                    <span
+                        className="ml-0.5 inline-flex items-center justify-center rounded-full bg-red-600 text-white
+                       text-[10px] font-semibold px-1.5 min-w-[1.1rem] h-4 leading-none"
+                        aria-label={`${newRidesCount} new rides`}
+                    >
+            {newRidesCount > 99 ? '99+' : newRidesCount}
+          </span>
+                )}
+      </span>
+        )
     }
 
     return (
@@ -77,7 +102,7 @@ export default function Navigation() {
                                             : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                                     }`}
                                 >
-                                    {item.name}
+                                    {renderNavLabel(item)}
                                 </Link>
                             ))}
                         </div>
@@ -94,7 +119,7 @@ export default function Navigation() {
                                         : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                                 }`}
                             >
-                               <User size={24}/> {user?.name}
+                                <User size={24} /> {user?.name}
                             </Link>
                             <Button variant="outline" size="sm" onClick={logout}>
                                 Logout
@@ -123,22 +148,29 @@ export default function Navigation() {
                                 key={item.name}
                                 href={item.href}
                                 onClick={() => setOpen(false)}
-                                className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                                className={`flex items-center justify-between pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
                                     isActive(item.href)
                                         ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
                                         : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300'
                                 }`}
                             >
-                                {item.name}
+                                <span className="inline-flex items-center gap-2">{renderNavLabel(item)}</span>
+
+                                {/* On mobile, also show count bubble for New Rides */}
+                                {item.name === 'New Rides' && isDriver && newRidesCount > 0 && (
+                                    <span
+                                        className="ml-2 inline-flex items-center justify-center rounded-full bg-red-600 text-white
+                               text-xs font-semibold px-2 min-w-[1.25rem] h-5 leading-none"
+                                        aria-label={`${newRidesCount} new rides`}
+                                    >
+                    {newRidesCount > 99 ? '99+' : newRidesCount}
+                  </span>
+                                )}
                             </Link>
                         ))}
                     </div>
                     <div className="border-t px-4 py-3 space-y-2">
-                        <Link
-                            href="/account"
-                            onClick={() => setOpen(false)}
-                            className="block text-sm font-medium text-gray-900"
-                        >
+                        <Link href="/account" onClick={() => setOpen(false)} className="block text-sm font-medium text-gray-900">
                             {user?.name}
                         </Link>
                         <div className="flex items-center justify-between">

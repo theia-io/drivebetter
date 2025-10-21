@@ -27,6 +27,10 @@ export type CreateShareRequest = {
     syncQueue?: boolean; // default true
 };
 
+export type InboxCount = {
+    count: number | null;
+}
+
 export type InboxItem = {
     shareId: string | null;
     visibility: "public" | "groups" | "drivers" | null;
@@ -70,6 +74,9 @@ export const revokeRideShare = (shareId: string) =>
 export const getDriverInbox = (tab: "available" | "claimed" = "available") =>
     apiGet<InboxItem[]>(`/ride-shares/inbox?tab=${tab}`);
 
+export const getDriverInboxCount = (tab: "available" | "claimed" = "available") =>
+    apiGet<InboxCount>(`/ride-shares/inbox/count?tab=${tab}`);
+
 export const claimRideShare = (shareId: string) =>
     apiPost<{ status: "claimed"; rideId: string; assignedDriverId: string }>(
         `/ride-shares/${shareId}/claim`,
@@ -98,6 +105,11 @@ export function useRideShares(rideId?: string) {
 export function useDriverInbox(tab: "available" | "claimed") {
     const key = `/ride-shares/inbox?tab=${tab}`;
     return useSWR<InboxItem[]>(key, () => getDriverInbox(tab));
+}
+
+export function useDriverInboxCount(tab: "available" | "claimed") {
+    const key = `/ride-shares/inbox/count?tab=${tab}`;
+    return useSWR<InboxCount>(key, () => getDriverInboxCount(tab));
 }
 
 export function useRevokeRideShare(shareId?: string) {

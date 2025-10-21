@@ -1,4 +1,3 @@
-// app/rides/[id]/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -15,16 +14,19 @@ import {
     PhoneIcon,
     Share2,
     Trash2,
-    User
+    User,
+    UserIcon,
+    Users
 } from "lucide-react";
-import LeafletMap from "@/components/ui/maps/LeafletMap";
-import { useRide, useSetRideStatus, useDeleteRide } from "@/stores/rides";
-import { getRoute } from "@/stores/routes";
-import {Ride} from "@/types";
 import Link from "next/link";
-import {useUser} from "@/stores/users";
+
+import LeafletMap from "@/components/ui/maps/LeafletMap";
+import {Ride} from "@/types";
+import { useRide, useSetRideStatus, useDeleteRide } from "@/stores/rides";
+import {useUser, useDriversPublicBatchMap} from "@/stores/users";
+import { getRoute } from "@/stores/routes";
 import {useAuthStore} from "@/stores";
-import {KV} from "@/components/ui/commmon";
+import { useGroups } from "@/stores/groups";
 import {useRevokeRideShare, useRideShares} from "@/stores/rideShares";
 
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -53,6 +55,23 @@ export default function RideDetailsPage() {
 
     const hasA = !!ride?.fromLocation?.coordinates?.length;
     const hasB = !!ride?.toLocation?.coordinates?.length;
+
+    const { data: groupsData } = useGroups({});
+    const groupNameById = useMemo(
+        () => new Map((groupsData?.items ?? []).map((g: any) => [String(g._id), g.name])),
+        [groupsData]
+    );
+
+    const allDriverIds = useMemo(
+        () =>
+            Array.from(
+                new Set(
+                    (shares ?? []).flatMap((s: any) => (s?.driverIds ?? []).map((id: any) => String(id)))
+                )
+            ),
+        [shares]
+    );
+    const { map: driversMap, isLoading: driversLoading } = useDriversPublicBatchMap(allDriverIds);
 
     useEffect(() => {
         let cancelled = false;
@@ -258,52 +277,103 @@ export default function RideDetailsPage() {
                                     </div>
                                 ) : (
                                     <div className="space-y-3">
-                                        {shares?.map((s) => (
-                                            <div key={s.shareId} className="rounded-lg border p-3 space-y-2 bg-white">
-                                                <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs capitalize">
-                  {s.visibility}
-                </span>
-                                                    {typeof s.maxClaims === "number" && (
-                                                        <span className="text-xs text-gray-600">Max claims: {s.maxClaims}</span>
-                                                    )}
-                                                    <span className="text-xs text-gray-600">
-                  Expires: {s.expiresAt ? new Date(s.expiresAt).toLocaleString() : "—"}
-                </span>
-                                                    <span className="text-xs text-gray-600">Status: {s.status || "active"}</span>
-                                                </div>
+                                        {shares.map((s: any) => {
+                                            const groups = (s.groupIds ?? []).map((gid: any) => String(gid));
+                                            const drivers = (s.driverIds ?? []).map((uid: any) => String(uid));
 
-                                                {s.url && (
-                                                    <div className="flex items-center gap-2 rounded-md border p-2">
-                                                        <Link2 className="w-4 h-4 text-gray-500 shrink-0" />
-                                                        <div className="truncate text-sm">{s.url}</div>
-                                                        <button
-                                                            type="button"
-                                                            className="ml-auto inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
-                                                            onClick={() => navigator.clipboard.writeText(s.url!)}
-                                                        >
-                                                            <Copy className="w-3.5 h-3.5" /> Copy
-                                                        </button>
+                                            return (
+                                                <div key={s.shareId} className="rounded-lg border p-3 space-y-2 bg-white">
+                                                    {/* Top row: basic meta */}
+                                                    <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs capitalize">
+              {s.visibility}
+            </span>
+                                                        {typeof s.maxClaims === "number" && (
+                                                            <span className="text-xs text-gray-600">Max claims: {s.maxClaims}</span>
+                                                        )}
+                                                        <span className="text-xs text-gray-600">
+              Expires: {s.expiresAt ? new Date(s.expiresAt).toLocaleString() : "—"}
+            </span>
+                                                        <span className="text-xs text-gray-600">Status: {s.status || "active"}</span>
                                                     </div>
-                                                )}
 
-                                                <div className="flex flex-wrap gap-2">
-                                                    <Link href={`/rides/${id}/share?shareId=${encodeURIComponent(s.shareId)}`}>
-                                                        <Button variant="outline" size="sm">Manage</Button>
-                                                    </Link>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        leftIcon={<Trash2 className="w-4 h-4" />}
-                                                        onClick={() => onRevokeShare(s.shareId)}
-                                                        disabled={revokingId === s.shareId}
-                                                    >
-                                                        {revokingId === s.shareId ? "Revoking…" : "Revoke"}
-                                                    </Button>
+                                                    {/* ACL: Groups */}
+                                                    {groups.length > 0 && (
+                                                        <div className="mt-1">
+                                                            <div className="flex items-center gap-1 text-xs text-gray-700 mb-1">
+                                                                <Users className="w-3.5 h-3.5 text-gray-500" />
+                                                                <span className="font-medium">Groups</span>
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {groups.map((gid) => (
+                                                                    <span
+                                                                        key={gid}
+                                                                        className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs bg-white"
+                                                                        title={gid}
+                                                                    >
+                    {groupNameById.get(gid) || `Group ${gid.slice(-6)}`}
+                  </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* ACL: Drivers */}
+                                                    {drivers.length > 0 && (
+                                                        <div className="mt-1">
+                                                            <div className="flex items-center gap-1 text-xs text-gray-700 mb-1">
+                                                                <UserIcon className="w-3.5 h-3.5 text-gray-500" />
+                                                                <span className="font-medium">Drivers</span>
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {drivers.map((uid) => {
+                                                                    const d = driversMap[uid];
+                                                                    const display = d?.name || `User ${uid.slice(-6)}`;
+                                                                    const secondary = d?.email || "";
+                                                                    return (
+                                                                        <span
+                                                                            key={uid}
+                                                                            className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs bg-white"
+                                                                            title={secondary || uid}
+                                                                        >
+                      <Link
+                          href={`/users/${uid}`}
+                          className="hover:underline font-medium text-gray-900 truncate max-w-[12rem]"
+                      >
+                        {display}
+                      </Link>
+                                                                            {secondary && (
+                                                                                <span className="text-gray-600 truncate max-w-[10rem]">• {secondary}</span>
+                                                                            )}
+                    </span>
+                                                                    );
+                                                                })}
+                                                                {driversLoading && (
+                                                                    <span className="text-xs text-gray-600">Loading drivers…</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* URL (only if present) */}
+                                                    {s.url && (
+                                                        <div className="flex items-center gap-2 rounded-md border p-2">
+                                                            <Link2 className="w-4 h-4 text-gray-500 shrink-0" />
+                                                            <div className="truncate text-sm">{s.url}</div>
+                                                            <button
+                                                                type="button"
+                                                                className="ml-auto inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
+                                                                onClick={() => navigator.clipboard.writeText(s.url!)}
+                                                            >
+                                                                <Copy className="w-3.5 h-3.5" /> Copy
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
 
+                                        {/* Footer CTA */}
                                         <div className="pt-1">
                                             {canShare && (
                                                 <Link href={`/rides/${id}/share`}>
@@ -313,7 +383,9 @@ export default function RideDetailsPage() {
                                                 </Link>
                                             )}
                                             <Link href={`/rides/${id}/share`}>
-                                                <Button size="sm" variant="outline">Create Another Share</Button>
+                                                <Button size="sm" variant="outline" className="ml-2">
+                                                    Create Another Share
+                                                </Button>
                                             </Link>
                                         </div>
                                     </div>
