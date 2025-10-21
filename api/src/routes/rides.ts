@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import mongoose, { Types } from "mongoose";
+import mongoose, {FilterQuery, Types} from "mongoose";
 import Ride from "../models/ride.model";
 import User from "../models/user.model";
 import {requireAuth, requireRole} from "../lib/auth";
@@ -12,16 +12,29 @@ const router = Router();
 const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
 const isObjectId = (v: any) => Types.ObjectId.isValid(String(v));
 
-async function ensureAcl(share: IRideShare, driverId: string) {
-    if (share.visibility === "public") return true;
-    if (share.visibility === "drivers") {
-        return (share.driverIds || []).some((id) => String(id) === String(driverId));
-    }
-    const count = await Group.countDocuments({
-        _id: { $in: share.groupIds || [] },
-        members: { $in: [driverId] },
-    });
-    return count > 0;
+function sanitizeRideForDriver(ride: any) {
+    const {
+        _id, from, to, datetime, type, status,
+        fromLocation, toLocation, customer,
+        payment, assignedDriverId, distance, notes
+    } = ride;
+    return {
+        _id,
+        from,
+        to,
+        datetime,
+        type,
+        status,
+        fromLocation,
+        toLocation,
+        distance,
+        notes, // keep or drop depending on your policy
+        customer: customer ? { name: customer.name || "", phone: customer.phone || "" } : undefined,
+        payment: payment
+            ? { method: payment.method || "", amountCents: payment.amountCents ?? null, paid: !!payment.paid }
+            : undefined,
+        assignedDriverId,
+    };
 }
 
 /**
@@ -936,6 +949,143 @@ router.delete(
         );
         if (!modifiedCount) return res.status(404).json({ error: "No active shares" });
         return res.json({ status: "revoked" });
+    }
+);
+
+/**
+ * @openapi
+ * /rides/my:
+ *   get:
+ *     summary: List rides assigned to the authenticated driver
+ *     description: Returns rides where `assignedDriverId` equals the current user. Supports basic filtering and cursor pagination.
+ *     tags: [Rides]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         description: Optional comma-separated list of ride statuses to include (e.g. `assigned,on_my_way,completed`)
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: from
+ *         description: ISO date-time (inclusive) filter on `datetime` (pickup time) lower bound
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *       - in: query
+ *         name: to
+ *         description: ISO date-time (exclusive) filter on `datetime` upper bound
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *       - in: query
+ *         name: limit
+ *         description: Page size (max 100)
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           minimum: 1
+ *           maximum: 100
+ *       - in: query
+ *         name: cursor
+ *         description: Cursor for pagination; pass the last seen ride `_id` to fetch the next page
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: A page of rides assigned to the driver
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 items:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id: { type: string }
+ *                       from: { type: string }
+ *                       to: { type: string }
+ *                       datetime: { type: string, format: date-time }
+ *                       type: { type: string }
+ *                       status: { type: string }
+ *                       fromLocation: { type: object, nullable: true }
+ *                       toLocation: { type: object, nullable: true }
+ *                       distance: { type: number, nullable: true }
+ *                       notes: { type: string, nullable: true }
+ *                       customer:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           name: { type: string }
+ *                           phone: { type: string }
+ *                       payment:
+ *                         type: object
+ *                         nullable: true
+ *                         properties:
+ *                           method: { type: string }
+ *                           amountCents: { type: integer, nullable: true }
+ *                           paid: { type: boolean }
+ *                       assignedDriverId: { type: string }
+ *                 nextCursor:
+ *                   type: string
+ *                   nullable: true
+ *       401: { description: Unauthorized }
+ *       403: { description: Forbidden (not a driver) }
+ */
+router.get(
+    "/my",
+    requireAuth,
+    requireRole(["driver"]),
+    async (req: Request, res: Response) => {
+        const driverId = (req as any).user.id as string;
+
+        const rawLimit = Number(req.query.limit ?? 20);
+        const limit = Math.min(Math.max(rawLimit, 1), 100);
+
+        const statusParam = String(req.query.status ?? "").trim();
+        const statusList = statusParam
+            ? statusParam.split(",").map((s) => s.trim()).filter(Boolean)
+            : [];
+
+        const from = req.query.from ? new Date(String(req.query.from)) : null;
+        const to = req.query.to ? new Date(String(req.query.to)) : null;
+
+        const cursor = req.query.cursor ? String(req.query.cursor) : null;
+
+        const q: FilterQuery<any> = {
+            assignedDriverId: driverId,
+        };
+
+        if (statusList.length) {
+            q.status = { $in: statusList };
+        }
+
+        if (from || to) {
+            q.datetime = {};
+            if (from && !Number.isNaN(from.getTime())) (q.datetime as any).$gte = from;
+            if (to && !Number.isNaN(to.getTime())) (q.datetime as any).$lt = to;
+            if (Object.keys(q.datetime as any).length === 0) delete q.datetime;
+        }
+
+        // Cursor pagination (descending by _id)
+        if (cursor && Types.ObjectId.isValid(cursor)) {
+            q._id = { $lt: new Types.ObjectId(cursor) };
+        }
+
+        const docs = await Ride.find(q)
+            .sort({ _id: -1 })
+            .limit(limit + 1)
+            .lean();
+
+        const hasMore = docs.length > limit;
+        const page = hasMore ? docs.slice(0, limit) : docs;
+        const nextCursor = hasMore ? String(page[page.length - 1]._id) : null;
+
+        const items = page.map(sanitizeRideForDriver);
+
+        return res.json({ items, nextCursor });
     }
 );
 

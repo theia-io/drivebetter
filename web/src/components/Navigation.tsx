@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useMemo } from 'react'
-import useSWR from 'swr'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from './ui'
 import { Menu, User, X, Bell } from 'lucide-react'
@@ -16,11 +15,18 @@ type NavItem = {
 }
 
 const navigation: NavItem[] = [
-    { name: 'Groups', href: '/groups', requiredRoles: ['driver', 'dispatcher', 'admin'] },
-    { name: 'Rides', href: '/rides', requiredRoles: ['driver', 'dispatcher', 'admin'] },
-    { name: 'New Rides', href: '/shared-rides', requiredRoles: ['driver', 'dispatcher', 'admin'] },
-    { name: 'Users', href: '/users', requiredRoles: ['admin', 'dispatcher'] },
-]
+    { name: "Groups", href: "/groups", requiredRoles: ["driver", "dispatcher", "admin"] },
+
+    // Drivers should NOT see all rides
+    { name: "Rides", href: "/rides", requiredRoles: ["dispatcher", "admin"] },
+
+    // Driver-only views
+    { name: "My Rides", href: "/my-rides", requiredRoles: ["driver"] },
+    { name: "New Rides", href: "/shared-rides", requiredRoles: ["driver"] },
+
+    // Admin/Dispatcher
+    { name: "Users", href: "/users", requiredRoles: ["admin", "dispatcher"] },
+];
 
 const getNavigationForUser = (item: NavItem, userRoles?: string[]): NavItem => {
     if (item.name !== 'Users') return item
@@ -41,7 +47,11 @@ export default function Navigation() {
     const pathname = usePathname()
     const { user, logout } = useAuthStore()
     const userRoles = user?.roles
+    const isDriver = !!userRoles?.includes('driver')
+    const { data: inboxCountData } = useDriverInboxCount(isDriver ? 'available' : undefined);
+
     const [open, setOpen] = useState(false)
+    const newRidesCount = inboxCountData?.count ?? 0
 
     const items = useMemo(
         () =>
@@ -55,10 +65,6 @@ export default function Navigation() {
         const base = href.split('?')[0]
         return pathname === href || pathname === base
     }
-
-    const isDriver = !!userRoles?.includes('driver')
-    const { data: inboxCountData } = useDriverInboxCount('available');
-    const newRidesCount = inboxCountData?.count ?? 0
 
     const renderNavLabel = (item: NavItem) => {
         if (item.name !== 'New Rides') return item.name

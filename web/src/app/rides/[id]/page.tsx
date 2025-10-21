@@ -35,20 +35,12 @@ import { useAuthStore } from "@/stores";
 import { useGroups } from "@/stores/groups";
 import { useRideShares } from "@/stores/rideShares";
 
-// ➕ Claims stores
 import {
     useRideClaims,
     useApproveRideClaim,
     useRejectRideClaim,
 } from "@/stores/rideClaims";
-
-const fmtTime = (iso: string) =>
-    new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
-const money = (cents?: number) =>
-    typeof cents === "number" ? `$${(cents / 100).toFixed(2)}` : "—";
-const km = (m?: number) => (m ? `${(m / 1000).toFixed(1)} km` : "—");
-const mins = (m?: number) => (m ? `${m} min` : "—");
+import {fmtDate, fmtTime, km, mins, money} from "@/services/convertors";
 
 const STATUS: Ride["status"][] = [
     "unassigned",

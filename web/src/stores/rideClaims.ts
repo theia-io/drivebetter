@@ -168,7 +168,8 @@ export function useDriverInbox(tab: "available" | "claimed") {
     return useSWR<InboxItem[]>(key, () => getDriverInbox(tab));
 }
 
-export function useDriverInboxCount(tab: "available" | "claimed") {
-    const key = `/ride-shares/inbox/count?tab=${tab}`;
-    return useSWR<InboxCount>(key, () => getDriverInboxCount(tab));
+export function useDriverInboxCount(tab?: "available" | "claimed") {
+    const key = tab ? `/ride-shares/inbox/count?tab=${tab}` : null;
+    return useSWR<InboxCount>(key, () => getDriverInboxCount(tab as "available" | "claimed"));
 }
+

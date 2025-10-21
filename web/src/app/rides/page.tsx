@@ -4,16 +4,13 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { Calendar, Car, Clock, DollarSign, Filter, MapPin, Navigation, Plus, Search, Star, User } from "lucide-react";
 import Link from "next/link";
-import { useMemo } from "react";
+import {useEffect, useMemo} from "react";
 import { useRidesInfinite } from "@/stores/rides";
 import {Ride} from "@/types";
 import AssignedDriverBadge from "@/components/ui/AssignedDriverBadge";
-
-const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
-const money = (cents?: number) => (typeof cents === "number" ? `$${(cents / 100).toFixed(2)}` : "—");
-const km = (m?: number) => (m ? `${(m / 1000).toFixed(1)} km` : "—");
-const mins = (m?: number) => (m ? `${m} min` : "—");
+import {fmtDate, fmtTime, km, mins, money} from "@/services/convertors";
+import {useRouter} from "next/navigation";
+import {useAuthStore} from "@/stores";
 
 function getStatusColor(status: string) {
     switch (status) {
@@ -50,6 +47,20 @@ function getStatusIcon(status: string) {
 }
 
 export default function RidesPage() {
+    const router = useRouter();
+    const { user } = useAuthStore();
+    const isChecking = typeof user === "undefined";
+    const roles = user?.roles ?? [];
+    const isDriver = roles.includes("driver");
+    const isPrivileged = roles.includes("admin") || roles.includes("dispatcher");
+    const isDriverOnly = isDriver && !isPrivileged;
+
+    useEffect(() => {
+        if (!isChecking && isDriverOnly) {
+            router.replace("/my-rides");
+        }
+    }, [isChecking, isDriverOnly, router]);
+
     const { items, size, setSize, isLoading, reachedEnd } = useRidesInfinite({}, 20);
 
     const todaysCount = useMemo(() => {

@@ -40,6 +40,9 @@ const q = (params?: Record<string, any>) => {
     return s ? `?${s}` : "";
 };
 
+export const listMyRides = () =>
+    apiGet<RidePage>(`/rides/my`);
+
 export const listRides = (params?: RideListQuery) =>
     apiGet<RidePage>(`/rides${q(params)}`);
 
@@ -215,6 +218,12 @@ export function useSetRideStatus(id?: string) {
         statusError: m.error as Error | undefined,
     };
 }
+
+export function useMyRides() {
+    const key = `/rides/my`;
+    return useSWR<RidePage>(key, () => listMyRides());
+}
+
 export function useRides(params?: RideListQuery) {
     const key = `/rides${q(params)}`;
     return useSWR<RidePage>(key, () => listRides(params));
