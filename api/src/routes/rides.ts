@@ -1,14 +1,28 @@
 import { Router, Request, Response } from "express";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import Ride from "../models/ride.model";
 import User from "../models/user.model";
 import {requireAuth, requireRole} from "../lib/auth";
 import {hasRideExpired, IRideShare, RideShare} from "../models/rideShare.model";
 import Group from "../models/group.model";
+import {RideClaim} from "@/src/models/rideClaim.model";
+import RideModel from "../models/ride.model";
 
 const router = Router();
 const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
 const isObjectId = (v: any) => Types.ObjectId.isValid(String(v));
+
+async function ensureAcl(share: IRideShare, driverId: string) {
+    if (share.visibility === "public") return true;
+    if (share.visibility === "drivers") {
+        return (share.driverIds || []).some((id) => String(id) === String(driverId));
+    }
+    const count = await Group.countDocuments({
+        _id: { $in: share.groupIds || [] },
+        members: { $in: [driverId] },
+    });
+    return count > 0;
+}
 
 /**
  * @openapi
@@ -363,43 +377,260 @@ router.delete("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
     res.status(204).end();
 });
 
+/* ==================================================================== */
+/* ============= DISPATCHER/ADMIN: list claims for a ride ============= */
+/* ==================================================================== */
+
 /**
  * @openapi
- * /rides/{id}/claim:
- *   post:
- *     summary: Driver claims a ride
+ * /rides/{id}/claims:
+ *   get:
+ *     summary: List claims for a ride
+ *     description: Returns all claims (queued/approved/rejected/withdrawn) for a given ride.
  *     tags: [Rides]
+ *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         schema: { type: string }
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [driverId]
- *             properties:
- *               driverId: { type: string }
+ *         schema:
+ *           type: string
+ *           pattern: "^[0-9a-fA-F]{24}$"
+ *         description: Mongo ObjectId of the Ride.
  *     responses:
- *       200: { description: Claimed }
- *       404: { description: Not found }
+ *       200:
+ *         description: Claims list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   claimId:   { type: string }
+ *                   status:    { type: string, enum: [queued, approved, rejected, withdrawn] }
+ *                   driverId:  { type: string }
+ *                   shareId:   { type: string, nullable: true }
+ *                   createdAt: { type: string, format: date-time }
  */
-router.post("/:id([0-9a-fA-F]{24})/claim", async (req: Request, res: Response) => {
-    const { driverId } = req.body as { driverId: string };
-    if (!isObjectId(driverId)) return res.status(400).json({ error: "invalid_driver_id" });
+router.get(
+    "/:id([0-9a-fA-F]{24})/claims",
+    requireAuth,
+    requireRole(["dispatcher", "admin"]),
+    async (req: Request, res: Response) => {
+        const { id } = req.params;
 
-    const ride = await Ride.findById(req.params.id);
-    if (!ride) return res.status(404).json({ error: "Ride not found" });
+        const claims = await (await RideClaim.find({ rideId: id }).sort({ createdAt: 1 }).lean()).map((c) => ({
+            claimId: String(c._id),
+            status: c.status,
+            driverId: String(c.driverId),
+            shareId: c.shareId ? String(c.shareId) : null,
+            createdAt: c.createdAt,
+        }));
 
-    const oid = new Types.ObjectId(driverId);
-    if (!ride.queue.map(String).includes(String(oid))) ride.queue.push(oid);
-    await ride.save();
+        return res.json(claims);
+    }
+);
 
-    res.json({ ok: true, queuePosition: ride.queue.findIndex((d) => String(d) === String(oid)) + 1 });
-});
+/* ==================================================================== */
+/* ========= DISPATCHER/ADMIN: approve one claim and assign ride ====== */
+/* ==================================================================== */
+
+/**
+ * @openapi
+ * /rides/{id}/claims/{claimId}/approve:
+ *   post:
+ *     summary: Approve a claim and assign the ride
+ *     description: Approves the specified queued claim, assigns the ride to that driver, rejects other queued claims, and closes all shares for this ride.
+ *     tags: [Rides]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: "^[0-9a-fA-F]{24}$"
+ *         description: Ride ID (Mongo ObjectId).
+ *       - in: path
+ *         name: claimId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: "^[0-9a-fA-F]{24}$"
+ *         description: Claim ID (Mongo ObjectId).
+ *     responses:
+ *       200:
+ *         description: Ride assigned and other claims/shares updated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok:     { type: boolean }
+ *                 status: { type: string, enum: [assigned] }
+ *       404: { description: Claim not found / ride closed }
+ *       409: { description: Claim not queued / ride already assigned }
+ */
+router.post(
+    "/:id([0-9a-fA-F]{24})/claims/:claimId([0-9a-fA-F]{24})/approve",
+    requireAuth,
+    requireRole(["dispatcher", "admin"]),
+    async (req: Request, res: Response) => {
+        const { id, claimId } = req.params;
+
+        const session = await mongoose.startSession();
+        try {
+            await session.withTransaction(async () => {
+                const claim = await RideClaim.findOne({ _id: claimId, rideId: id }).session(session);
+                if (!claim) throw new Error("Claim not found");
+                if (claim.status !== "queued") throw new Error("Claim is not queued");
+
+                const ride = await Ride.findOneAndUpdate(
+                    { _id: id, assignedDriverId: { $in: [null, undefined] }, status: { $ne: "completed" } },
+                    { $set: { assignedDriverId: claim.driverId, status: "assigned" } },
+                    { new: true, session }
+                );
+                if (!ride) throw new Error("Ride already assigned or closed");
+
+                await RideClaim.updateOne({ _id: claim._id }, { $set: { status: "approved" } }, { session });
+
+                await RideClaim.updateMany(
+                    { rideId: id, status: "queued", _id: { $ne: claim._id } },
+                    { $set: { status: "rejected" } },
+                    { session }
+                );
+
+                await RideShare.updateMany(
+                    { rideId: id, status: { $in: ["active", "expired"] } },
+                    { $set: { status: "closed" } },
+                    { session }
+                );
+            });
+
+            return res.json({ ok: true, status: "assigned" });
+        } catch (err: any) {
+            const msg = String(err?.message || err);
+            const code = /not found/i.test(msg) ? 404 : /queued|assigned|closed/i.test(msg) ? 409 : 400;
+            return res.status(code).json({ error: msg });
+        } finally {
+            await session.endSession();
+        }
+    }
+);
+
+/* ==================================================================== */
+/* ============= DISPATCHER/ADMIN: reject a queued claim ============== */
+/* ==================================================================== */
+
+/**
+ * @openapi
+ * /rides/{id}/claims/{claimId}/reject:
+ *   post:
+ *     summary: Reject a queued claim
+ *     tags: [Rides]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: "^[0-9a-fA-F]{24}$"
+ *         description: Ride ID (Mongo ObjectId).
+ *       - in: path
+ *         name: claimId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: "^[0-9a-fA-F]{24}$"
+ *         description: Claim ID (Mongo ObjectId).
+ *     responses:
+ *       200:
+ *         description: Claim rejected
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok: { type: boolean }
+ *       404: { description: Claim not found }
+ *       409: { description: Claim is not queued }
+ */
+router.post(
+    "/:id([0-9a-fA-F]{24})/claims/:claimId([0-9a-fA-F]{24})/reject",
+    requireAuth,
+    requireRole(["dispatcher", "admin"]),
+    async (req: Request, res: Response) => {
+        const { id, claimId } = req.params;
+
+        const claim = await RideClaim.findOne({ _id: claimId, rideId: id });
+        if (!claim) return res.status(404).json({ error: "Claim not found" });
+        if (claim.status !== "queued") return res.status(409).json({ error: "Claim is not queued" });
+
+        claim.status = "rejected";
+        await claim.save();
+
+        return res.json({ ok: true });
+    }
+);
+
+/* ==================================================================== */
+/* ==================== DRIVER: withdraw own claim ==================== */
+/* ==================================================================== */
+
+/**
+ * @openapi
+ * /rides/{id}/claims/{claimId}:
+ *   delete:
+ *     summary: Withdraw a queued claim (driver)
+ *     tags: [Rides]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: "^[0-9a-fA-F]{24}$"
+ *         description: Ride ID (Mongo ObjectId).
+ *       - in: path
+ *         name: claimId
+ *         required: true
+ *         schema:
+ *           type: string
+ *           pattern: "^[0-9a-fA-F]{24}$"
+ *         description: Claim ID (Mongo ObjectId).
+ *     responses:
+ *       200:
+ *         description: Claim withdrawn
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 ok: { type: boolean }
+ *       404: { description: Claim not found }
+ *       409: { description: Only queued claims can be withdrawn }
+ */
+router.delete(
+    "/:id([0-9a-fA-F]{24})/claims/:claimId([0-9a-fA-F]{24})",
+    requireAuth,
+    requireRole(["driver"]),
+    async (req: Request, res: Response) => {
+        const { id, claimId } = req.params;
+        const driverId = (req as any).user.id;
+
+        const claim = await RideClaim.findOne({ _id: claimId, rideId: id, driverId });
+        if (!claim) return res.status(404).json({ error: "Claim not found" });
+        if (claim.status !== "queued") return res.status(409).json({ error: "Only queued claims can be withdrawn" });
+
+        claim.status = "withdrawn";
+        await claim.save();
+
+        return res.json({ ok: true });
+    }
+);
 
 /**
  * @openapi

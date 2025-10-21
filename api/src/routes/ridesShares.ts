@@ -4,6 +4,7 @@ import Ride from "../models/ride.model";
 import {requireAuth, requireRole} from "../lib/auth";
 import {hasRideExpired, IRideShare, RideShare} from "../models/rideShare.model";
 import Group from "../models/group.model";
+import {RideClaim} from "@/src/models/rideClaim.model";
 
 const router = Router();
 const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
@@ -102,70 +103,87 @@ router.get("/:shareId([0-9a-fA-F]{24})", requireAuth, requireRole(["driver"]), a
     res.json({ ride: sanitizeRideForDriver(ride), share: serializeShare(share) });
 });
 
+/* ==================================================================== */
+/* =============== DRIVER: queue a claim from a share ================== */
+/* ==================================================================== */
+
 /**
  * @openapi
  * /ride-shares/{shareId}/claim:
  *   post:
- *     summary: Claim a ride via share (driver)
+ *     summary: Queue a claim for a shared ride (driver request)
+ *     description: Creates (or idempotently returns) a queued claim for the given share. This **does not** assign the ride; a dispatcher/admin must approve one claim.
  *     tags: [RideShares]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
  *         name: shareId
  *         required: true
- *         schema: { type: string }
- *     requestBody:
- *       required: false
+ *         schema:
+ *           type: string
+ *           pattern: "^[0-9a-fA-F]{24}$"
+ *         description: Mongo ObjectId of the RideShare document.
  *     responses:
  *       200:
- *         description: Claimed
+ *         description: Claim queued (or already queued)
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 status: { type: string }
- *                 rideId: { type: string }
- *                 assignedDriverId: { type: string }
- *       403: { description: Forbidden / ACL }
- *       404: { description: Not found / expired / inactive }
- *       409: { description: Already assigned / maxClaims reached }
+ *                 status:  { type: string, enum: [queued] }
+ *                 claimId: { type: string }
+ *                 rideId:  { type: string }
+ *                 shareId: { type: string }
+ *       403: { description: Forbidden (ACL) }
+ *       404: { description: Share not found / expired / inactive / ride closed }
+ *       409: { description: Ride already assigned }
  */
-router.post("/:shareId([0-9a-fA-F]{24})/claim", requireAuth, requireRole(["driver"]), async (req, res) => {
-    const { shareId } = req.params;
-    const driverId = (req as any).user.id;
+router.post(
+    "/:shareId([0-9a-fA-F]{24})/claim",
+    requireAuth,
+    requireRole(["driver"]),
+    async (req: Request, res: Response) => {
+        const { shareId } = req.params;
+        const driverId = (req as any).user.id;
 
-    const share = await RideShare.findById(shareId);
-    if (!share) return res.status(404).json({ error: "Share not found" });
+        const share = await RideShare.findById(shareId);
+        if (!share) return res.status(404).json({ error: "Share not found" });
 
-    if (share.status === "active" && hasRideExpired(share)) {
-        share.status = "expired";
+        // expiry/inactive checks
+        if (share.status === "active" && hasRideExpired(share)) {
+            share.status = "expired";
+            await share.save();
+            return res.status(404).json({ error: "Share expired" });
+        }
+        if (share.status !== "active") return res.status(404).json({ error: "Share inactive" });
+
+        if (!(await ensureAcl(share as any, driverId))) return res.status(403).json({ error: "Forbidden" });
+
+        const ride = await Ride.findById(share.rideId).lean();
+        if (!ride) return res.status(404).json({ error: "Ride not found" });
+        if ((ride.status as string) === "completed") return res.status(404).json({ error: "Ride closed" });
+        if (ride.assignedDriverId) return res.status(409).json({ error: "Ride already assigned" });
+
+        // Create or keep existing queued claim for (ride, driver)
+        const claim = await RideClaim.findOneAndUpdate(
+            { rideId: share.rideId, driverId, status: "queued" },
+            { $setOnInsert: { shareId: share._id } },
+            { new: true, upsert: true }
+        );
+
+        // optional: telemetry (naive)
+        share.claimsCount = (share.claimsCount ?? 0) + 1;
         await share.save();
-        return res.status(404).json({ error: "Share expired" });
+
+        return res.json({
+            status: "queued",
+            claimId: String(claim._id),
+            rideId: String(share.rideId),
+            shareId: String(share._id),
+        });
     }
-    if (share.status !== "active") return res.status(404).json({ error: "Share inactive" });
-
-    if (!(await ensureAcl(share, driverId))) return res.status(403).json({ error: "Forbidden" });
-
-    if (share.maxClaims && share.claimsCount >= share.maxClaims) {
-        share.status = "closed";
-        await share.save();
-        return res.status(409).json({ error: "Max claims reached" });
-    }
-
-    const ride = await Ride.findOneAndUpdate(
-        { _id: share.rideId, assignedDriverId: { $in: [null, undefined] }, status: { $ne: "completed" } },
-        { $set: { assignedDriverId: driverId, status: "assigned" } },
-        { new: true }
-    );
-    if (!ride) return res.status(409).json({ error: "Ride already assigned or closed" });
-
-    share.claimsCount += 1;
-    if (share.maxClaims && share.claimsCount >= share.maxClaims) share.status = "closed";
-    await share.save();
-
-    res.json({ status: "claimed", rideId: String(ride._id), assignedDriverId: driverId });
-});
+);
 
 /**
  * @openapi

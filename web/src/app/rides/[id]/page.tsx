@@ -1,3 +1,4 @@
+// app/rides/[id]/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -7,8 +8,10 @@ import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import {
     ArrowLeft,
     Calendar,
-    Clock, Copy,
-    DollarSign, Link2,
+    Clock,
+    Copy,
+    DollarSign,
+    Link2,
     MapPin,
     Navigation,
     PhoneIcon,
@@ -16,74 +19,131 @@ import {
     Trash2,
     User,
     UserIcon,
-    Users
+    Users,
+    Check,
+    X as XIcon,
+    Loader2,
 } from "lucide-react";
 import Link from "next/link";
 
 import LeafletMap from "@/components/ui/maps/LeafletMap";
-import {Ride} from "@/types";
+import { Ride } from "@/types";
 import { useRide, useSetRideStatus, useDeleteRide } from "@/stores/rides";
-import {useUser, useDriversPublicBatchMap} from "@/stores/users";
+import { useUser, useDriversPublicBatchMap } from "@/stores/users";
 import { getRoute } from "@/stores/routes";
-import {useAuthStore} from "@/stores";
+import { useAuthStore } from "@/stores";
 import { useGroups } from "@/stores/groups";
-import {useRevokeRideShare, useRideShares} from "@/stores/rideShares";
+import { useRideShares } from "@/stores/rideShares";
 
-const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+// ➕ Claims stores
+import {
+    useRideClaims,
+    useApproveRideClaim,
+    useRejectRideClaim,
+} from "@/stores/rideClaims";
+
+const fmtTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString();
-const money = (cents?: number) => (typeof cents === "number" ? `$${(cents / 100).toFixed(2)}` : "—");
+const money = (cents?: number) =>
+    typeof cents === "number" ? `$${(cents / 100).toFixed(2)}` : "—";
 const km = (m?: number) => (m ? `${(m / 1000).toFixed(1)} km` : "—");
 const mins = (m?: number) => (m ? `${m} min` : "—");
 
-const STATUS: Ride["status"][] = ["unassigned","assigned","on_my_way","on_location","pob","clear","completed"];
+const STATUS: Ride["status"][] = [
+    "unassigned",
+    "assigned",
+    "on_my_way",
+    "on_location",
+    "pob",
+    "clear",
+    "completed",
+];
 
 export default function RideDetailsPage() {
     const { user } = useAuthStore();
-    const canShare = user?.roles?.some((r) => r === "admin" || r === "dispatcher");
+    const canManage = user?.roles?.some((r) => r === "admin" || r === "dispatcher");
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
+
     const { data: ride, mutate } = useRide(id);
     const { setRideStatus, isSettingStatus } = useSetRideStatus(id);
     const { deleteRide, isDeleting } = useDeleteRide(id);
+
+    // Shares (used for the existing shares card)
     const { data: shares = [], isLoading: sharesLoading, mutate: mutateShares } = useRideShares(id);
+
+    // Assigned driver display
     const assignedDriverId = ride?.assignedDriverId;
     const { data: driver } = useUser(assignedDriverId);
 
-    const [routeLine, setRouteLine] = useState<[number, number][]>([]);
-    const [revokingId, setRevokingId] = useState<string | null>(null);
-    const [error, setError] = useState<string | null>(null);
+    // Claims (driver requests queue)
+    const {
+        data: claims = [],
+        isLoading: claimsLoading,
+        mutate: mutateClaims,
+    } = useRideClaims(id);
 
-    const hasA = !!ride?.fromLocation?.coordinates?.length;
-    const hasB = !!ride?.toLocation?.coordinates?.length;
+    const { approve, isApproving } = useApproveRideClaim(id);
+    const { reject, isRejecting } = useRejectRideClaim(id);
 
+    const queuedClaims = useMemo(
+        () => claims.filter((c) => c.status === "queued"),
+        [claims]
+    );
+    const approvedClaim = useMemo(
+        () => claims.find((c) => c.status === "approved"),
+        [claims]
+    );
+
+    // Resolve driver names/emails for all claims once
+    const claimDriverIds = useMemo(
+        () => Array.from(new Set(claims.map((c) => c.driverId))),
+        [claims]
+    );
+    const { map: claimDriversMap, isLoading: claimDriversLoading } =
+        useDriversPublicBatchMap(claimDriverIds);
+
+    // Groups (to show names inside shares ACL block)
     const { data: groupsData } = useGroups({});
     const groupNameById = useMemo(
         () => new Map((groupsData?.items ?? []).map((g: any) => [String(g._id), g.name])),
         [groupsData]
     );
 
-    const allDriverIds = useMemo(
+    // Resolve share driver names (for existing "Ride Shares" card)
+    const allShareDriverIds = useMemo(
         () =>
             Array.from(
-                new Set(
-                    (shares ?? []).flatMap((s: any) => (s?.driverIds ?? []).map((id: any) => String(id)))
-                )
+                new Set((shares ?? []).flatMap((s: any) => (s?.driverIds ?? []).map((id: any) => String(id))))
             ),
         [shares]
     );
-    const { map: driversMap, isLoading: driversLoading } = useDriversPublicBatchMap(allDriverIds);
+    const { map: shareDriversMap, isLoading: shareDriversLoading } =
+        useDriversPublicBatchMap(allShareDriverIds);
+
+    const [routeLine, setRouteLine] = useState<[number, number][]>([]);
+    const [error, setError] = useState<string | null>(null);
+
+    const hasA = !!ride?.fromLocation?.coordinates?.length;
+    const hasB = !!ride?.toLocation?.coordinates?.length;
 
     useEffect(() => {
         let cancelled = false;
         (async () => {
-            if (!ride?.fromLocation || !ride?.toLocation) { setRouteLine([]); return; }
+            if (!ride?.fromLocation || !ride?.toLocation) {
+                setRouteLine([]);
+                return;
+            }
             const [lonA, latA] = ride.fromLocation.coordinates;
             const [lonB, latB] = ride.toLocation.coordinates;
             const r = await getRoute([lonA, latA], [lonB, latB]);
             if (cancelled) return;
             setRouteLine(r.geometry);
         })();
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [ride?.fromLocation, ride?.toLocation]);
 
     const statusValue = ride?.status || "unassigned";
@@ -92,32 +152,35 @@ export default function RideDetailsPage() {
         return `${ride.from} → ${ride.to}`;
     }, [ride]);
 
-    async function onRevokeShare(shareId: string) {
-        const ok = confirm(`Revoke this share? `);
-        if (!ok) return;
-        setRevokingId(shareId);
-        setError(null);
-        try {
-            await useRevokeRideShare(shareId);
-            await mutate();
-        } catch (e: any) {
-            setError(e?.message || "Failed to revoke share");
-        } finally {
-            setRevokingId(null);
-        }
-    }
-
     async function onChangeStatus(next: Ride["status"]) {
         const res = await setRideStatus({ status: next });
         if (res?.ok) await mutate();
     }
 
     async function onDelete() {
-        // eslint-disable-next-line no-alert
         const ok = confirm("Delete this ride?");
         if (!ok) return;
         const res = await deleteRide();
         if (res?.ok) router.push("/rides");
+    }
+
+    async function onApproveClaim(claimId: string) {
+        try {
+            await approve(claimId);
+            // Refresh everything that can change: ride (assignment), claims list, shares
+            await Promise.all([mutate(), mutateClaims(), mutateShares()]);
+        } catch (e: any) {
+            setError(e?.message || "Failed to approve request");
+        }
+    }
+
+    async function onRejectClaim(claimId: string) {
+        try {
+            await reject(claimId);
+            await mutateClaims();
+        } catch (e: any) {
+            setError(e?.message || "Failed to reject request");
+        }
     }
 
     if (!ride) {
@@ -137,11 +200,19 @@ export default function RideDetailsPage() {
                     {/* Toolbar */}
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                            <Button variant="outline" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />} onClick={() => router.push("/rides")}>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                leftIcon={<ArrowLeft className="w-4 h-4" />}
+                                onClick={() => router.push("/rides")}
+                            >
                                 Back
                             </Button>
-                            <Typography variant="h1" className="text-base sm:text-2xl font-bold text-gray-900 whitespace-normal break-words hyphens-auto leading-tight">
-                                {header}3
+                            <Typography
+                                variant="h1"
+                                className="text-base sm:text-2xl font-bold text-gray-900 whitespace-normal break-words hyphens-auto leading-tight"
+                            >
+                                {header}
                             </Typography>
                         </div>
                         <div className="flex items-center gap-2">
@@ -152,14 +223,22 @@ export default function RideDetailsPage() {
                                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                             >
                                 {STATUS.map((s) => (
-                                    <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
+                                    <option key={s} value={s}>
+                                        {s.replace(/_/g, " ")}
+                                    </option>
                                 ))}
                             </select>
-                            <Button variant="outline" size="sm" leftIcon={<Trash2 className="w-4 h-4" />} onClick={onDelete} disabled={isDeleting}>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                leftIcon={<Trash2 className="w-4 h-4" />}
+                                onClick={onDelete}
+                                disabled={isDeleting}
+                            >
                                 Delete
                             </Button>
                         </div>
-                        {canShare && (
+                        {canManage && (
                             <Link href={`/rides/${id}/share`}>
                                 <Button variant="outline" size="sm" leftIcon={<Share2 className="w-4 h-4" />}>
                                     Manage Shares
@@ -224,25 +303,17 @@ export default function RideDetailsPage() {
                                     <div className="flex items-center text-sm text-gray-700">
                                         <User className="w-4 h-4 mr-2 text-gray-400" />
                                         <span className="font-medium mr-1">Assigned driver:</span>
-
                                         {ride.assignedDriverId ? (
-                                            // ✅ Use a Link/Button structure for the assigned driver
                                             <Link
                                                 href={`/users/${ride.assignedDriverId}`}
-                                                className="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700
-                       ring-1 ring-inset ring-indigo-600/20 hover:bg-indigo-100 transition-colors truncate"
+                                                className="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/20 hover:bg-indigo-100 transition-colors truncate"
                                             >
-                                                <span className="truncate">
-                                                    {/* Primary Display: Driver Name (or "View driver") */}
-                                                    {driver?.name || "View driver"}
-                                                </span>
-                                                {/* Secondary Display: Driver Email (if available) - optional to include in the button */}
+                                                <span className="truncate">{driver?.name || "View driver"}</span>
                                                 {driver?.email ? (
                                                     <span className="ml-1 text-gray-600/80"> • {driver.email}</span>
                                                 ) : null}
                                             </Link>
                                         ) : (
-                                            // Fallback for unassigned
                                             "—"
                                         )}
                                     </div>
@@ -256,8 +327,94 @@ export default function RideDetailsPage() {
                         </CardBody>
                     </Card>
 
-                    {canShare && (
-                        <Card variant="elevated" className="mt-4">
+                    {/* ➕ Driver Requests (queue) — visible to dispatcher/admin */}
+                    {canManage && (
+                        <Card variant="elevated">
+                            <CardBody className="p-4 sm:p-6 space-y-3">
+                                <div className="flex items-center gap-2">
+                                    <Users className="w-4 h-4 text-indigo-600" />
+                                    <Typography className="font-semibold text-gray-900">Driver Requests</Typography>
+                                    {approvedClaim && (
+                                        <span className="ml-auto inline-flex items-center rounded-full border px-2 py-0.5 text-xs bg-green-50 text-green-700 border-green-200">
+                      <Check className="w-3.5 h-3.5 mr-1" />
+                      Approved driver selected
+                    </span>
+                                    )}
+                                </div>
+
+                                {claimsLoading ? (
+                                    <div className="text-sm text-gray-600 flex items-center gap-2">
+                                        <Loader2 className="w-4 h-4 animate-spin" /> Loading requests…
+                                    </div>
+                                ) : queuedClaims.length === 0 ? (
+                                    <div className="text-sm text-gray-600">No pending requests.</div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        {queuedClaims.map((c) => {
+                                            const d = claimDriversMap[c.driverId];
+                                            const name = d?.name || `User ${c.driverId.slice(-6)}`;
+                                            const email = d?.email;
+
+                                            return (
+                                                <div
+                                                    key={c.claimId}
+                                                    className="flex flex-wrap items-center gap-2 justify-between rounded-lg border p-2 bg-white"
+                                                >
+                                                    <div className="min-w-0 flex items-center gap-2">
+                                                        <UserIcon className="w-4 h-4 text-gray-500" />
+                                                        <div className="min-w-0">
+                                                            <div className="text-sm font-medium text-gray-900 truncate">
+                                                                <Link href={`/users/${c.driverId}`} className="hover:underline">
+                                                                    {name}
+                                                                </Link>
+                                                            </div>
+                                                            <div className="text-xs text-gray-600 truncate">{email || "—"}</div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => onApproveClaim(c.claimId)}
+                                                            disabled={isApproving}
+                                                            leftIcon={
+                                                                isApproving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />
+                                                            }
+                                                        >
+                                                            Approve
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => onRejectClaim(c.claimId)}
+                                                            disabled={isRejecting}
+                                                            leftIcon={
+                                                                isRejecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <XIcon className="w-4 h-4" />
+                                                            }
+                                                        >
+                                                            Reject
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {claimDriversLoading && queuedClaims.length > 0 && (
+                                    <div className="text-xs text-gray-600">Loading driver info…</div>
+                                )}
+
+                                {error && (
+                                    <div className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">{error}</div>
+                                )}
+                            </CardBody>
+                        </Card>
+                    )}
+
+                    {/* Shares (existing block) */}
+                    {canManage && (
+                        <Card variant="elevated" className="mt-2">
                             <CardBody className="p-4 sm:p-6 space-y-3">
                                 <div className="flex items-center gap-2">
                                     <Share2 className="w-4 h-4 text-indigo-600" />
@@ -285,15 +442,15 @@ export default function RideDetailsPage() {
                                                 <div key={s.shareId} className="rounded-lg border p-3 space-y-2 bg-white">
                                                     {/* Top row: basic meta */}
                                                     <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs capitalize">
-              {s.visibility}
-            </span>
+                            <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs capitalize">
+                              {s.visibility}
+                            </span>
                                                         {typeof s.maxClaims === "number" && (
                                                             <span className="text-xs text-gray-600">Max claims: {s.maxClaims}</span>
                                                         )}
                                                         <span className="text-xs text-gray-600">
-              Expires: {s.expiresAt ? new Date(s.expiresAt).toLocaleString() : "—"}
-            </span>
+                              Expires: {s.expiresAt ? new Date(s.expiresAt).toLocaleString() : "—"}
+                            </span>
                                                         <span className="text-xs text-gray-600">Status: {s.status || "active"}</span>
                                                     </div>
 
@@ -311,8 +468,8 @@ export default function RideDetailsPage() {
                                                                         className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs bg-white"
                                                                         title={gid}
                                                                     >
-                    {groupNameById.get(gid) || `Group ${gid.slice(-6)}`}
-                  </span>
+                                    {groupNameById.get(gid) || `Group ${gid.slice(-6)}`}
+                                  </span>
                                                                 ))}
                                                             </div>
                                                         </div>
@@ -327,7 +484,7 @@ export default function RideDetailsPage() {
                                                             </div>
                                                             <div className="flex flex-wrap gap-2">
                                                                 {drivers.map((uid) => {
-                                                                    const d = driversMap[uid];
+                                                                    const d = shareDriversMap[uid];
                                                                     const display = d?.name || `User ${uid.slice(-6)}`;
                                                                     const secondary = d?.email || "";
                                                                     return (
@@ -336,19 +493,19 @@ export default function RideDetailsPage() {
                                                                             className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs bg-white"
                                                                             title={secondary || uid}
                                                                         >
-                      <Link
-                          href={`/users/${uid}`}
-                          className="hover:underline font-medium text-gray-900 truncate max-w-[12rem]"
-                      >
-                        {display}
-                      </Link>
+                                      <Link
+                                          href={`/users/${uid}`}
+                                          className="hover:underline font-medium text-gray-900 truncate max-w-[12rem]"
+                                      >
+                                        {display}
+                                      </Link>
                                                                             {secondary && (
                                                                                 <span className="text-gray-600 truncate max-w-[10rem]">• {secondary}</span>
                                                                             )}
-                    </span>
+                                    </span>
                                                                     );
                                                                 })}
-                                                                {driversLoading && (
+                                                                {shareDriversLoading && (
                                                                     <span className="text-xs text-gray-600">Loading drivers…</span>
                                                                 )}
                                                             </div>
@@ -375,13 +532,11 @@ export default function RideDetailsPage() {
 
                                         {/* Footer CTA */}
                                         <div className="pt-1">
-                                            {canShare && (
-                                                <Link href={`/rides/${id}/share`}>
-                                                    <Button variant="outline" size="sm">
-                                                        Manage Shares
-                                                    </Button>
-                                                </Link>
-                                            )}
+                                            <Link href={`/rides/${id}/share`}>
+                                                <Button variant="outline" size="sm">
+                                                    Manage Shares
+                                                </Button>
+                                            </Link>
                                             <Link href={`/rides/${id}/share`}>
                                                 <Button size="sm" variant="outline" className="ml-2">
                                                     Create Another Share
@@ -406,8 +561,10 @@ export default function RideDetailsPage() {
                                     markerBLabel="B"
                                     routeLine={routeLine}
                                     center={
-                                        hasA ? (ride!.fromLocation!.coordinates as [number, number])
-                                            : hasB ? (ride!.toLocation!.coordinates as [number, number])
+                                        hasA
+                                            ? (ride!.fromLocation!.coordinates as [number, number])
+                                            : hasB
+                                                ? (ride!.toLocation!.coordinates as [number, number])
                                                 : undefined
                                     }
                                 />
