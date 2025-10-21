@@ -4,7 +4,7 @@ import Ride from "../models/ride.model";
 import {requireAuth, requireRole} from "../lib/auth";
 import {hasRideExpired, IRideShare, RideShare} from "../models/rideShare.model";
 import Group from "../models/group.model";
-import {RideClaim} from "@/src/models/rideClaim.model";
+import {RideClaim} from "../models/rideClaim.model";
 
 const router = Router();
 const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
@@ -401,16 +401,32 @@ router.get(
                 .lean();
             const rideMap = new Map(rides.map((r) => [String(r._id), r]));
 
+            const myClaims = await RideClaim.find({
+                rideId: { $in: rideIds },
+                driverId,
+                status: { $in: ["queued", "approved"] }, // show queued; approved means already assigned
+            }).select("_id rideId status createdAt").lean();
+
+            const myClaimByRide = new Map(
+                myClaims.map((c: any) => [String(c.rideId), c])
+            );
+
             const items = activeShares
                 .map((s) => {
                     const ride = rideMap.get(String(s.rideId));
                     if (!ride) return null;
+
+                    const my = myClaimByRide.get(String(ride._id));
+
                     return {
                         shareId: String(s._id),
                         visibility: s.visibility,
                         expiresAt: s.expiresAt,
                         maxClaims: s.maxClaims ?? null,
                         claimsCount: s.claimsCount ?? 0,
+                        myClaim: my
+                            ? { claimId: String(my._id), status: my.status, createdAt: my.createdAt }
+                            : null,
                         ride: {
                             _id: String(ride._id),
                             from: ride.from,
@@ -419,7 +435,9 @@ router.get(
                             status: ride.status,
                             fromLocation: ride.fromLocation,
                             toLocation: ride.toLocation,
-                            customer: ride.customer ? { name: ride.customer.name ?? "", phone: ride.customer.phone ?? "" } : undefined,
+                            customer: ride.customer
+                                ? { name: ride.customer.name ?? "", phone: ride.customer.phone ?? "" }
+                                : undefined,
                         },
                     };
                 })

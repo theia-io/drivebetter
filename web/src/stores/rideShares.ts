@@ -1,7 +1,5 @@
 import {apiGet, apiPost, apiDelete, apiPatch} from "@/services/http";
 import useSWR from "swr";
-import useSWRMutation from "swr/mutation";
-import {mutate as globalMutate} from "swr/_internal";
 
 export type RideShareVisibility = "public" | "groups" | "drivers";
 
@@ -27,27 +25,6 @@ export type CreateShareRequest = {
     syncQueue?: boolean; // default true
 };
 
-export type InboxCount = {
-    count: number | null;
-}
-
-export type InboxItem = {
-    shareId: string | null;
-    visibility: "public" | "groups" | "drivers" | null;
-    expiresAt: string | null;
-    maxClaims: number | null;
-    claimsCount: number;
-    status?: "active" | "revoked" | "expired" | "closed" | null;
-    ride: {
-        _id: string;
-        from: string;
-        to: string;
-        datetime: string;
-        status: string;
-        customer?: { name: string; phone: string };
-    };
-};
-
 export type UpdateShareRequest = Partial<{
     visibility: RideShareVisibility;
     groupIds: string[];
@@ -71,22 +48,6 @@ export const createRideShare = (rideId: string, payload: CreateShareRequest) =>
 export const revokeRideShare = (shareId: string) =>
     apiDelete<void>(`/ride-shares/${shareId}`);
 
-export const getDriverInbox = (tab: "available" | "claimed" = "available") =>
-    apiGet<InboxItem[]>(`/ride-shares/inbox?tab=${tab}`);
-
-export const getDriverInboxCount = (tab: "available" | "claimed" = "available") =>
-    apiGet<InboxCount>(`/ride-shares/inbox/count?tab=${tab}`);
-
-export const claimRideShare = (shareId: string) =>
-    apiPost<{ status: "claimed"; rideId: string; assignedDriverId: string }>(
-        `/ride-shares/${shareId}/claim`,
-        {}
-    );
-
-const revalidateRideShares = async () => {
-    await globalMutate((key) => typeof key === "string" && key.startsWith("/ride-shares"));
-};
-
 export const updateRideShare = (shareId: string, payload: UpdateShareRequest) =>
     apiPatch<RideShare>(`/ride-shares/${shareId}`, payload); // if you prefer PATCH, switch apiPost->apiPatch
 
@@ -100,47 +61,4 @@ export function useCreateRideShare(rideId: string, payload: CreateShareRequest) 
 export function useRideShares(rideId?: string) {
     const key = `/rides/${rideId}/share`;
     return useSWR<RideShare[]>(key, () => getRideShare(rideId));
-}
-
-export function useDriverInbox(tab: "available" | "claimed") {
-    const key = `/ride-shares/inbox?tab=${tab}`;
-    return useSWR<InboxItem[]>(key, () => getDriverInbox(tab));
-}
-
-export function useDriverInboxCount(tab: "available" | "claimed") {
-    const key = `/ride-shares/inbox/count?tab=${tab}`;
-    return useSWR<InboxCount>(key, () => getDriverInboxCount(tab));
-}
-
-export function useRevokeRideShare(shareId?: string) {
-    const key = shareId ? `/ride-shares/${shareId}` : null;
-    console.log(key);
-    const m = useSWRMutation(
-        key,
-        async () => {
-            await revokeRideShare(shareId as string);
-            return { ok: true as const };
-        },
-        {
-            onSuccess: async () => {
-                await globalMutate(`/ride-shares/${shareId}`);
-                await revalidateRideShares();
-            },
-        }
-    );
-    return {
-        deleteRide: m.trigger,
-        isDeleting: m.isMutating,
-        deleteResult: m.data, // { ok: true }
-        deleteError: m.error as Error | undefined,
-    };
-}
-
-export function useUpdateRideShare(shareId?: string) {
-    const key = shareId ? `/ride-shares/${shareId}:update` : null;
-    return useSWRMutation(
-        key,
-        async (_key, { arg }: { arg: UpdateShareRequest }) => updateRideShare(shareId as string, arg),
-        { onSuccess: async (_d, _k, _c) => { await globalMutate((k) => typeof k === "string" && k.startsWith("/rides/")); } }
-    );
 }

@@ -1,16 +1,24 @@
-// app/shared-rides/page.tsx
 "use client";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import { Info, MapPin, Clock, Share2, Check, Loader2, ArrowRight } from "lucide-react";
+import {
+    Info,
+    MapPin,
+    Clock,
+    Share2,
+    Check,
+    Loader2,
+    ArrowRight,
+} from "lucide-react";
 import { useDriverInbox, useQueueRideClaim } from "@/stores/rideClaims";
 
 export default function DriverSharedRidesPage() {
     const [tab, setTab] = useState<"available" | "claimed">("available");
 
+    // Available inbox
     const {
         data: available = [],
         isLoading: loadingAvailable,
@@ -33,6 +41,8 @@ export default function DriverSharedRidesPage() {
         try {
             await queue(shareId);
             setJustQueued((m) => ({ ...m, [shareId]: true }));
+            // revalidate both lists; if a dispatcher immediately assigns elsewhere,
+            // the available list might change and claimed could update too
             await Promise.all([mutateAvailable(), mutateClaimed()]);
         } catch (e) {
             alert((e as Error).message);
@@ -61,7 +71,9 @@ export default function DriverSharedRidesPage() {
                             Click <span className="font-semibold">Request ride</span> to enter the queue.
                             A dispatcher will review all requests and{" "}
                             <span className="font-semibold">approve one driver</span>. Until approved,
-                            the ride will not be assigned to you.
+                            the ride is not assigned to you. Use the{" "}
+                            <span className="font-semibold">My Assigned</span> tab to see rides that were
+                            approved and assigned to you.
                         </div>
                     </div>
 
@@ -101,11 +113,14 @@ export default function DriverSharedRidesPage() {
                                 <div className="space-y-3">
                                     {items.map((it) => {
                                         const dt = new Date(it.ride.datetime);
-                                        const queued = !!(it.shareId && justQueued[it.shareId]);
+                                        const alreadyQueued = it.myClaim?.status === "queued";
                                         const canRequest = tab === "available" && !!it.shareId;
 
                                         return (
-                                            <div key={`${it.ride._id}-${it.shareId ?? "none"}`} className="rounded-lg border p-3 bg-white">
+                                            <div
+                                                key={`${it.ride._id}-${it.shareId ?? "none"}`}
+                                                className="rounded-lg border p-3 bg-white"
+                                            >
                                                 <div className="flex items-start justify-between gap-3">
                                                     <div className="min-w-0">
                                                         <div className="flex items-center gap-2 text-sm text-gray-700">
@@ -123,45 +138,57 @@ export default function DriverSharedRidesPage() {
                                                         <div className="flex items-center gap-2 text-sm text-gray-700">
                                                             <Clock className="w-4 h-4 text-gray-400" />
                                                             <span title={dt.toISOString()}>
-                                {dt.toLocaleDateString()} • {dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                {dt.toLocaleDateString()} •{" "}
+                                                                {dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                               </span>
                                                         </div>
 
-                                                        {/* tiny meta */}
+                                                        {/* metadata */}
                                                         <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-gray-600">
                                                             {it.visibility && (
                                                                 <span className="inline-flex items-center rounded-full border px-2 py-0.5 capitalize">
                                   {it.visibility}
                                 </span>
                                                             )}
-                                                            {typeof it.maxClaims === "number" && <span>max claims: {it.maxClaims}</span>}
-                                                            {it.expiresAt && <span>expires: {new Date(it.expiresAt).toLocaleString()}</span>}
+                                                            {typeof it.maxClaims === "number" && (
+                                                                <span>max claims: {it.maxClaims}</span>
+                                                            )}
+                                                            {it.expiresAt && (
+                                                                <span>expires: {new Date(it.expiresAt).toLocaleString()}</span>
+                                                            )}
+                                                            {tab === "claimed" && (
+                                                                <span className="inline-flex items-center rounded-full border px-2 py-0.5 bg-green-50 text-green-700 border-green-200">
+                                  Assigned to you
+                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
 
                                                     <div className="flex flex-col items-end gap-2 shrink-0">
                                                         <Link href={`/rides/${it.ride._id}`}>
-                                                            <Button variant="outline" size="sm" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                rightIcon={<ArrowRight className="w-4 h-4" />}
+                                                            >
                                                                 Details
                                                             </Button>
                                                         </Link>
 
-                                                        {canRequest ? (
+                                                        {tab === "available" && (
                                                             <Button
                                                                 size="sm"
-                                                                onClick={() => requestRide(it.shareId!)}
-                                                                disabled={isQueuing || queued}
+                                                                onClick={() => it.shareId && requestRide(it.shareId)}
+                                                                disabled={alreadyQueued || isQueuing}
                                                                 leftIcon={
-                                                                    queued ? (
-                                                                        <Check className="w-4 h-4" />
-                                                                    ) : isQueuing ? (
-                                                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                                                    ) : undefined
+                                                                    alreadyQueued ? <Check className="w-4 h-4" /> :
+                                                                        isQueuing ? <Loader2 className="w-4 h-4 animate-spin" /> :
+                                                                            undefined
                                                                 }
                                                             >
-                                                                {queued ? "Requested" : "Request ride"}
+                                                                {alreadyQueued ? "Requested" : "Request ride"}
                                                             </Button>
-                                                        ) : null}
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>

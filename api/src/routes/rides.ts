@@ -5,7 +5,7 @@ import User from "../models/user.model";
 import {requireAuth, requireRole} from "../lib/auth";
 import {hasRideExpired, IRideShare, RideShare} from "../models/rideShare.model";
 import Group from "../models/group.model";
-import {RideClaim} from "@/src/models/rideClaim.model";
+import {RideClaim} from "../models/rideClaim.model";
 import RideModel from "../models/ride.model";
 
 const router = Router();

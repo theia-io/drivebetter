@@ -30,6 +30,7 @@ export type InboxItem = {
     maxClaims: number | null;
     claimsCount: number;
     status?: string | null;
+    myClaim?: { claimId: string; status: "queued" | "approved"; createdAt?: string } | null;
     ride: {
         _id: string;
         from: string;

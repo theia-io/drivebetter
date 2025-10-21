@@ -7,7 +7,7 @@ import useSWR from 'swr'
 import { useAuthStore } from '@/stores/auth'
 import { Button } from './ui'
 import { Menu, User, X, Bell } from 'lucide-react'
-import {getDriverInboxCount, useDriverInboxCount} from '@/stores/rideShares' // expects: () => Promise<{ count: number }>
+import {getDriverInboxCount, useDriverInboxCount} from '@/stores/rideClaims' // expects: () => Promise<{ count: number }>
 
 type NavItem = {
     name: string
