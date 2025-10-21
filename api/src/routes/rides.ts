@@ -438,84 +438,96 @@ router.get(
 
 /**
  * @openapi
- * /rides/{id}/claims/{claimId}/approve:
+ * /rides/{rideId}/claims/{claimId}/approve:
  *   post:
- *     summary: Approve a claim and assign the ride
- *     description: Approves the specified queued claim, assigns the ride to that driver, rejects other queued claims, and closes all shares for this ride.
- *     tags: [Rides]
+ *     summary: Approve a driver's claim for a ride (assigns ride, rejects others, closes shares)
+ *     tags: [RideClaims]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: rideId
  *         required: true
- *         schema:
- *           type: string
- *           pattern: "^[0-9a-fA-F]{24}$"
- *         description: Ride ID (Mongo ObjectId).
+ *         schema: { type: string }
  *       - in: path
  *         name: claimId
  *         required: true
- *         schema:
- *           type: string
- *           pattern: "^[0-9a-fA-F]{24}$"
- *         description: Claim ID (Mongo ObjectId).
+ *         schema: { type: string }
  *     responses:
  *       200:
- *         description: Ride assigned and other claims/shares updated
+ *         description: Ride assigned to the approved driver
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
- *                 ok:     { type: boolean }
+ *                 ok: { type: boolean }
  *                 status: { type: string, enum: [assigned] }
- *       404: { description: Claim not found / ride closed }
- *       409: { description: Claim not queued / ride already assigned }
+ *                 rideId: { type: string }
+ *                 assignedDriverId: { type: string }
+ *       404: { description: Claim not found }
+ *       409:
+ *         description: Ride already assigned/closed or claim not in a queueable state
  */
 router.post(
-    "/:id([0-9a-fA-F]{24})/claims/:claimId([0-9a-fA-F]{24})/approve",
+    "/:rideId([0-9a-fA-F]{24})/claims/:claimId([0-9a-fA-F]{24})/approve",
     requireAuth,
     requireRole(["dispatcher", "admin"]),
     async (req: Request, res: Response) => {
-        const { id, claimId } = req.params;
+        const { rideId, claimId } = req.params;
 
-        const session = await mongoose.startSession();
-        try {
-            await session.withTransaction(async () => {
-                const claim = await RideClaim.findOne({ _id: claimId, rideId: id }).session(session);
-                if (!claim) throw new Error("Claim not found");
-                if (claim.status !== "queued") throw new Error("Claim is not queued");
-
-                const ride = await Ride.findOneAndUpdate(
-                    { _id: id, assignedDriverId: { $in: [null, undefined] }, status: { $ne: "completed" } },
-                    { $set: { assignedDriverId: claim.driverId, status: "assigned" } },
-                    { new: true, session }
-                );
-                if (!ride) throw new Error("Ride already assigned or closed");
-
-                await RideClaim.updateOne({ _id: claim._id }, { $set: { status: "approved" } }, { session });
-
-                await RideClaim.updateMany(
-                    { rideId: id, status: "queued", _id: { $ne: claim._id } },
-                    { $set: { status: "rejected" } },
-                    { session }
-                );
-
-                await RideShare.updateMany(
-                    { rideId: id, status: { $in: ["active", "expired"] } },
-                    { $set: { status: "closed" } },
-                    { session }
-                );
-            });
-
-            return res.json({ ok: true, status: "assigned" });
-        } catch (err: any) {
-            const msg = String(err?.message || err);
-            const code = /not found/i.test(msg) ? 404 : /queued|assigned|closed/i.test(msg) ? 409 : 400;
-            return res.status(code).json({ error: msg });
-        } finally {
-            await session.endSession();
+        // 1) Load the claim and validate state
+        const claim = await RideClaim.findOne({ _id: claimId, rideId }).lean();
+        if (!claim) return res.status(404).json({ error: "Claim not found" });
+        if (claim.status !== "queued") {
+            return res.status(409).json({ error: "Claim is not queued" });
         }
+
+        // 2) Assign the ride atomically if still unassigned and not completed
+        const ride = await Ride.findOneAndUpdate(
+            {
+                _id: rideId,
+                assignedDriverId: { $in: [null, undefined] },
+                status: { $ne: "completed" },
+            },
+            {
+                $set: {
+                    assignedDriverId: claim.driverId,
+                    status: "assigned",
+                },
+            },
+            { new: true }
+        ).lean();
+
+        if (!ride) {
+            return res
+                .status(409)
+                .json({ error: "Ride already assigned or closed" });
+        }
+
+        // 3) Mark this claim approved
+        await RideClaim.updateOne(
+            { _id: claimId, status: "queued" },
+            { $set: { status: "approved", approvedAt: new Date() } }
+        );
+
+        // 4) Reject other queued claims for the same ride
+        await RideClaim.updateMany(
+            { rideId, _id: { $ne: claimId }, status: "queued" },
+            { $set: { status: "rejected", rejectedAt: new Date() } }
+        );
+
+        // 5) Close any active shares for this ride (prevent new requests)
+        await RideShare.updateMany(
+            { rideId, status: "active" },
+            { $set: { status: "closed" } }
+        );
+
+        return res.json({
+            ok: true,
+            status: "assigned",
+            rideId: String(rideId),
+            assignedDriverId: String(claim.driverId),
+        });
     }
 );
 
