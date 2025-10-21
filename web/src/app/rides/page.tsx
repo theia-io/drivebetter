@@ -2,15 +2,28 @@
 
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import { Calendar, Car, Clock, DollarSign, Filter, MapPin, Navigation, Plus, Search, Star, User } from "lucide-react";
+import {
+    Calendar,
+    Car,
+    Clock,
+    DollarSign,
+    Filter,
+    MapPin,
+    Navigation,
+    Plus,
+    Search,
+    Star,
+    User,
+} from "lucide-react";
 import Link from "next/link";
-import {useEffect, useMemo} from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRidesInfinite } from "@/stores/rides";
-import {Ride} from "@/types";
+import { Ride } from "@/types";
 import AssignedDriverBadge from "@/components/ui/AssignedDriverBadge";
-import {fmtDate, fmtTime, km, mins, money} from "@/services/convertors";
-import {useRouter} from "next/navigation";
-import {useAuthStore} from "@/stores";
+import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/stores";
+import DriverCombobox from "@/components/ui/DriverCombobox";
 
 function getStatusColor(status: string) {
     switch (status) {
@@ -28,7 +41,6 @@ function getStatusColor(status: string) {
             return "bg-gray-100 text-gray-800 border-gray-200";
     }
 }
-
 function getStatusIcon(status: string) {
     switch (status) {
         case "completed":
@@ -55,13 +67,53 @@ export default function RidesPage() {
     const isPrivileged = roles.includes("admin") || roles.includes("dispatcher");
     const isDriverOnly = isDriver && !isPrivileged;
 
+    // Redirect pure drivers away
     useEffect(() => {
         if (!isChecking && isDriverOnly) {
             router.replace("/my-rides");
         }
     }, [isChecking, isDriverOnly, router]);
 
-    const { items, size, setSize, isLoading, reachedEnd } = useRidesInfinite({}, 20);
+    // -------------------- Filters state --------------------
+    const [driver, setDriver] = useState<any | null>(null); // DriverCombobox returns { _id, name, email } (or similar)
+    const [dateFrom, setDateFrom] = useState<string>(""); // YYYY-MM-DD
+    const [dateTo, setDateTo] = useState<string>(""); // YYYY-MM-DD
+    const [distanceMin, setDistanceMin] = useState<string>(""); // km as string input
+    const [distanceMax, setDistanceMax] = useState<string>(""); // km as string input
+
+    // Build params for the hook
+    const params = useMemo(() => {
+        // backend expects meters; UI asks for km
+        const minMeters =
+            distanceMin.trim() !== "" ? Math.max(0, Math.round(Number(distanceMin) * 1000)) : undefined;
+        const maxMeters =
+            distanceMax.trim() !== "" ? Math.max(0, Math.round(Number(distanceMax) * 1000)) : undefined;
+
+        // convert dates to ISO start/end if your API expects them; if it expects plain YYYY-MM-DD, pass as-is
+        const fromISO = dateFrom ? new Date(`${dateFrom}T00:00:00.000Z`).toISOString() : undefined;
+        const toISO = dateTo ? new Date(`${dateTo}T23:59:59.999Z`).toISOString() : undefined;
+
+        return {
+            driverId: driver?._id || undefined,
+            dateFrom: fromISO,
+            dateTo: toISO,
+            distanceMin: minMeters,
+            distanceMax: maxMeters,
+        };
+    }, [driver, dateFrom, dateTo, distanceMin, distanceMax]);
+
+    // When filters change, start from the first page
+    const { items, size, setSize, isLoading, reachedEnd, mutate } = useRidesInfinite(params, 20);
+
+    // Optional: requery immediately when filters change (SWR key change usually handles it,
+    // but if your hook caches aggressively, forcing a mutate is fine)
+    useEffect(() => {
+        // reset pagination to page 1
+        setSize(1);
+        // trigger revalidation
+        mutate();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [params.driverId, params.dateFrom, params.dateTo, params.distanceMin, params.distanceMax]);
 
     const todaysCount = useMemo(() => {
         const todayStr = new Date().toDateString();
@@ -79,7 +131,7 @@ export default function RidesPage() {
                                 Rides
                             </Typography>
                             <Typography variant="body1" className="text-gray-600 mt-0.5 sm:mt-2 text-xs sm:text-base">
-                                Manage your ride history and upcoming trips
+                                Manage ride history and upcoming trips
                             </Typography>
                         </div>
                         <div className="hidden sm:flex items-center gap-2 sm:gap-3 shrink-0">
@@ -89,15 +141,7 @@ export default function RidesPage() {
                         </div>
                     </div>
 
-                    {/* Mobile quick actions */}
-                    <div className="flex sm:hidden gap-2">
-                        <Button variant="outline" size="sm" className="flex-1" leftIcon={<Filter className="w-4 h-4" />}>Filter</Button>
-                        <Button size="sm" className="flex-1" leftIcon={<Plus className="w-4 h-4" />}>
-                            <Link href="/rides/new" className="w-full text-center">New Ride</Link>
-                        </Button>
-                    </div>
-
-                    {/* Stats: responsive grid, tighter on mobile */}
+                    {/* Stats */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-6">
                         <Card variant="elevated" className="hover:shadow-lg transition-shadow">
                             <CardBody className="p-3 sm:p-6">
@@ -118,44 +162,120 @@ export default function RidesPage() {
                         </Card>
                     </div>
 
-                    {/* Search */}
+                    {/* Filters */}
                     <Card variant="elevated">
-                        <CardBody className="p-3 sm:p-6">
-                            <div className="flex gap-2 sm:gap-4">
-                                <div className="relative flex-1">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search rides by location..."
-                                        className="w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm sm:text-base"
-                                        disabled
+                        <CardBody className="p-3 sm:p-6 space-y-3">
+                            <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                                <Filter className="w-4 h-4" />
+                                Filters
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                {/* Driver filter (only visible to admins/dispatchers) */}
+                                <div className={`${isPrivileged ? "" : "hidden"}`}>
+                                    <label className="block text-xs text-gray-600 mb-1">Driver</label>
+                                    <DriverCombobox
+                                        id="driver-filter"
+                                        valueEmail={driver?.email || ""}
+                                        onChange={(v: any | null) => setDriver(v)}
                                     />
                                 </div>
-                                <Button variant="outline" leftIcon={<Filter className="w-4 h-4" />} size="sm">Filter</Button>
-                                <Button
-                                    variant="outline"
-                                    leftIcon={<Calendar className="w-4 h-4" />}
-                                    size="sm"
-                                    className="hidden sm:inline-flex"
-                                    disabled
-                                >
-                                    Date Range
-                                </Button>
+
+                                {/* Date From */}
+                                <div>
+                                    <label className="block text-xs text-gray-600 mb-1">Date from</label>
+                                    <div className="relative">
+                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                        <input
+                                            type="date"
+                                            value={dateFrom}
+                                            onChange={(e) => setDateFrom(e.target.value)}
+                                            className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Date To */}
+                                <div>
+                                    <label className="block text-xs text-gray-600 mb-1">Date to</label>
+                                    <div className="relative">
+                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                        <input
+                                            type="date"
+                                            value={dateTo}
+                                            onChange={(e) => setDateTo(e.target.value)}
+                                            className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                                        />
+                                    </div>
+                                </div>
                             </div>
-                            {/* Mobile date button below input for better tap target */}
-                            <Button
-                                variant="outline"
-                                leftIcon={<Calendar className="w-4 h-4" />}
-                                size="sm"
-                                className="mt-2 w-full sm:hidden"
-                                disabled
-                            >
-                                Date Range
-                            </Button>
+
+                            {/* Distance range (km) */}
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label className="block text-xs text-gray-600 mb-1">Min distance (km)</label>
+                                    <div className="relative">
+                                        <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            step="0.1"
+                                            value={distanceMin}
+                                            onChange={(e) => setDistanceMin(e.target.value)}
+                                            placeholder="e.g. 3"
+                                            className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs text-gray-600 mb-1">Max distance (km)</label>
+                                    <div className="relative">
+                                        <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            step="0.1"
+                                            value={distanceMax}
+                                            onChange={(e) => setDistanceMax(e.target.value)}
+                                            placeholder="e.g. 50"
+                                            className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Quick actions */}
+                                <div className="flex items-end gap-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        leftIcon={<Search className="w-4 h-4" />}
+                                        onClick={() => {
+                                            // simply revalidate with current params; SWR key already changes as user types, but this gives an explicit action
+                                            setSize(1);
+                                            mutate();
+                                        }}
+                                    >
+                                        Apply
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            setDriver(null);
+                                            setDateFrom("");
+                                            setDateTo("");
+                                            setDistanceMin("");
+                                            setDistanceMax("");
+                                        }}
+                                    >
+                                        Reset
+                                    </Button>
+                                </div>
+                            </div>
                         </CardBody>
                     </Card>
 
-                    {/* Rides List: compact mobile row, richer on larger screens */}
+                    {/* Rides List */}
                     <div className="space-y-2 sm:space-y-4">
                         {items.map((ride: Ride) => (
                             <Card key={ride._id} variant="elevated" className="hover:shadow-lg transition-shadow">
@@ -171,27 +291,28 @@ export default function RidesPage() {
                                                     {ride.from} → {ride.to}
                                                 </Typography>
                                                 <div className="mt-0.5 sm:mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] sm:text-sm text-gray-600">
-                      <span className="inline-flex items-center gap-1">
-                        <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                          {fmtDate(ride.datetime)} • {fmtTime(ride.datetime)}
-                      </span>
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                              {fmtDate(ride.datetime)} • {fmtTime(ride.datetime)}
+                          </span>
                                                     <span className="inline-flex items-center gap-1">
-                        <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                            <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                                                         {money(ride.payment?.amountCents)}
-                      </span>
+                          </span>
                                                 </div>
                                             </div>
                                         </div>
-                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] sm:text-xs font-medium border ${getStatusColor(
+                                        <span
+                                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] sm:text-xs font-medium border ${getStatusColor(
                                                 ride.status
-                                            )}`}>
-                  {getStatusIcon(ride.status)}
-                                            <span className="ml-1 capitalize">{ride.status.replace(/_/g, " ")}
-                                            </span>
-                                        </span>
+                                            )}`}
+                                        >
+                      {getStatusIcon(ride.status)}
+                                            <span className="ml-1 capitalize">{ride.status.replace(/_/g, " ")}</span>
+                    </span>
                                     </div>
 
-                                    {/* Secondary meta: stack on mobile */}
+                                    {/* Secondary meta */}
                                     <div className="mt-2 sm:mt-3 grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4 text-[11px] sm:text-sm text-gray-600">
                                         <div className="flex items-center">
                                             <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 text-gray-400 shrink-0" />
@@ -212,13 +333,15 @@ export default function RidesPage() {
                                         <AssignedDriverBadge userId={ride.assignedDriverId as string | undefined} />
                                     </div>
 
-                                    {/* Actions: full-width on mobile */}
+                                    {/* Actions */}
                                     <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2">
                                         <Button variant="outline" size="sm" className="w-full sm:w-auto text-xs">
                                             <Link href={`/rides/${ride._id}`}>Details</Link>
                                         </Button>
                                         {ride.status === "unassigned" && (
-                                            <Button size="sm" className="w-full sm:w-auto text-xs">Start</Button>
+                                            <Button size="sm" className="w-full sm:w-auto text-xs">
+                                                Start
+                                            </Button>
                                         )}
                                     </div>
                                 </CardBody>
@@ -226,7 +349,7 @@ export default function RidesPage() {
                         ))}
                     </div>
 
-                    {/* Load More: sticky on mobile for easy reach */}
+                    {/* Load More */}
                     <div className="sticky bottom-3 sm:static sm:bottom-auto">
                         <div className="text-center">
                             <Button

@@ -11,6 +11,56 @@ import type { VehicleType } from "@/types/driver-details";
 import { Field, FieldLabel, inputClass } from "@/components/ui/commmon";
 import {EligibleDriver} from "@/types";
 
+function initials(name?: string) {
+    if (!name) return "DR";
+    const parts = name.trim().split(/\s+/).slice(0, 2);
+    return parts.map(p => p[0]?.toUpperCase()).join("");
+}
+
+function timeAgo(d?: string | Date | null) {
+    if (!d) return "—";
+    const t = typeof d === "string" ? new Date(d) : d;
+    const secs = Math.max(0, Math.floor((Date.now() - t.getTime()) / 1000));
+    if (secs < 60) return `${secs}s ago`;
+    const mins = Math.floor(secs / 60);
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+}
+
+function Pill({ children }: { children: React.ReactNode }) {
+    return (
+        <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs bg-white">
+      {children}
+    </span>
+    );
+}
+
+function Tag({ children }: { children: React.ReactNode }) {
+    return (
+        <span className="inline-flex items-center rounded-md bg-gray-100 text-gray-800 border border-gray-200 px-2 py-0.5 text-[11px]">
+      {children}
+    </span>
+    );
+}
+
+function RatingStars({ value = 0 }: { value?: number }) {
+    const full = Math.floor(value);
+    const half = value - full >= 0.25 && value - full < 0.75;
+    const stars = Array.from({ length: 5 }).map((_, i) => {
+        if (i < full) return "★";
+        if (i === full && half) return "☆"; // pseudo half; keep it simple
+        return "☆";
+    });
+    return (
+        <span className="font-medium tracking-tight text-yellow-600" title={`${value.toFixed(1)} / 5`}>
+      {stars.join("")}
+    </span>
+    );
+}
+
 export default function AssignDriverPage() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
@@ -51,7 +101,7 @@ export default function AssignDriverPage() {
                 longDistance,
                 limit: 50,
             };
-            console.log("searching");
+
             const res = await apiPost<EligibleDriver[]>("/driver-details/eligible", body);
             setEligible(res || []);
         } catch (e: any) {
@@ -180,35 +230,133 @@ export default function AssignDriverPage() {
                 </Card>
 
                 {/* Results */}
-                <div className="mt-4 grid grid-cols-1 gap-3 max-w-3xl">
+                <div className="mt-4 grid grid-cols-1 gap-3 max-w-4xl">
                     {eligible.map((d) => {
+                        const user = d.user || {};
                         const v = d.vehicle || {};
-                        const label = [
-                            v.type?.toUpperCase(),
-                            [v.make, v.model].filter(Boolean).join(" "),
-                            v.plate ? `(${v.plate})` : "",
-                            d.stats?.ratingAvg ? `★${d.stats.ratingAvg.toFixed(1)}` : "",
-                        ]
+                        const cap = d.capacity || {};
+                        const feats = d.features || {};
+                        const langs = d.languages || {};
+                        const prefs = d.preferences || {};
+                        const stats = d.stats || {};
+
+                        const vehicleLabel = [v.type?.toUpperCase(), [v.make, v.model].filter(Boolean).join(" "), v.year, v.plate ? `(${v.plate})` : ""]
                             .filter(Boolean)
                             .join(" • ");
 
                         return (
                             <Card key={d.userId} variant="elevated" className="hover:shadow-lg transition-shadow">
-                                <CardBody className="p-4 flex items-center justify-between gap-3">
-                                    <div className="min-w-0">
-                                        <div className="font-medium text-gray-900 truncate">{label || d.userId}</div>
-                                        <div className="text-xs text-gray-600">
-                                            Max passengers: {d.capacity?.maxPassengers ?? "—"}
+                                <CardBody className="p-4 sm:p-5">
+                                    <div className="flex items-start gap-3 sm:gap-4">
+                                        {/* Avatar */}
+                                        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center shrink-0">
+              <span className="text-indigo-700 text-sm sm:text-base font-bold">
+                {((user as any).name ? (user as any).name[0] : "D").toUpperCase()}
+              </span>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            size="sm"
-                                            leftIcon={<CheckCircle className="w-4 h-4" />}
-                                            onClick={() => assignDriver(d.userId)}
-                                        >
-                                            Assign
-                                        </Button>
+
+                                        <div className="min-w-0 flex-1">
+                                            {/* Top row: name + contact + rating */}
+                                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <div className="text-gray-900 font-semibold truncate">
+                                                        {(user as any).name || `Driver ${String(d.userId).slice(-6)}`}
+                                                    </div>
+                                                    <div className="text-xs text-gray-600 truncate">
+                                                        {(user as any).email || "—"}
+                                                    </div>
+                                                </div>
+
+                                                {stats && (
+                                                    <div className="flex items-center gap-2 text-sm">
+                                                        {typeof stats.ratingAvg === "number" && (
+                                                            <div className="flex items-center gap-1 text-yellow-600 font-medium">
+                                                                ★ {stats.ratingAvg.toFixed(1)}
+                                                                <span className="text-xs text-gray-500">({stats.ratingCount ?? 0})</span>
+                                                            </div>
+                                                        )}
+                                                        {typeof stats.completedRides === "number" && (
+                                                            <span className="text-xs text-gray-600">Rides: {stats.completedRides}</span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Vehicle & capacity */}
+                                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-700">
+                                                {vehicleLabel && (
+                                                    <span className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-0.5">
+                    {vehicleLabel}
+                  </span>
+                                                )}
+                                                {typeof cap.maxPassengers === "number" && (
+                                                    <span className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-0.5">
+                    Max pax: {cap.maxPassengers}
+                  </span>
+                                                )}
+                                                {typeof cap.luggageCapacityLiters === "number" && (
+                                                    <span className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-0.5">
+                    Luggage: {cap.luggageCapacityLiters} L
+                  </span>
+                                                )}
+                                                {v.color && (
+                                                    <span className="inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-0.5">
+                    Color: {v.color}
+                  </span>
+                                                )}
+                                            </div>
+
+                                            {/* Features / preferences / languages */}
+                                            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                                                {/* Features */}
+                                                <div>
+                                                    <div className="font-medium text-gray-600 mb-1">Features</div>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {feats.petFriendly && <Tag>Pet-friendly</Tag>}
+                                                        {feats.babySeat && <Tag>Baby seat</Tag>}
+                                                        {feats.wheelchairAccessible && <Tag>Wheelchair</Tag>}
+                                                        {!feats.petFriendly && !feats.babySeat && !feats.wheelchairAccessible && (
+                                                            <span className="text-gray-400">—</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Preferences */}
+                                                <div>
+                                                    <div className="font-medium text-gray-600 mb-1">Preferences</div>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {prefs.airportPermit && <Tag>Airport permit</Tag>}
+                                                        {prefs.longDistance && <Tag>Long distance</Tag>}
+                                                        {!prefs.airportPermit && !prefs.longDistance && (
+                                                            <span className="text-gray-400">—</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Languages */}
+                                                <div>
+                                                    <div className="font-medium text-gray-600 mb-1">Languages</div>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {langs.primary && <Tag>{langs.primary}</Tag>}
+                                                        {(langs.list ?? []).map((lng) => (
+                                                            <Tag key={lng}>{lng}</Tag>
+                                                        ))}
+                                                        {!langs.primary && !(langs.list ?? []).length && <span className="text-gray-400">—</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Actions */}
+                                        <div className="flex flex-col items-end gap-2 shrink-0">
+                                            <Button
+                                                size="sm"
+                                                leftIcon={<CheckCircle className="w-4 h-4" />}
+                                                onClick={() => assignDriver(d.userId)}
+                                            >
+                                                Assign
+                                            </Button>
+                                        </div>
                                     </div>
                                 </CardBody>
                             </Card>
@@ -223,6 +371,7 @@ export default function AssignDriverPage() {
                         </Card>
                     )}
                 </div>
+
             </Container>
         </ProtectedLayout>
     );
