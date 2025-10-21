@@ -207,6 +207,7 @@ export default function RideDetailsPage() {
                                 {header}
                             </Typography>
                         </div>
+                        {canManage && (
                         <div className="flex items-center gap-2">
                             <select
                                 value={statusValue}
@@ -229,13 +230,12 @@ export default function RideDetailsPage() {
                             >
                                 Delete
                             </Button>
-                        </div>
-                        {canManage && (
                             <Link href={`/rides/${id}/share`}>
                                 <Button variant="outline" size="sm" leftIcon={<Share2 className="w-4 h-4" />}>
                                     Manage Shares
                                 </Button>
                             </Link>
+                        </div>
                         )}
                     </div>
 
