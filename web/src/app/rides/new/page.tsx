@@ -60,14 +60,14 @@ const initialValues: RideFormValues = {
     airportTrip: false,
     longDistance: false,
 };
-type NextStep = "assign" | "share";
+type NextStep = "assign" | "share" | "skip";
 
 export default function NewRidePage() {
     const router = useRouter();
     const [values, setValues] = useState<RideFormValues>(initialValues);
     const [submitting, setSubmitting] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const [nextStep, setNextStep] = useState<NextStep>("share");
+    const [nextStep, setNextStep] = useState<NextStep>("skip");
 
     const [pickupHit, setPickupHit] = useState<PlaceHit | null>(null);
     const [destHit, setDestHit] = useState<PlaceHit | null>(null);
@@ -133,8 +133,10 @@ export default function NewRidePage() {
 
                 if (nextStep === "assign") {
                     router.push(`/rides/${created._id}/assign?${sp.toString()}`);
-                } else {
+                } else if(nextStep === "share") {
                     router.push(`/rides/${created._id}/share`);
+                } else {
+                    router.push(`/rides/${created._id}`);
                 }
             } else {
                 alert("Ride created but response missing ID.");
@@ -517,6 +519,16 @@ export default function NewRidePage() {
                                 </label>
                                 <div className="flex items-center gap-4">
                                     <span className="text-sm font-medium text-gray-900">Next step:</span>
+                                    <label className="inline-flex items-center gap-2 text-sm">
+                                        <input
+                                            type="radio"
+                                            name="nextStep"
+                                            value="assign"
+                                            checked={nextStep === "skip"}
+                                            onChange={() => setNextStep("skip")}
+                                        />
+                                        Skip
+                                    </label>
                                     <label className="inline-flex items-center gap-2 text-sm">
                                         <input
                                             type="radio"
