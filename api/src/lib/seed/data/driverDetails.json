@@ -1,0 +1,101 @@
+[
+  {
+    "userEmail": "admin@example.com",
+    "vehicle": {
+      "make": "Toyota",
+      "model": "Camry",
+      "year": 2020,
+      "color": "Black",
+      "plate": "AMS-VA-2020",
+      "type": "sedan",
+      "vin": "JTNBA46KX03000001",
+      "registrationExpiry": "2026-12-31T00:00:00.000Z",
+      "insurancePolicyNumber": "POL123-AMS-VA",
+      "insuranceExpiry": "2026-06-30T00:00:00.000Z"
+    },
+    "capacity": {
+      "seatsTotal": 5,
+      "maxPassengers": 3,
+      "luggageCapacityLiters": 450
+    },
+    "features": {
+      "petFriendly": false,
+      "babySeat": true,
+      "boosterSeat": false,
+      "wheelchairAccessible": false,
+      "smokingAllowed": false
+    },
+    "equipment": {
+      "chargerTypes": ["usb-a", "usb-c"],
+      "skiRack": false,
+      "bikeRack": false,
+      "trunkLarge": true,
+      "climateControlZones": 2
+    },
+    "preferences": {
+      "airportPermit": true,
+      "nightShifts": true,
+      "longDistance": true,
+      "corporateOnly": false
+    },
+    "languages": {
+      "primary": "en",
+      "list": ["nl", "uk"]
+    },
+    "service": {
+      "homeCity": "Amsterdam",
+      "homeCoordinates": { "type": "Point", "coordinates": [4.9041, 52.3676] },
+      "serviceRadiusKm": 65,
+      "serviceAreas": ["Amsterdam", "Haarlem", "Schiphol"]
+    },
+    "availability": {
+      "workingDays": ["mon", "tue", "wed", "thu", "fri"],
+      "shiftStart": "07:00",
+      "shiftEnd": "19:00",
+      "breaks": [{ "start": "12:30", "end": "13:00" }]
+    },
+    "pricing": {
+      "baseFareCents": 500,
+      "perKmCents": 120,
+      "perMinuteCents": 50,
+      "surgeEligible": true
+    },
+    "compliance": {
+      "licenseNumber": "AMS-DRV-2020-VA",
+      "licenseExpiry": "2027-01-31T00:00:00.000Z",
+      "backgroundCheckCleared": true,
+      "backgroundCheckedAt": "2025-01-01T00:00:00.000Z"
+    },
+    "documents": [
+      { "type": "license", "url": "https://example.com/docs/vasyl-license.pdf", "expiresAt": "2027-01-31T00:00:00.000Z" },
+      { "type": "insurance", "url": "https://example.com/docs/vasyl-insurance.pdf", "expiresAt": "2026-06-30T00:00:00.000Z" }
+    ],
+    "stats": {
+      "ratingAvg": 4.9,
+      "ratingCount": 280,
+      "completedRides": 1300,
+      "cancellations": 6,
+      "lastActiveAt": "2025-10-20T09:00:00.000Z"
+    },
+    "notes": "Prefers airport pickups",
+    "tags": ["priority", "airport"]
+  },
+  {
+    "userEmail": "john.driver@example.com",
+    "vehicle": {
+      "make": "Volkswagen",
+      "model": "Passat",
+      "year": 2018,
+      "color": "Blue",
+      "plate": "AMS-JD-2018",
+      "type": "wagon"
+    },
+    "availability": {
+      "workingDays": ["thu", "fri", "sat", "sun"],
+      "shiftStart": "18:00",
+      "shiftEnd": "02:00",
+      "breaks": []
+    },
+    "languages": { "primary": "nl", "list": ["en"] }
+  }
+]

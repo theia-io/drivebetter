@@ -64,7 +64,7 @@ app.prepare().then(async () => {
   // Next handles everything else
   server.all("*", (req, res) => handle(req, res));
 
-  server.listen(env.PORT, () => {
+  server.listen(env.PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${env.PORT}`);
     console.log(`📚 Swagger UI: http://localhost:${env.PORT}/api/docs`);
     console.log(`📋 OpenAPI:    http://localhost:${env.PORT}/api/openapi.json`);

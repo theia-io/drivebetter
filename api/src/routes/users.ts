@@ -316,7 +316,7 @@ router.get("/", async (req: Request, res: Response) => {
 router.get("/:id([0-9a-fA-F]{24})/groups", requireAuth,
     async (req: Request, res: Response) => {
         const targetUserId = req.params.id;
-        console.log(targetUserId);
+
         const me = (req as any).user as { id: string; roles: string[] };
 
         const isSelf = me?.id === targetUserId;
@@ -406,7 +406,6 @@ router.get("/drivers", async (_req: Request, res: Response) => {
  *                     items: { type: string }
  */
 router.get("/drivers/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
-    console.log(req.params.id);
     const drivers = await User.findById(req.params.id)
         .select({ _id: 1, name: 1, email: 1, phone: 1, roles: 1 })
         .lean();

@@ -158,9 +158,10 @@ router.post("/resend-verification", async (req: Request, res: Response) => {
 router.post("/login", async (req: Request, res: Response) => {
     const { email, password } = req.body || {};
     if (!email || !password) return res.status(400).json({ error: "email, password required" });
-
+    console.log(email);
+    console.log(password);
     const user = await User.findOne({ email: String(email).toLowerCase() });
-
+    console.log(user);
     if (!user || !user.passwordHash) return res.status(401).json({ error: "Invalid credentials" });
 
     const ok = await verifyPassword(password, user.passwordHash);

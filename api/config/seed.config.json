@@ -1,14 +1,17 @@
 {
-  "loadUsers": true,
-  "loadGroups": true,
-  "loadRides": true,
-  "loadClients": true,
-
+  "toggles": {
+    "loadUsers": true,
+    "loadGroups": true,
+    "loadDriverDetails": true,
+    "loadRides": true,
+    "loadRideShares": true,
+    "loadRideGroupShares": true,
+    "loadRideClaims": true
+  },
   "defaults": {
-    "password": "password123",
+    "password": "password123!",
     "roles": ["driver"]
   },
-
   "options": {
     "clearBeforeInsert": true,
     "logInserted": true

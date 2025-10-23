@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # 1. Database Service (MongoDB)
+  # Port 27017 is exposed to the host for external connections (e.g., Compass).
+  mongo:
+    image: mongo:latest
+    container_name: betterdrive_mongo
+    restart: always
+    ports:
+      # Format: HOST_PORT:CONTAINER_PORT
+      - "27017:27017"
+    # IMPORTANT: Change these environment values immediately for security!
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: user_admin
+      MONGO_INITDB_ROOT_PASSWORD: secure_password_123
+      MONGO_INITDB_DATABASE: betterdrive_db
+    # Persistent volume for data storage
+    volumes:
+      - mongodb_data:/data/db
+
+  # 2. API Service (Node.js API)
+  api:
+    # Replace 'kutsyk' with your actual Docker Hub username
+    image: kutsyk/betterdriver-api:latest
+    container_name: betterdrive_api
+    restart: always
+    # Ensures the API waits for MongoDB to be healthy
+    depends_on:
+      mongo:
+        condition: service_started
+    # Environment variables for the API to connect to the DB
+    environment:
+      MAPTILER_API_KEY: <TO_REPLACE_IN_GITHUB_ACTION>
+      ORS_API_KEY: <TO_REPLACE_IN_GITHUB_ACTION>
+      MONGO_URI: <TO_REPLACE_IN_GITHUB_ACTION>
+      PORT: 3000
+
+  # 3. Web Service (Node.js UI)
+  web:
+    # Replace 'kutsyk' with your actual Docker Hub username
+    image: kutsyk/betterdriver-web:latest
+    container_name: betterdrive_web
+    restart: always
+    environment:
+      # Web app talks to the API service using the internal service name 'api'
+      API_URL: http://api:3000
+    expose:
+      - "4200" # Expose internal port 80 (used by Nginx)
+
+  # 4. Reverse Proxy Service (Nginx)
+  nginx:
+    image: nginx:latest
+    container_name: betterdrive_nginx
+    restart: always
+    # Expose public ports 80 to the host machine
+    ports:
+      - "80:80"
+      # - "443:443" # Uncomment when you set up SSL
+    # Mount the custom configuration file
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+      - web
+
+# Define the named volume for persistent MongoDB data
+volumes:
+  mongodb_data:
+    driver: local
