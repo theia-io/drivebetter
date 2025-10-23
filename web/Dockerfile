@@ -14,6 +14,7 @@ RUN npm ci
 FROM base AS builder
 WORKDIR /app
 ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_BASE_URL=http://193.169.241.16/api/v1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Build the Next.js app
