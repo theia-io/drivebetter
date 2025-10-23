@@ -23,6 +23,8 @@ services:
       NODE_ENV: development
       PORT: 3000
       MONGODB_URI: mongodb://mongo:27017/drivebetter
+      MAPTILER_API_KEY: jb2wR0kvhEyp9kwHP1UA
+      ORS_API_KEY: eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjU4YmRhNjkyNGE2NzRmNTNiMmE4Mzk2Njc5YTg2NGQ2IiwiaCI6Im11cm11cjY0In0=
       JWT_SECRET: dev_super_secret
       GOOGLE_CLIENT_ID: your-google-client-id.apps.googleusercontent.com
       GOOGLE_CLIENT_SECRET: your-google-client-secret

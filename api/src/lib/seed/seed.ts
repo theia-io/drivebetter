@@ -140,7 +140,7 @@ async function run() {
         }
 
         // Build lookups from DB (works even if users weren’t just inserted)
-        const usersAll = await User.find({}, { _id: 1, email: 1 });
+        const usersAll = (await User.find({}, { _id: 1, email: 1 })).map(d => d.toObject()) as Array<{ _id: Types.ObjectId; email: string }>;
         const usersByEmail = new Map(usersAll.map((u) => [u.email.toLowerCase(), u]));
         const usersById = new Map(usersAll.map((u) => [u._id.toString(), u]));
 
@@ -170,8 +170,7 @@ async function run() {
 
         const groupsAll = await Group.find({}, { _id: 1, name: 1 });
         const groupsByName = new Map(groupsAll.map((g) => [g.name, g]));
-        const groupsById = new Map(groupsAll.map((g) => [g._id.toString(), g]));
-
+        const groupsById = (await Group.find({}, { _id: 1, name: 1 })).map(d => d.toObject()) as Array<{ _id: Types.ObjectId; name: string }>;
         /**
          * DRIVER DETAILS
          * Supports "userEmail" or "userId"
