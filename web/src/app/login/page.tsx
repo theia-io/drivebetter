@@ -11,9 +11,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isLoading } = useAuthStore();
+  const { login, isLoading, isAuthenticated, user, fetchMe } = useAuthStore();
 
-  const { isAuthenticated, user, fetchMe } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
