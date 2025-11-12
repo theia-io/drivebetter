@@ -12,7 +12,7 @@
     "name": "Alice Dispatcher",
     "email": "alice.dispatcher@example.com",
     "phone": "+310000000002",
-    "roles": ["dispatcher"],
+    "roles": ["dispatcher", "driver"],
     "emailVerified": true
   },
   {

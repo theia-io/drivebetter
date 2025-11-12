@@ -10,7 +10,7 @@
   },
   "defaults": {
     "password": "password123!",
-    "roles": ["driver"]
+    "roles": ["driver", "dispatcher"]
   },
   "options": {
     "clearBeforeInsert": true,
