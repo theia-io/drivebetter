@@ -5,60 +5,19 @@ import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import {
     Calendar,
     Car,
-    Clock,
-    DollarSign,
     Filter,
-    MapPin,
     Navigation,
     Plus,
     Search,
-    Star,
-    User,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRidesInfinite } from "@/stores/rides";
-import {Ride, RideCreatorUser} from "@/types";
-import AssignedDriverBadge from "@/components/ui/AssignedDriverBadge";
-import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
-import { useRouter } from "next/navigation";
+import {Ride} from "@/types";
 import { useAuthStore } from "@/stores";
 import DriverCombobox from "@/components/ui/DriverCombobox";
-import RideCreatorBadge from "@/components/ui/RideCreatorBadge";
 import RideSummaryCard from "@/components/ui/RideSummaryCard";
 
-function getStatusColor(status: string) {
-    switch (status) {
-        case "completed":
-            return "bg-green-100 text-green-800 border-green-200";
-        case "assigned":
-        case "on_my_way":
-        case "on_location":
-        case "pob":
-        case "clear":
-            return "bg-blue-100 text-blue-800 border-blue-200";
-        case "unassigned":
-            return "bg-yellow-100 text-yellow-800 border-yellow-200";
-        default:
-            return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-}
-function getStatusIcon(status: string) {
-    switch (status) {
-        case "completed":
-            return <Star className="w-4 h-4" />;
-        case "assigned":
-        case "on_my_way":
-        case "on_location":
-        case "pob":
-        case "clear":
-            return <Navigation className="w-4 h-4" />;
-        case "unassigned":
-            return <Clock className="w-4 h-4" />;
-        default:
-            return <Car className="w-4 h-4" />;
-    }
-}
 
 export default function RidesPage() {
     const { user } = useAuthStore();
