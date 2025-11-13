@@ -13,6 +13,8 @@ import {
     Route,
     Share2,
     UsersRound,
+    Pencil,
+    UserCheck
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -28,6 +30,12 @@ type NavItem = {
 
 const navigation: NavItem[] = [
     {
+        name: "Create Ride",
+        href: "/rides/new",
+        requiredRoles: ["driver", "dispatcher", "admin"],
+        icon: <Plus className="h-4 w-4" color={"blue"}/>,
+    },
+    {
         name: "Groups",
         href: "/groups",
         requiredRoles: ["driver", "dispatcher", "admin"],
@@ -36,7 +44,7 @@ const navigation: NavItem[] = [
 
     // Drivers should NOT see all rides
     {
-        name: "Rides",
+        name: "All Rides",
         href: "/rides",
         requiredRoles: ["dispatcher", "admin"],
         icon: <Route className="h-4 w-4" />,
@@ -44,22 +52,16 @@ const navigation: NavItem[] = [
 
     // Driver-only views
     {
-        name: "Create Ride",
-        href: "/rides/new",
-        requiredRoles: ["driver", "dispatcher", "admin"],
-        icon: <Plus className="h-4 w-4" />,
-    },
-    {
         name: "My Created",
-        href: "/my-created",
+        href: "/rides",
         requiredRoles: ["driver"],
-        icon: <CalendarDays className="h-4 w-4" />,
+        icon: <Route className="h-4 w-4" />,
     },
     {
         name: "My Assignments",
         href: "/my-rides",
         requiredRoles: ["driver"],
-        icon: <CalendarDays className="h-4 w-4" />,
+        icon: <UserCheck className="h-4 w-4" />,
     },
     {
         name: "New Rides",

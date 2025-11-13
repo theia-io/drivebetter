@@ -59,20 +59,9 @@ function getStatusIcon(status: string) {
 }
 
 export default function RidesPage() {
-    const router = useRouter();
     const { user } = useAuthStore();
-    const isChecking = typeof user === "undefined";
     const roles = user?.roles ?? [];
-    const isDriver = roles.includes("driver");
     const isPrivileged = roles.includes("admin") || roles.includes("dispatcher");
-    const isDriverOnly = isDriver && !isPrivileged;
-
-    // Redirect pure drivers away
-    useEffect(() => {
-        if (!isChecking && isDriverOnly) {
-            router.replace("/my-rides");
-        }
-    }, [isChecking, isDriverOnly, router]);
 
     // -------------------- Filters state --------------------
     const [driver, setDriver] = useState<any | null>(null); // DriverCombobox returns { _id, name, email } (or similar)

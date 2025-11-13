@@ -1,13 +1,12 @@
 import { Router, Request, Response } from "express";
 import mongoose, {FilterQuery, Types} from "mongoose";
-import Ride from "../models/ride.model";
-import User from "../models/user.model";
-import {requireAuth, requireRole} from "../lib/auth";
-import {hasRideExpired, IRideShare, RideShare} from "../models/rideShare.model";
-import Group from "../models/group.model";
-import {RideClaim} from "../models/rideClaim.model";
-import RideModel from "../models/ride.model";
-import {assertCanAccessRide, rideScopeFilter} from "@/src/lib/rideAuthz";
+import {requireAuth, requireRole} from "@/lib/auth";
+import {assertCanAccessRide, rideScopeFilter} from "@/lib/rideAuthz";
+import Ride from "@/models/ride.model";
+import User from "@/models/user.model";
+import { RideShare} from "@/models/rideShare.model";
+import Group from "@/models/group.model";
+import {RideClaim} from "@/models/rideClaim.model";
 
 const router = Router();
 const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";

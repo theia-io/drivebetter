@@ -15,12 +15,7 @@
     "jsx": "preserve",
     "incremental": true,
     "baseUrl": ".",
-    "paths": {
-      "@/*": ["*"],
-      "@lib/*": ["lib/*"],
-      "@pages/*": ["pages/*"],
-      "@prisma/*": ["prisma/*"]
-    }
+    "paths": { "@/*": ["./src/*"] }
   },
   "include": [
     "next-env.d.ts",
