@@ -8,17 +8,11 @@ import { inputClass } from "@/components/ui/commmon";
 
 type AssignDriverSelectProps = {
     rideId: string;
-    /** currently assigned driver (if any) */
     currentDriverId?: string | null;
-    /** optional filters forwarded to /driver-details/eligible */
     filters?: Partial<EligibleDriverBody>;
-    /** called after successful assignment */
     onAssigned?: (driverUserId: string) => void;
-    /** extra classes for wrapper */
     className?: string;
-    /** optional label text */
     label?: string;
-    /** disable interactions */
     disabled?: boolean;
 };
 

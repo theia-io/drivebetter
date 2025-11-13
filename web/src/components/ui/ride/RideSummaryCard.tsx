@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {useMemo} from "react";
+import { useMemo } from "react";
 import {
     Calendar,
     Car,
@@ -11,12 +11,13 @@ import {
     Navigation,
     User,
 } from "lucide-react";
-import {Button, Card, CardBody, Typography} from "@/components/ui";
-import {Ride, RideCreatorUser} from "@/types";
-import {fmtDate, fmtTime, km, mins, money} from "@/services/convertors";
+import { Button, Card, CardBody, Typography } from "@/components/ui";
+import { Ride, RideCreatorUser } from "@/types";
+import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
 import AssignedDriverBadge from "@/components/ui/ride/AssignedDriverBadge";
 import RideCreatorBadge from "@/components/ui/ride/RideCreatorBadge";
-import {useAuthStore} from "@/stores";
+import { useAuthStore } from "@/stores";
+import AssignDriverSelect from "@/components/ui/ride/AssignDriverSelect";
 
 type RideSummaryCardProps = {
     ride: Ride;
@@ -34,6 +35,11 @@ type RideSummaryCardProps = {
      * Hide the footer actions (Details/Assign). Defaults to false.
      */
     hideActions?: boolean;
+    /**
+     * Called when driver has been successfully assigned via the select.
+     * Receives the newly assigned driverUserId.
+     */
+    onDriverAssigned?: (driverUserId: string) => void;
 };
 
 /* ---------------- Status decorators ---------------- */
@@ -58,17 +64,17 @@ function getStatusColor(status: string) {
 function getStatusIcon(status: string) {
     switch (status) {
         case "completed":
-            return <Car className="w-3.5 h-3.5"/>;
+            return <Car className="w-3.5 h-3.5" />;
         case "assigned":
         case "on_my_way":
         case "on_location":
         case "pob":
         case "clear":
-            return <Navigation className="w-3.5 h-3.5"/>;
+            return <Navigation className="w-3.5 h-3.5" />;
         case "unassigned":
-            return <Clock className="w-3.5 h-3.5"/>;
+            return <Clock className="w-3.5 h-3.5" />;
         default:
-            return <Car className="w-3.5 h-3.5"/>;
+            return <Car className="w-3.5 h-3.5" />;
     }
 }
 
@@ -79,8 +85,9 @@ export default function RideSummaryCard({
                                             detailsHref,
                                             onCardClick,
                                             hideActions = false,
+                                            onDriverAssigned,
                                         }: RideSummaryCardProps) {
-    const {user} = useAuthStore();
+    const { user } = useAuthStore();
     const roles = user?.roles ?? [];
 
     const isAdmin = roles.includes("admin");
@@ -104,109 +111,87 @@ export default function RideSummaryCard({
 
     const statusColor = getStatusColor(ride.status);
 
-    const handleCardClick = (e: React.MouseEvent) => {
-        if (!onCardClick) return;
-        // Don’t trigger when clicking buttons/links inside card
-        const target = e.target as HTMLElement;
-        if (target.closest("button") || target.closest("a")) return;
-        onCardClick();
-    };
-    const clickable = !!onCardClick;
-
     return (
         <Card
             variant="elevated"
-            className="hover:shadow-md transition-shadow cursor-pointer"
+            className="hover:shadow-lg transition-shadow cursor-pointer"
         >
-            <div
-                onClick={clickable ? handleCardClick : undefined}
-                className={clickable ? "block" : undefined}
-            >
-                <CardBody className="p-3 sm:p-4">
-                    {/* Header row: route + status */}
+            <div className="p-3 sm:p-4">
+                <CardBody className="p-0 space-y-3 sm:space-y-4">
+                    {/* Header row */}
                     <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex items-start gap-2 sm:gap-3">
-                            <div
-                                className="w-9 h-9 sm:w-10 sm:h-10 bg-indigo-100 rounded-full flex items-center justify-center shrink-0">
-                                <User className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600"/>
+                        <div className="flex items-start gap-2 sm:gap-3 min-w-0">
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-indigo-100 rounded-full flex items-center justify-center shrink-0">
+                                <User className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
                             </div>
                             <div className="min-w-0 space-y-1">
-                                {/* Main route */}
                                 <Typography className="text-sm sm:text-base font-semibold text-gray-900 truncate">
                                     {ride.from} → {ride.to}
                                 </Typography>
 
-                                {/* Creator */}
-                                {ride.creatorId && (
-                                    <RideCreatorBadge
-                                        creator={ride.creatorId as RideCreatorUser}
-                                        className="mt-0.5"
-                                    />
-                                )}
+                                <div className="flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs text-gray-600">
+                                    <span className="inline-flex items-center gap-1">
+                                        <Clock className="w-3 h-3 text-gray-400" />
+                                        <span className="font-medium">
+                                            {rideDate} · {rideTime}
+                                        </span>
+                                    </span>
+                                    {amountText && (
+                                        <span className="inline-flex items-center gap-1">
+                                            <DollarSign className="w-3 h-3 text-gray-400" />
+                                            <span>{amountText}</span>
+                                        </span>
+                                    )}
+                                    <span className="inline-flex items-center gap-1">
+                                        <Calendar className="w-3 h-3 text-gray-400" />
+                                        <span className="uppercase tracking-wide text-[10px]">
+                                            {ride.type === "reservation" ? "RESERVATION" : "ASAP"}
+                                        </span>
+                                    </span>
+                                </div>
 
-                                {/* Time + fare row */}
-                                <div
-                                    className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] sm:text-xs text-gray-600">
-                <span className="inline-flex items-center gap-1.5">
-                  <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400"/>
-                  <span className="font-medium">Ride request time:</span>
-                  <span>
-                    {rideDate} • {rideTime}
-                  </span>
-                </span>
-                                    <span className="inline-flex items-center gap-1.5">
-                  <DollarSign className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-400"/>
-                  <span>{amountText}</span>
-                </span>
+                                {/* Creator */}
+                                <div className="mt-0.5">
+                                    <RideCreatorBadge creator={ride.creatorId as RideCreatorUser | undefined} />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Status chip */}
-                        <div className="flex flex-col items-end gap-1">
-            <span
-                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border ${statusColor}`}
-            >
-              {getStatusIcon(ride.status)}
-                <span className="ml-1 capitalize">
-                {ride.status.replace(/_/g, " ")}
-              </span>
-            </span>
-                            {/* Show ride type as tiny chip if present */}
-                            {ride.type && (
-                                <span
-                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] bg-gray-50 text-gray-700 border border-gray-200 uppercase tracking-wide">
-                {ride.type}
-              </span>
-                            )}
-                        </div>
+                        {/* Status pill */}
+                        <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] sm:text-xs font-medium border ${statusColor}`}
+                        >
+                            {getStatusIcon(ride.status)}
+                            <span className="ml-1 capitalize">
+                                {ride.status.replace(/_/g, " ")}
+                            </span>
+                        </span>
                     </div>
 
-                    {/* Secondary meta row */}
-                    <div
-                        className="mt-2 sm:mt-3 grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-3 text-[11px] sm:text-xs text-gray-600">
+                    {/* Secondary info row */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 text-[11px] sm:text-xs text-gray-600">
                         <div className="flex items-center">
-                            <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1.5 text-gray-400 shrink-0"/>
+                            <MapPin className="w-3 h-3 mr-1.5 text-gray-400 shrink-0" />
                             <span className="truncate">{ride.from}</span>
                         </div>
                         <div className="flex items-center">
-                            <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1.5 text-gray-400 shrink-0"/>
+                            <MapPin className="w-3 h-3 mr-1.5 text-gray-400 shrink-0" />
                             <span className="truncate">{ride.to}</span>
                         </div>
                         <div className="flex items-center">
-                            <Navigation className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1.5 text-gray-400 shrink-0"/>
+                            <Navigation className="w-3 h-3 mr-1.5 text-gray-400 shrink-0" />
                             <span className="truncate">{distanceText}</span>
                         </div>
                         <div className="flex items-center">
-                            <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-1.5 text-gray-400 shrink-0"/>
+                            <Calendar className="w-3 h-3 mr-1.5 text-gray-400 shrink-0" />
                             <span className="truncate">
-              {etaText ? `ETA: ${etaText}` : "ETA: —"}
-            </span>
+                                {etaText ? `ETA: ${etaText}` : "ETA: —"}
+                            </span>
                         </div>
                     </div>
 
                     {/* Assigned driver badge row */}
-                    <div className="mt-2 sm:mt-2">
+                    <div className="mt-1 sm:mt-2">
                         <AssignedDriverBadge
                             userId={ride.assignedDriverId as string | undefined}
                         />
@@ -226,15 +211,27 @@ export default function RideSummaryCard({
                             </Link>
 
                             {showAssign && (
-                                <Link href={`/rides/${ride._id}/assign`} className="w-full sm:w-auto">
-                                    <Button
-                                        size="sm"
-                                        className="w-full sm:w-auto text-xs"
-                                        leftIcon={<Car className="w-3.5 h-3.5"/>}
-                                    >
-                                        Assign driver
-                                    </Button>
-                                </Link>
+                                <div className="w-full sm:w-auto space-y-1">
+                                    <AssignDriverSelect
+                                        rideId={ride._id}
+                                        currentDriverId={ride.assignedDriverId || undefined}
+                                        filters={{
+                                            limit: 50,
+                                        }}
+                                        onAssigned={(driverUserId) => {
+                                            onDriverAssigned?.(driverUserId);
+                                        }}
+                                    />
+                                    <Link href={`/rides/${ride._id}/assign`} className="w-full sm:w-auto">
+                                        <Button
+                                            size="sm"
+                                            className="w-full sm:w-auto text-xs"
+                                            leftIcon={<Car className="w-3.5 h-3.5" />}
+                                        >
+                                            Advanced assign
+                                        </Button>
+                                    </Link>
+                                </div>
                             )}
                         </div>
                     )}

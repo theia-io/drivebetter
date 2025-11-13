@@ -70,11 +70,6 @@ export default function RidesPage() {
         mutate();
     }, [params.driverId, params.dateFrom, params.dateTo, params.distanceMin, params.distanceMax]);
 
-    const todaysCount = useMemo(() => {
-        const todayStr = new Date().toDateString();
-        return rides.filter((r) => new Date(r.createdAt).toDateString() === todayStr).length;
-    }, [items]);
-
     return (
         <ProtectedLayout>
             <Container className="px-3 sm:px-6 lg:px-8">
@@ -96,146 +91,15 @@ export default function RidesPage() {
                         </div>
                     </div>
 
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-6">
-                        <Card variant="elevated" className="hover:shadow-lg transition-shadow">
-                            <CardBody className="p-3 sm:p-6">
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="min-w-0">
-                                        <Typography variant="body2" className="text-gray-600 font-medium text-[11px] sm:text-sm">
-                                            Today&apos;s Rides
-                                        </Typography>
-                                        <Typography variant="h2" className="text-base sm:text-2xl font-bold text-gray-900 mt-0.5 sm:mt-1">
-                                            {todaysCount}
-                                        </Typography>
-                                    </div>
-                                    <div className="p-2 sm:p-3 bg-blue-50 rounded-xl border border-blue-200">
-                                        <Car className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600" />
-                                    </div>
-                                </div>
-                            </CardBody>
-                        </Card>
-                    </div>
-
-                    {/* Filters */}
-                    <Card variant="elevated">
-                        <CardBody className="p-3 sm:p-6 space-y-3">
-                            <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
-                                <Filter className="w-4 h-4" />
-                                Filters
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                {/* Driver filter (only visible to admins/dispatchers) */}
-                                <div className={`${isPrivileged ? "" : "hidden"}`}>
-                                    <label className="block text-xs text-gray-600 mb-1">Driver</label>
-                                    <DriverCombobox
-                                        id="driver-filter"
-                                        valueEmail={driver?.email || ""}
-                                        onChange={(v: any | null) => setDriver(v)}
-                                    />
-                                </div>
-
-                                {/* Date From */}
-                                <div>
-                                    <label className="block text-xs text-gray-600 mb-1">Date from</label>
-                                    <div className="relative">
-                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                        <input
-                                            type="date"
-                                            value={dateFrom}
-                                            onChange={(e) => setDateFrom(e.target.value)}
-                                            className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Date To */}
-                                <div>
-                                    <label className="block text-xs text-gray-600 mb-1">Date to</label>
-                                    <div className="relative">
-                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                        <input
-                                            type="date"
-                                            value={dateTo}
-                                            onChange={(e) => setDateTo(e.target.value)}
-                                            className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Distance range (km) */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div>
-                                    <label className="block text-xs text-gray-600 mb-1">Min distance (km)</label>
-                                    <div className="relative">
-                                        <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                        <input
-                                            type="number"
-                                            min={0}
-                                            step="0.1"
-                                            value={distanceMin}
-                                            onChange={(e) => setDistanceMin(e.target.value)}
-                                            placeholder="e.g. 3"
-                                            className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs text-gray-600 mb-1">Max distance (km)</label>
-                                    <div className="relative">
-                                        <Navigation className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                        <input
-                                            type="number"
-                                            min={0}
-                                            step="0.1"
-                                            value={distanceMax}
-                                            onChange={(e) => setDistanceMax(e.target.value)}
-                                            placeholder="e.g. 50"
-                                            className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Quick actions */}
-                                <div className="flex items-end gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        leftIcon={<Search className="w-4 h-4" />}
-                                        onClick={() => {
-                                            // simply revalidate with current params; SWR key already changes as user types, but this gives an explicit action
-                                            setSize(1);
-                                            mutate();
-                                        }}
-                                    >
-                                        Apply
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                            setDriver(null);
-                                            setDateFrom("");
-                                            setDateTo("");
-                                            setDistanceMin("");
-                                            setDistanceMax("");
-                                        }}
-                                    >
-                                        Reset
-                                    </Button>
-                                </div>
-                            </div>
-                        </CardBody>
-                    </Card>
-
                     {/* Rides List */}
                     <div className="space-y-2 sm:space-y-4">
                         {rides.map((ride: Ride) => (
                             <RideSummaryCard
                                 key={ride._id}
                                 ride={ride}
+                                onDriverAssigned={() => {
+                                    mutate();
+                                }}
                             />
                         ))}
                     </div>

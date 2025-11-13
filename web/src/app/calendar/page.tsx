@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {useCallback, useMemo, useState} from "react";
 import { Calendar as RBCalendar, dateFnsLocalizer, View, Event as RBCEvent } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay, addMinutes } from "date-fns";
 import {enGB} from "date-fns/locale/en-GB";
@@ -8,13 +8,14 @@ import "react-big-calendar/lib/css/react-big-calendar.css";
 
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, MapPin, User, X } from "lucide-react";
+import {CalendarDays, CalendarIcon, ChevronLeft, ChevronRight, Clock, Loader2, MapPin, User, X} from "lucide-react";
 import { useAuthStore } from "@/stores";
 import { useRidesInfinite } from "@/stores/rides";
-import {Ride, RideCreatorUser} from "@/types";
+import {Ride} from "@/types";
 import Link from "next/link";
 import { fmtDate, fmtTime, money, km, mins } from "@/services/convertors";
 import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
+import {mutate} from "swr";
 
 // ---------- react-big-calendar localizer ----------
 
@@ -120,7 +121,7 @@ export default function DriverCalendarPage() {
     const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
 
     // Fetch LOTS of rides and filter client-side by creator/assigned
-    const { items: allRides } = useRidesInfinite({}, 100);
+    const { items: allRides, isLoading, mutate } = useRidesInfinite({}, 100);
 
     const eventPropGetter = (event: RideEvent) => {
         const ride = event.ride;
@@ -152,6 +153,25 @@ export default function DriverCalendarPage() {
                 };
             }),
         [allRides]
+    );
+
+    const handleDriverAssigned = useCallback(
+        async (rideId: string, driverUserId: string) => {
+            // update the ride shown in the preview
+            setSelectedRide((prev) => {
+                if (!prev || prev._id !== rideId) return prev;
+                return {
+                    ...prev,
+                    assignedDriverId: driverUserId,
+                    // status usually becomes "assigned" from "unassigned"
+                    status: prev.status === "unassigned" ? "assigned" : prev.status,
+                };
+            });
+
+            // refresh the underlying list used by the calendar
+            await mutate();
+        },
+        [mutate]
     );
 
     const onNavigate = (date: Date) => {
@@ -209,7 +229,18 @@ export default function DriverCalendarPage() {
                                     onClick={() => onNavigate(new Date())}
                                     className="px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50"
                                 >
-                                    Today
+                                    <div className="flex items-center gap-2">
+                                    <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-2 py-1 text-xs sm:text-sm">
+                                        <CalendarIcon className="w-4 h-4 text-gray-500" />
+                                        Today
+                                        <span>{currentDate.toLocaleDateString()}</span>
+                                    </div>
+                                    {isLoading && (
+                                        <div className="inline-flex items-center gap-1 text-xs text-gray-500">
+                                            <Loader2 className="w-3 h-3 animate-spin" /> Loading rides…
+                                        </div>
+                                    )}
+                                </div>
                                 </button>
                                 <button
                                     type="button"
@@ -363,6 +394,9 @@ export default function DriverCalendarPage() {
                         {/* Main info */}
                         <RideSummaryCard
                             ride={selectedRide}
+                            onDriverAssigned={(driverUserId) =>
+                                handleDriverAssigned(selectedRide._id, driverUserId)
+                            }
                         />
 
                         {/* Actions */}
