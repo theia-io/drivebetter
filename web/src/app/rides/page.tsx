@@ -25,6 +25,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores";
 import DriverCombobox from "@/components/ui/DriverCombobox";
 import RideCreatorBadge from "@/components/ui/RideCreatorBadge";
+import RideSummaryCard from "@/components/ui/RideSummaryCard";
 
 function getStatusColor(status: string) {
     switch (status) {
@@ -273,75 +274,10 @@ export default function RidesPage() {
                     {/* Rides List */}
                     <div className="space-y-2 sm:space-y-4">
                         {rides.map((ride: Ride) => (
-                            <Card key={ride._id} variant="elevated" className="hover:shadow-lg transition-shadow">
-                                <CardBody className="p-3 sm:p-6">
-                                    {/* Row header: title + status */}
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="min-w-0 flex items-start gap-2 sm:gap-3">
-                                            <div className="w-9 h-9 sm:w-12 sm:h-12 bg-indigo-100 rounded-full flex items-center justify-center shrink-0">
-                                                <User className="w-4 h-4 sm:w-6 sm:h-6 text-indigo-600" />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <Typography className="text-sm sm:text-lg font-semibold text-gray-900 truncate">
-                                                    {ride.from} → {ride.to}
-                                                </Typography>
-                                                <RideCreatorBadge creator={ride.creatorId as RideCreatorUser | undefined} />
-                                                <div className="mt-0.5 sm:mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] sm:text-sm text-gray-600">
-                                                  <span className="inline-flex items-center gap-1">
-                                                    <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                                                      Ride request time: {fmtDate(ride.datetime)} • {fmtTime(ride.datetime)}
-                                                  </span>
-                                                    <span className="inline-flex items-center gap-1">
-                                                        <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                                                        {money(ride.payment?.amountCents)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <span
-                                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] sm:text-xs font-medium border ${getStatusColor(
-                                                ride.status
-                                            )}`}
-                                        >
-                      {getStatusIcon(ride.status)}
-                                            <span className="ml-1 capitalize">{ride.status.replace(/_/g, " ")}</span>
-                    </span>
-                                    </div>
-
-                                    {/* Secondary meta */}
-                                    <div className="mt-2 sm:mt-3 grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4 text-[11px] sm:text-sm text-gray-600">
-                                        <div className="flex items-center">
-                                            <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 text-gray-400 shrink-0" />
-                                            <span className="truncate">{ride.from}</span>
-                                        </div>
-                                        <div className="flex items-center">
-                                            <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 text-gray-400 shrink-0" />
-                                            <span className="truncate">{ride.to}</span>
-                                        </div>
-                                        <div className="flex items-center">
-                                            <Navigation className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 text-gray-400 shrink-0" />
-                                            <span className="truncate">{km(ride.distance)}</span>
-                                        </div>
-                                        <div className="flex items-center">
-                                            <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5 text-gray-400 shrink-0" />
-                                            <span className="truncate">{mins((ride as any).durationMinutes)}</span>
-                                        </div>
-                                        <AssignedDriverBadge userId={ride.assignedDriverId as string | undefined} />
-                                    </div>
-
-                                    {/* Actions */}
-                                    <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2">
-                                        <Button variant="outline" size="sm" className="w-full sm:w-auto text-xs">
-                                            <Link href={`/rides/${ride._id}`}>Details</Link>
-                                        </Button>
-                                        {ride.status === "unassigned" && (
-                                            <Button size="sm" className="w-full sm:w-auto text-xs">
-                                                Start
-                                            </Button>
-                                        )}
-                                    </div>
-                                </CardBody>
-                            </Card>
+                            <RideSummaryCard
+                                key={ride._id}
+                                ride={ride}
+                            />
                         ))}
                     </div>
 

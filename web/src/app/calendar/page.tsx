@@ -15,6 +15,7 @@ import {Ride, RideCreatorUser} from "@/types";
 import Link from "next/link";
 import { fmtDate, fmtTime, money, km, mins } from "@/services/convertors";
 import RideCreatorBadge from "@/components/ui/RideCreatorBadge";
+import RideSummaryCard from "@/components/ui/RideSummaryCard";
 
 // ---------- react-big-calendar localizer ----------
 
@@ -361,44 +362,11 @@ export default function DriverCalendarPage() {
                         </div>
 
                         {/* Main info */}
-                        <div className="space-y-2 text-xs sm:text-sm text-gray-700">
-                            <div className="flex items-center">
-                                <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-                                <span className="font-medium mr-1">From:</span>
-                                <span className="truncate">{selectedRide.from}</span>
-                            </div>
-                            <div className="flex items-center">
-                                <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-                                <span className="font-medium mr-1">To:</span>
-                                <span className="truncate">{selectedRide.to}</span>
-                            </div>
-                            <div className="flex items-center">
-                                <Clock className="w-4 h-4 mr-2 text-gray-400" />
-                                <span className="font-medium mr-1">Duration:</span>
-                                <span>{mins((selectedRide as any).durationMinutes)}</span>
-                            </div>
-                            <div className="flex items-center">
-                                <Clock className="w-4 h-4 mr-2 text-gray-400" />
-                                <span className="font-medium mr-1">Distance:</span>
-                                <span>{km(selectedRide.distance)}</span>
-                            </div>
-                            {selectedRide.customer?.name && (
-                                <div className="flex items-center">
-                                    <User className="w-4 h-4 mr-2 text-gray-400" />
-                                    <span className="font-medium mr-1">Customer:</span>
-                                    <span className="truncate">{selectedRide.customer.name}</span>
-                                </div>
-                            )}
-
-                            {/* Creator */}
-                            <div className="flex items-center">
-                                <User className="w-4 h-4 mr-2 text-gray-400" />
-                                <span className="font-medium mr-1">Created by:</span>
-                                <span className="truncate">
-                        <RideCreatorBadge creator={selectedRide.creatorId as RideCreatorUser | undefined} />
-                </span>
-                            </div>
-                        </div>
+                        <RideSummaryCard
+                            ride={selectedRide}
+                            showActions={false}
+                            compact
+                        />
 
                         {/* Actions */}
                         <div className="mt-4 flex flex-col sm:flex-row gap-2">

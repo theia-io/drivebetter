@@ -41,7 +41,7 @@ const q = (params?: Record<string, any>) => {
 };
 
 export const listMyRides = () =>
-    apiGet<RidePage>(`/rides/my`);
+    apiGet<RidePage>(`/rides/my-assigned`);
 
 export const listRides = (params?: RideListQuery) =>
     apiGet<RidePage>(`/rides${q(params)}`);
@@ -220,7 +220,7 @@ export function useSetRideStatus(id?: string) {
 }
 
 export function useMyRides() {
-    const key = `/rides/my`;
+    const key = `/rides/my-assigned`;
     return useSWR<RidePage>(key, () => listMyRides());
 }
 
