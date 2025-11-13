@@ -46,11 +46,17 @@ const navigation: NavItem[] = [
     {
         name: "Create Ride",
         href: "/rides/new",
-        requiredRoles: ["driver"],
+        requiredRoles: ["driver", "dispatcher", "admin"],
         icon: <Plus className="h-4 w-4" />,
     },
     {
-        name: "My Rides",
+        name: "My Created",
+        href: "/my-created",
+        requiredRoles: ["driver"],
+        icon: <CalendarDays className="h-4 w-4" />,
+    },
+    {
+        name: "My Assignments",
         href: "/my-rides",
         requiredRoles: ["driver"],
         icon: <CalendarDays className="h-4 w-4" />,

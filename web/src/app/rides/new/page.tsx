@@ -15,6 +15,7 @@ import { currentHourTimeInput, todayDateInput } from "@/services/datetime";
 import { VehicleType } from "@/types/driver-details";
 import { RideStatus, RideType } from "@/types/ride";
 import { Field, FieldLabel, FieldError, inputClass } from "@/components/ui/commmon";
+import {useAuthStore} from "@/stores";
 
 /* ------------------------------- Types ------------------------------- */
 
@@ -65,6 +66,7 @@ type NextStep = "assign" | "share" | "skip";
 export default function NewRidePage() {
     const router = useRouter();
     const [values, setValues] = useState<RideFormValues>(initialValues);
+    const { user } = useAuthStore();
     const [submitting, setSubmitting] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [nextStep, setNextStep] = useState<NextStep>("skip");
@@ -104,6 +106,7 @@ export default function NewRidePage() {
 
             // Stage 1: create UNASSIGNED ride
             const payload: any = {
+                creatorId: user._id,
                 customer: values.customer || undefined,
                 from: values.fromLabel,
                 to: values.toLabel,

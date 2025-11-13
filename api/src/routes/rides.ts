@@ -7,6 +7,7 @@ import {hasRideExpired, IRideShare, RideShare} from "../models/rideShare.model";
 import Group from "../models/group.model";
 import {RideClaim} from "../models/rideClaim.model";
 import RideModel from "../models/ride.model";
+import {assertCanAccessRide, rideScopeFilter} from "@/src/lib/rideAuthz";
 
 const router = Router();
 const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
@@ -35,6 +36,58 @@ function sanitizeRideForDriver(ride: any) {
             : undefined,
         assignedDriverId,
     };
+}
+
+function buildRideFilters(req: Request) {
+    const {
+        status,          // string | string[]
+        fromDate,        // ISO string
+        toDate,          // ISO string
+        dateField = "datetime", // which field to use for date filtering
+        q,               // simple text match against from/to
+        assigned,        // "true" | "false"
+    } = req.query as Record<string, string | undefined>;
+
+    const filters: any = {};
+
+    // status filter (single or multiple)
+    if (status) {
+        const list = Array.isArray(status) ? status : String(status).split(",");
+        filters.status = { $in: list };
+    }
+
+    // date range on chosen field (defaults to ride.datetime)
+    if (fromDate || toDate) {
+        filters[dateField] = {};
+        if (fromDate) filters[dateField].$gte = new Date(fromDate!);
+        if (toDate) {
+            // include the whole 'to' day if only a date is provided
+            const end = new Date(toDate!);
+            filters[dateField].$lte = end;
+        }
+    }
+
+    // text query on from/to
+    if (q && q.trim()) {
+        const rx = new RegExp(q.trim(), "i");
+        filters.$or = [{ from: rx }, { to: rx }];
+    }
+
+    // assigned flag
+    if (assigned === "true") {
+        filters.assignedDriverId = { $ne: null };
+    } else if (assigned === "false") {
+        filters.assignedDriverId = { $in: [null, undefined] };
+    }
+
+    return filters;
+}
+
+function getPaging(req: Request) {
+    const page = Math.max(1, parseInt(String(req.query.page || "1"), 10));
+    const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || "20"), 10)));
+    const skip = (page - 1) * limit;
+    return { page, limit, skip };
 }
 
 /**
@@ -80,33 +133,38 @@ function sanitizeRideForDriver(ride: any) {
  *       200:
  *         description: Paged list
  */
-router.get("/", async (req: Request, res: Response) => {
+router.get("/",
+    requireAuth,
+    requireRole(["driver", "dispatcher", "admin"]),
+    async (req: Request, res: Response) => {
+    const user = (req as any).user;
     const page = Math.max(Number(req.query.page || 1), 1);
     const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
     const sortDir = String(req.query.sort || "desc").toLowerCase() === "asc" ? 1 : -1;
 
-    const q: any = {};
-    if (req.query.status) q.status = req.query.status;
-    if (req.query.type) q.type = req.query.type;
+    const filter: any = {};
+
+    if (req.query.status) filter.status = req.query.status;
+    if (req.query.type) filter.type = req.query.type;
 
     // Date range
     if (req.query.from || req.query.to) {
-        q.datetime = {};
-        if (req.query.from) q.datetime.$gte = new Date(String(req.query.from));
-        if (req.query.to) q.datetime.$lte = new Date(String(req.query.to));
+        filter.datetime = {};
+        if (req.query.from) filter.datetime.$gte = new Date(String(req.query.from));
+        if (req.query.to) filter.datetime.$lte = new Date(String(req.query.to));
     }
 
     // Driver filter
     if (req.query.driverId && isObjectId(req.query.driverId)) {
         const driverId = new Types.ObjectId(String(req.query.driverId));
         const includeClaimed = String(req.query.includeClaimed || "false").toLowerCase() === "true";
-        q.$or = includeClaimed
+        filter.$or = includeClaimed
             ? [{ assignedDriverId: driverId }, { queue: driverId }]
             : [{ assignedDriverId: driverId }];
     }
-
-    const total = await Ride.countDocuments(q);
-    const items = await Ride.find(q)
+    const scopedFilter = { ...filter, ...rideScopeFilter(user) };
+    const total = await Ride.countDocuments(scopedFilter);
+    const items = await Ride.find(scopedFilter)
         .sort({ datetime: sortDir })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -119,7 +177,7 @@ router.get("/", async (req: Request, res: Response) => {
  * @openapi
  * /rides:
  *   post:
- *     summary: Create ride
+ *     summary: Create a ride
  *     tags: [Rides]
  *     requestBody:
  *       required: true
@@ -173,7 +231,10 @@ router.get("/", async (req: Request, res: Response) => {
  *       400: { description: Validation error }
  *       404: { description: Driver not found }
  */
-router.post("/", async (req: Request, res: Response) => {
+router.post("/",
+    requireAuth,
+    requireRole(["driver", "dispatcher", "admin"]),
+    async (req: Request, res: Response) => {
     try {
         const body = req.body || {};
 
@@ -238,8 +299,18 @@ router.post("/", async (req: Request, res: Response) => {
  *       200: { description: OK }
  *       404: { description: Not found }
  */
-router.get("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
+router.get("/:id([0-9a-fA-F]{24})",
+    requireAuth,
+    requireRole(["driver", "dispatcher", "admin"]),
+    async (req: Request, res: Response) => {
     const ride = await Ride.findById(req.params.id);
+    const user = (req as any).user;
+    try {
+        assertCanAccessRide(user, ride);
+    } catch (e: any) {
+        return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
+    }
+
     if (!ride) return res.status(404).json({ error: "Ride not found" });
     res.json(ride);
 });
@@ -326,9 +397,13 @@ router.get("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
  *       allOf:
  *         - $ref: '#/components/schemas/RidePutBody'
  */
-router.put("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
+router.put("/:id([0-9a-fA-F]{24})",
+    requireAuth,
+    requireRole(["driver", "dispatcher", "admin"]),
+    async (req: Request, res: Response) => {
     const id = req.params.id;
     const b = req.body || {};
+    const user = (req as any).user;
 
     const set: any = {};
     // whitelist fields
@@ -341,19 +416,187 @@ router.put("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
     ];
     for (const k of allow) if (k in b) set[k] = b[k];
 
+    try {
+        assertCanAccessRide(user, set);
+    } catch (e: any) {
+        return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
+    }
+
     if (set.creatorId && !isObjectId(set.creatorId)) delete set.creatorId;
     if (set.clientId && !isObjectId(set.clientId)) delete set.clientId;
     if (set.assignedDriverId && !isObjectId(set.assignedDriverId)) delete set.assignedDriverId;
     if (set.datetime) set.datetime = new Date(set.datetime);
 
     const ride = await Ride.findByIdAndUpdate(id, { $set: set }, { new: true });
+
     if (!ride) return res.status(404).json({ error: "Ride not found" });
     res.json(ride);
 });
 
-router.patch("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
+/**
+ * @openapi
+ * /rides/{id}:
+ *   patch:
+ *     summary: Partially update a ride
+ *     description: >
+ *       Update selected fields of an existing ride. Only the ride creator, an admin,
+ *       or a dispatcher are allowed to modify a ride (according to your access checks).
+ *     tags: [Rides]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: Ride ID
+ *         schema:
+ *           type: string
+ *           pattern: "^[0-9a-fA-F]{24}$"
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             description: >
+ *               Only the listed fields are accepted; other fields in the payload are ignored.
+ *             properties:
+ *               from:
+ *                 type: string
+ *                 description: Pickup address/label
+ *               to:
+ *                 type: string
+ *                 description: Dropoff address/label
+ *               stops:
+ *                 type: array
+ *                 description: Optional intermediate stop labels
+ *                 items:
+ *                   type: string
+ *               datetime:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Scheduled date and time of the ride (ISO 8601)
+ *               type:
+ *                 type: string
+ *                 description: Ride type (e.g. "reservation" or "asap")
+ *               assignedDriverId:
+ *                 type: string
+ *                 nullable: true
+ *                 description: User ID of the assigned driver
+ *               coveredVisible:
+ *                 type: boolean
+ *                 description: Whether the ride is visible in covered views
+ *               status:
+ *                 type: string
+ *                 description: Ride status
+ *               notes:
+ *                 type: string
+ *                 description: Internal notes
+ *               fromLocation:
+ *                 type: object
+ *                 description: GeoJSON point for pickup
+ *                 properties:
+ *                   type:
+ *                     type: string
+ *                     example: "Point"
+ *                   coordinates:
+ *                     type: array
+ *                     minItems: 2
+ *                     maxItems: 2
+ *                     items:
+ *                       type: number
+ *                     description: "[longitude, latitude]"
+ *               toLocation:
+ *                 type: object
+ *                 description: GeoJSON point for dropoff
+ *                 properties:
+ *                   type:
+ *                     type: string
+ *                     example: "Point"
+ *                   coordinates:
+ *                     type: array
+ *                     minItems: 2
+ *                     maxItems: 2
+ *                     items:
+ *                       type: number
+ *                     description: "[longitude, latitude]"
+ *               stopLocations:
+ *                 type: array
+ *                 description: GeoJSON points for intermediate stops
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     type:
+ *                       type: string
+ *                       example: "Point"
+ *                     coordinates:
+ *                       type: array
+ *                       minItems: 2
+ *                       maxItems: 2
+ *                       items:
+ *                         type: number
+ *                       description: "[longitude, latitude]"
+ *               payment:
+ *                 type: object
+ *                 description: Payment details
+ *                 properties:
+ *                   amountCents:
+ *                     type: number
+ *                     description: Total fare in cents
+ *                   method:
+ *                     type: string
+ *                     description: Payment method identifier
+ *                   paid:
+ *                     type: boolean
+ *                     description: Whether the ride has been paid by the customer
+ *                   driverPaid:
+ *                     type: boolean
+ *                     description: Whether the driver has been settled
+ *                   driverShareCents:
+ *                     type: number
+ *                     description: Driver's share in cents
+ *     responses:
+ *       200:
+ *         description: Updated ride
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: "#/components/schemas/Ride"
+ *       400:
+ *         description: Invalid request body
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *       403:
+ *         description: Forbidden – user is not allowed to modify this ride
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *       404:
+ *         description: Ride not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ */
+router.patch("/:id([0-9a-fA-F]{24})",
+    requireAuth,
+    requireRole(["driver", "dispatcher", "admin"]),
+    async (req: Request, res: Response) => {
     const id = req.params.id;
     const b = req.body || {};
+    const user = (req as any).user;
     const set: any = {};
     const allow = [
         "from","to","stops","datetime","type",
@@ -363,7 +606,11 @@ router.patch("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
     ];
     for (const k of allow) if (k in b) set[k] = b[k];
     if (set.datetime) set.datetime = new Date(set.datetime);
-
+    try {
+        assertCanAccessRide(user, set);
+    } catch (e: any) {
+        return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
+    }
     const ride = await Ride.findByIdAndUpdate(id, { $set: set }, { new: true });
     if (!ride) return res.status(404).json({ error: "Ride not found" });
     res.json(ride);
@@ -384,7 +631,17 @@ router.patch("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
  *       204: { description: Deleted }
  *       404: { description: Not found }
  */
-router.delete("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
+router.delete("/:id([0-9a-fA-F]{24})",
+    requireAuth,
+    requireRole(["driver", "dispatcher", "admin"]),
+    async (req: Request, res: Response) => {
+    const ride = await Ride.findById(req.params.id);
+    const user = (req as any).user;
+    try {
+        assertCanAccessRide(user, ride);
+    } catch (e: any) {
+        return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
+    }
     const deleted = await Ride.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ error: "Ride not found" });
     res.status(204).end();
@@ -429,7 +686,7 @@ router.delete("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
 router.get(
     "/:id([0-9a-fA-F]{24})/claims",
     requireAuth,
-    requireRole(["dispatcher", "admin"]),
+    requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
         const { id } = req.params;
 
@@ -484,7 +741,7 @@ router.get(
 router.post(
     "/:rideId([0-9a-fA-F]{24})/claims/:claimId([0-9a-fA-F]{24})/approve",
     requireAuth,
-    requireRole(["dispatcher", "admin"]),
+    requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
         const { rideId, claimId } = req.params;
 
@@ -585,7 +842,7 @@ router.post(
 router.post(
     "/:id([0-9a-fA-F]{24})/claims/:claimId([0-9a-fA-F]{24})/reject",
     requireAuth,
-    requireRole(["dispatcher", "admin"]),
+    requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
         const { id, claimId } = req.params;
 
@@ -682,7 +939,10 @@ router.delete(
  *       400: { description: Driver not found }
  *       404: { description: Ride not found }
  */
-router.post("/:id([0-9a-fA-F]{24})/assign", async (req: Request, res: Response) => {
+router.post("/:id([0-9a-fA-F]{24})/assign",
+    requireAuth,
+    requireRole(["driver", "dispatcher", "admin"]),
+    async (req: Request, res: Response) => {
     const { driverId } = req.body as { driverId: string };
     if (!isObjectId(driverId)) return res.status(400).json({ error: "invalid_driver_id" });
 
@@ -727,7 +987,10 @@ router.post("/:id([0-9a-fA-F]{24})/assign", async (req: Request, res: Response) 
  *       200: { description: Updated }
  *       404: { description: Not found }
  */
-router.post("/:id([0-9a-fA-F]{24})/status", async (req: Request, res: Response) => {
+router.post("/:id([0-9a-fA-F]{24})/status",
+    requireAuth,
+    requireRole(["driver", "dispatcher", "admin"]),
+    async (req: Request, res: Response) => {
     const { status } = req.body as { status: string };
     const ride = await Ride.findByIdAndUpdate(req.params.id, { $set: { status } }, { new: true });
     if (!ride) return res.status(404).json({ error: "Ride not found" });
@@ -786,7 +1049,7 @@ router.post("/:id([0-9a-fA-F]{24})/status", async (req: Request, res: Response) 
 router.post(
     "/:id([0-9a-fA-F]{24})/share",
     requireAuth,
-    requireRole(["dispatcher", "admin"]),
+    requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
         const { id } = req.params;
         const { visibility, groupIds, driverIds, expiresAt, maxClaims, syncQueue = true } = req.body || {};
@@ -889,9 +1152,17 @@ router.post(
 router.get(
     "/:id([0-9a-fA-F]{24})/share",
     requireAuth,
-    requireRole(["dispatcher", "admin"]),
+    requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
         const { id } = req.params;
+        const user = (req as any).user;
+        const ride = await Ride.findById(id);
+        try {
+            assertCanAccessRide(user, ride);
+        } catch (e: any) {
+            return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
+        }
+
         const raw = String(req.query.status ?? "active");
         const status = raw === "revoked" ? "revoked" : "active";
 
@@ -951,6 +1222,75 @@ router.delete(
         return res.json({ status: "revoked" });
     }
 );
+
+/**
+ * @openapi
+ * /rides/my-created:
+ *   get:
+ *     summary: List rides created by me (driver/dispatcher/admin)
+ *     tags: [Rides]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, minimum: 1, default: 1 }
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+ *       - in: query
+ *         name: status
+ *         schema: { type: string, description: "Comma-separated statuses" }
+ *       - in: query
+ *         name: fromDate
+ *         schema: { type: string, format: date-time }
+ *       - in: query
+ *         name: toDate
+ *         schema: { type: string, format: date-time }
+ *       - in: query
+ *         name: dateField
+ *         schema: { type: string, enum: ["datetime","createdAt","updatedAt"], default: "datetime" }
+ *       - in: query
+ *         name: q
+ *         schema: { type: string, description: "Search in from/to" }
+ *       - in: query
+ *         name: assigned
+ *         schema: { type: string, enum: ["true","false"] }
+ *     responses:
+ *       200:
+ *         description: Paginated list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 items: { type: array, items: { $ref: '#/components/schemas/Ride' } }
+ *                 page: { type: integer }
+ *                 limit: { type: integer }
+ *                 total: { type: integer }
+ *                 pages: { type: integer }
+ *       401: { description: Unauthorized }
+ */
+router.get("/my-created", requireAuth, async (req: Request, res: Response) => {
+    const user = (req as any).user;
+    const { page, limit, skip } = getPaging(req);
+    const filters = buildRideFilters(req);
+
+    // Only rides created by me
+    filters.creatorId = new Types.ObjectId(user.id); // <— ensure field matches your model
+
+    const [items, total] = await Promise.all([
+        Ride.find(filters).sort({ datetime: -1, createdAt: -1 }).skip(skip).limit(limit).lean(),
+        Ride.countDocuments(filters),
+    ]);
+
+    return res.json({
+        items,
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit),
+    });
+});
 
 /**
  * @openapi
