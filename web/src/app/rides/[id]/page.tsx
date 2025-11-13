@@ -54,13 +54,13 @@ const STATUS: Ride["status"][] = [
 
 export default function RideDetailsPage() {
     const { user } = useAuthStore();
-    const canManage = user?.roles?.some((r) => r === "admin" || r === "dispatcher");
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
 
     const { data: ride, mutate } = useRide(id);
     const { setRideStatus, isSettingStatus } = useSetRideStatus(id);
     const { deleteRide, isDeleting } = useDeleteRide(id);
+    const canManage = user?.roles?.some((r) => r === "admin" || r === "dispatcher") || ride?.creatorId == user?._id;
 
     // Shares (used for the existing shares card)
     const { data: shares = [], isLoading: sharesLoading, mutate: mutateShares } = useRideShares(id);
