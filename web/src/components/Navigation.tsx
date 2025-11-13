@@ -14,7 +14,7 @@ import {
     Share2,
     UsersRound,
     Pencil,
-    UserCheck
+    UserCheck, Calendar
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -51,6 +51,12 @@ const navigation: NavItem[] = [
     },
 
     // Driver-only views
+    {
+        name: "Calendar",
+        href: "/calendar",
+        requiredRoles: ["driver"],
+        icon: <Calendar className="h-4 w-4" />,
+    },
     {
         name: "My Created",
         href: "/rides",
