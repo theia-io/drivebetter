@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
-import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
+import { Button, Card, CardBody, Container, Typography } from "@/components/ui/";
 import {
     ArrowLeft,
     Calendar,
@@ -27,7 +27,7 @@ import {
 import Link from "next/link";
 
 import LeafletMap from "@/components/ui/maps/LeafletMap";
-import { Ride } from "@/types";
+import {Ride, RideCreatorUser} from "@/types";
 import { useRide, useSetRideStatus, useDeleteRide } from "@/stores/rides";
 import { useUser, useDriversPublicBatchMap } from "@/stores/users";
 import { getRoute } from "@/stores/routes";
@@ -60,7 +60,7 @@ export default function RideDetailsPage() {
     const { data: ride, mutate } = useRide(id);
     const { setRideStatus, isSettingStatus } = useSetRideStatus(id);
     const { deleteRide, isDeleting } = useDeleteRide(id);
-    const canManage = user?.roles?.some((r) => r === "admin" || r === "dispatcher") || ride?.creatorId == user?._id;
+    const canManage = user?.roles?.some((r) => r === "admin" || r === "dispatcher") || (ride?.creatorId as RideCreatorUser)?._id == user?._id;
 
     // Shares (used for the existing shares card)
     const { data: shares = [], isLoading: sharesLoading, mutate: mutateShares } = useRideShares(id);

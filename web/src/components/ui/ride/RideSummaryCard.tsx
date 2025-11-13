@@ -14,8 +14,8 @@ import {
 import {Button, Card, CardBody, Typography} from "@/components/ui";
 import {Ride, RideCreatorUser} from "@/types";
 import {fmtDate, fmtTime, km, mins, money} from "@/services/convertors";
-import AssignedDriverBadge from "@/components/ui/AssignedDriverBadge";
-import RideCreatorBadge from "@/components/ui/RideCreatorBadge";
+import AssignedDriverBadge from "@/components/ui/ride/AssignedDriverBadge";
+import RideCreatorBadge from "@/components/ui/ride/RideCreatorBadge";
 import {useAuthStore} from "@/stores";
 
 type RideSummaryCardProps = {

@@ -7,7 +7,7 @@ import Link from "next/link";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { ArrowLeft, Save, Users as UsersIcon, Plus, X } from "lucide-react";
-import DriverCombobox from "@/components/ui/DriverCombobox";
+import DriverCombobox from "@/components/ui/ride/DriverCombobox";
 import { createGroup as apiCreateGroup } from "@/stores/groups";
 import type {CreateGroupRequest} from "@/types"; // uses your existing store/service
 

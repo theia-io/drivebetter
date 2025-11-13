@@ -27,8 +27,6 @@ export function rideScopeFilter(user: any) {
  * Throw 403 if a driver tries to access a ride they didn’t create.
  */
 export function assertCanAccessRide(user: any, ride: any) {
-    console.log(user);
-    console.log(ride);
     if (!user) {
         const err: any = new Error("Forbidden");
         err.status = 403;

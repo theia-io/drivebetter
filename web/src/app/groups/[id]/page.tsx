@@ -8,7 +8,7 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import {Button, Card, CardBody, Container, Typography} from "@/components/ui";
 import {ArrowLeft, PencilLine, Trash2, Users, Plus, X, Badge, UserIcon} from "lucide-react";
 import {useAuthStore} from "@/stores/auth";
-import DriverCombobox from "@/components/ui/DriverCombobox";
+import DriverCombobox from "@/components/ui/ride/DriverCombobox";
 import {dt, KV} from "@/components/ui/commmon";
 
 import {

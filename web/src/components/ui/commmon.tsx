@@ -1,4 +1,4 @@
-import {Typography} from "@/components/ui/Typography";
+import {Typography} from "@/components/ui/general/Typography";
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
     return <Typography className="text-sm font-semibold text-gray-900">{children}</Typography>;

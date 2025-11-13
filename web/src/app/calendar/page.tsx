@@ -14,8 +14,7 @@ import { useRidesInfinite } from "@/stores/rides";
 import {Ride, RideCreatorUser} from "@/types";
 import Link from "next/link";
 import { fmtDate, fmtTime, money, km, mins } from "@/services/convertors";
-import RideCreatorBadge from "@/components/ui/RideCreatorBadge";
-import RideSummaryCard from "@/components/ui/RideSummaryCard";
+import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
 
 // ---------- react-big-calendar localizer ----------
 
@@ -364,8 +363,6 @@ export default function DriverCalendarPage() {
                         {/* Main info */}
                         <RideSummaryCard
                             ride={selectedRide}
-                            showActions={false}
-                            compact
                         />
 
                         {/* Actions */}

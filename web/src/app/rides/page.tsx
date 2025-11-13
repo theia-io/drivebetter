@@ -15,8 +15,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRidesInfinite } from "@/stores/rides";
 import {Ride} from "@/types";
 import { useAuthStore } from "@/stores";
-import DriverCombobox from "@/components/ui/DriverCombobox";
-import RideSummaryCard from "@/components/ui/RideSummaryCard";
+import DriverCombobox from "@/components/ui/ride/DriverCombobox";
+import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
 
 
 export default function RidesPage() {

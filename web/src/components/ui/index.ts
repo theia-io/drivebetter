@@ -1,9 +1,9 @@
 // UI Components
-export { Button } from './Button'
-export { Input } from './Input'
-export { Card, CardHeader, CardBody, CardFooter } from './Card'
-export { Badge } from './Badge'
-export { Typography, Heading, Text } from './Typography'
+export { Button } from './general/Button'
+export { Input } from './general/Input'
+export { Card, CardHeader, CardBody, CardFooter } from './general/Card'
+export { Badge } from './general/Badge'
+export { Typography, Heading, Text } from './general/Typography'
 
 // Layout Components
 export { Container } from '../layout/Container'

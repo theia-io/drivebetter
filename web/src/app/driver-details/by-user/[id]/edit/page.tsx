@@ -17,7 +17,7 @@ import {
     Checkbox, CheckboxRow, DateInput, DateTimeInput, Grid2, Grid3, Grid4,
     NumberField, SectionTitle, Select, TextArea, TextField
 } from '@/components/ui/commmon'
-import { WorkingDaysSelect, Day } from '@/components/ui/WorkingDaysSelect'
+import { WorkingDaysSelect, Day } from '@/components/ui/general/WorkingDaysSelect'
 
 type F = DriverDetails & {
     chargerTypesText?: string;
