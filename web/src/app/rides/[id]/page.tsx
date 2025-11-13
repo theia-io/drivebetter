@@ -41,6 +41,7 @@ import {
     useRejectRideClaim,
 } from "@/stores/rideClaims";
 import {fmtDate, fmtTime, km, mins, money} from "@/services/convertors";
+import AssignDriverSelect from "@/components/ui/ride/AssignDriverSelect";
 
 const STATUS: Ride["status"][] = [
     "unassigned",
@@ -310,9 +311,18 @@ export default function RideDetailsPage() {
                                         )}
                                     </div>
                                     {ride.status === "unassigned" && (
-                                        <Button size="sm" onClick={() => router.push(`/rides/${ride._id}/assign`)}>
-                                            Assign driver
-                                        </Button>
+                                        <div>
+                                            <AssignDriverSelect
+                                                rideId={ride._id}
+                                                currentDriverId={ride.assignedDriverId || undefined}
+                                                onAssigned={() => {
+                                                    mutate();
+                                                }}
+                                            />
+                                            <Button size="sm" onClick={() => router.push(`/rides/${ride._id}/assign`)}>
+                                                Assign driver
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
                             </div>
