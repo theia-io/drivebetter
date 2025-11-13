@@ -206,6 +206,17 @@ export default function DriverCalendarPage() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                            <div className="flex items-center gap-2">
+                                <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-2 py-1 text-xs sm:text-sm">
+                                    <CalendarIcon className="w-4 h-4 text-gray-500" />
+                                    <span>{currentDate.toLocaleDateString()}</span>
+                                </div>
+                                {isLoading && (
+                                    <div className="inline-flex items-center gap-1 text-xs text-gray-500">
+                                        <Loader2 className="w-3 h-3 animate-spin" /> Loading rides…
+                                    </div>
+                                )}
+                            </div>
                             {/* Date navigation */}
                             <div className="inline-flex items-center rounded-lg border border-gray-200 bg-white">
                                 <button
@@ -229,18 +240,7 @@ export default function DriverCalendarPage() {
                                     onClick={() => onNavigate(new Date())}
                                     className="px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50"
                                 >
-                                    <div className="flex items-center gap-2">
-                                    <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-2 py-1 text-xs sm:text-sm">
-                                        <CalendarIcon className="w-4 h-4 text-gray-500" />
-                                        Today
-                                        <span>{currentDate.toLocaleDateString()}</span>
-                                    </div>
-                                    {isLoading && (
-                                        <div className="inline-flex items-center gap-1 text-xs text-gray-500">
-                                            <Loader2 className="w-3 h-3 animate-spin" /> Loading rides…
-                                        </div>
-                                    )}
-                                </div>
+                                    Today
                                 </button>
                                 <button
                                     type="button"
