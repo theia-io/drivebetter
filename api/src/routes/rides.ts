@@ -139,8 +139,10 @@ router.get("/",
     const user = (req as any).user;
     const page = Math.max(Number(req.query.page || 1), 1);
     const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
-    const sortDir = String(req.query.sort || "desc").toLowerCase() === "asc" ? 1 : -1;
-
+    const sortDirParam = String(req.query.sort || "asc").toLowerCase();
+    const sortDir: 1 | -1 = sortDirParam === "asc" ? 1 : -1;
+    const sortByParam = String(req.query.sortBy || "createdAt");
+    const sortField = sortByParam === "datetime" ? "datetime" : "createdAt";
     const filter: any = {};
 
     if (req.query.status) filter.status = req.query.status;
@@ -164,9 +166,10 @@ router.get("/",
     const scopedFilter = { ...filter, ...rideScopeFilter(user) };
     const total = await Ride.countDocuments(scopedFilter);
     const items = await Ride.find(scopedFilter)
-        .sort({ datetime: sortDir })
+        .sort({ [sortField]: sortDir })
         .skip((page - 1) * limit)
         .limit(limit)
+        .populate("creatorId", "name email phone")
         .lean();
 
     res.json({ items, page, limit, total, pages: Math.ceil(total / limit) });
@@ -1293,7 +1296,7 @@ router.get("/my-created", requireAuth, async (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /rides/my:
+ * /rides/my-assigned:
  *   get:
  *     summary: List rides assigned to the authenticated driver
  *     description: Returns rides where `assignedDriverId` equals the current user. Supports basic filtering and cursor pagination.
@@ -1374,7 +1377,7 @@ router.get("/my-created", requireAuth, async (req: Request, res: Response) => {
  *       403: { description: Forbidden (not a driver) }
  */
 router.get(
-    "/my",
+    "/my-assigned",
     requireAuth,
     requireRole(["driver"]),
     async (req: Request, res: Response) => {

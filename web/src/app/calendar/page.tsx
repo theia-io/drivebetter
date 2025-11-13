@@ -11,9 +11,10 @@ import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock, MapPin, User, X } from "lucide-react";
 import { useAuthStore } from "@/stores";
 import { useRidesInfinite } from "@/stores/rides";
-import type { Ride } from "@/types";
+import {Ride, RideCreatorUser} from "@/types";
 import Link from "next/link";
 import { fmtDate, fmtTime, money, km, mins } from "@/services/convertors";
+import RideCreatorBadge from "@/components/ui/RideCreatorBadge";
 
 // ---------- react-big-calendar localizer ----------
 
@@ -121,16 +122,6 @@ export default function DriverCalendarPage() {
     // Fetch LOTS of rides and filter client-side by creator/assigned
     const { items: allRides } = useRidesInfinite({}, 100);
 
-    const myRides = useMemo(
-        () =>
-            allRides.filter((r) => {
-                const creatorId = (r as any).creatorId ? String((r as any).creatorId) : "";
-                const assignedId = r.assignedDriverId ? String(r.assignedDriverId) : "";
-                return creatorId === currentUserId || assignedId === currentUserId;
-            }),
-        [allRides, currentUserId]
-    );
-
     const eventPropGetter = (event: RideEvent) => {
         const ride = event.ride;
         const { bg, border, text } = getStatusColors(ride?.status);
@@ -149,7 +140,7 @@ export default function DriverCalendarPage() {
 
     const events: CalendarEvent[] = useMemo(
         () =>
-            myRides.map((ride) => {
+            allRides.map((ride) => {
                 const start = new Date(ride.datetime);
                 const end = addMinutes(start, 60);
                 return {
@@ -160,7 +151,7 @@ export default function DriverCalendarPage() {
                     ride,
                 };
             }),
-        [myRides]
+        [allRides]
     );
 
     const onNavigate = (date: Date) => {
@@ -317,7 +308,7 @@ export default function DriverCalendarPage() {
                                     <span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Unassigned
                                 </div>
                                 <div className="inline-flex items-center gap-1">
-                                    <span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> In progress
+                                    <span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Assigned
                                 </div>
                                 <div className="inline-flex items-center gap-1">
                                     <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Completed
@@ -404,13 +395,7 @@ export default function DriverCalendarPage() {
                                 <User className="w-4 h-4 mr-2 text-gray-400" />
                                 <span className="font-medium mr-1">Created by:</span>
                                 <span className="truncate">
-                  {selectedRide.creatorId &&
-                  currentUserId &&
-                  String(selectedRide.creatorId) === String(currentUserId)
-                      ? "You"
-                      : selectedRide.creatorId
-                          ? `User ${String(selectedRide.creatorId).slice(-6)}`
-                          : "Unknown"}
+                        <RideCreatorBadge creator={selectedRide.creatorId as RideCreatorUser | undefined} />
                 </span>
                             </div>
                         </div>

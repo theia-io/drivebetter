@@ -1,4 +1,5 @@
 import {VehicleType} from "@/types/driver-details";
+import {RideCreatorUser} from "@/types/user";
 
 export type RideType = "reservation" | "asap";
 export type RideStatus = "unassigned" | "assigned" | "on_my_way" | "on_location" | "pob" | "clear" | "completed";
@@ -33,7 +34,7 @@ export type EligibleDriverBody = {
 
 export type Ride = {
     _id: string;
-    creatorId?: string | null;
+    creatorId?: RideCreatorUser;
     customer?: {
         name: string;
         phone: string;

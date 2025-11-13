@@ -18,12 +18,13 @@ import {
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRidesInfinite } from "@/stores/rides";
-import { Ride } from "@/types";
+import {Ride, RideCreatorUser} from "@/types";
 import AssignedDriverBadge from "@/components/ui/AssignedDriverBadge";
 import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores";
 import DriverCombobox from "@/components/ui/DriverCombobox";
+import RideCreatorBadge from "@/components/ui/RideCreatorBadge";
 
 function getStatusColor(status: string) {
     switch (status) {
@@ -60,6 +61,7 @@ function getStatusIcon(status: string) {
 
 export default function RidesPage() {
     const { user } = useAuthStore();
+    const currentUserId = user?._id || (user as any)?.id || "";
     const roles = user?.roles ?? [];
     const isPrivileged = roles.includes("admin") || roles.includes("dispatcher");
 
@@ -93,20 +95,24 @@ export default function RidesPage() {
 
     // When filters change, start from the first page
     const { items, size, setSize, isLoading, reachedEnd, mutate } = useRidesInfinite(params, 20);
+    const myRides = useMemo(
+        () =>
+            items.filter((r) => {
+                const creatorId = (r as any).creatorId ? String((r as Ride).creatorId._id) : "";
+                return creatorId === currentUserId;
+            }),
+        [items, currentUserId]
+    );
+    const rides = roles.includes("driver") ? myRides : items;
 
-    // Optional: requery immediately when filters change (SWR key change usually handles it,
-    // but if your hook caches aggressively, forcing a mutate is fine)
     useEffect(() => {
-        // reset pagination to page 1
         setSize(1);
-        // trigger revalidation
         mutate();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [params.driverId, params.dateFrom, params.dateTo, params.distanceMin, params.distanceMax]);
 
     const todaysCount = useMemo(() => {
         const todayStr = new Date().toDateString();
-        return items.filter((r) => new Date(r.datetime).toDateString() === todayStr).length;
+        return rides.filter((r) => new Date(r.createdAt).toDateString() === todayStr).length;
     }, [items]);
 
     return (
@@ -266,7 +272,7 @@ export default function RidesPage() {
 
                     {/* Rides List */}
                     <div className="space-y-2 sm:space-y-4">
-                        {items.map((ride: Ride) => (
+                        {rides.map((ride: Ride) => (
                             <Card key={ride._id} variant="elevated" className="hover:shadow-lg transition-shadow">
                                 <CardBody className="p-3 sm:p-6">
                                     {/* Row header: title + status */}
@@ -279,15 +285,16 @@ export default function RidesPage() {
                                                 <Typography className="text-sm sm:text-lg font-semibold text-gray-900 truncate">
                                                     {ride.from} → {ride.to}
                                                 </Typography>
+                                                <RideCreatorBadge creator={ride.creatorId as RideCreatorUser | undefined} />
                                                 <div className="mt-0.5 sm:mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] sm:text-sm text-gray-600">
-                          <span className="inline-flex items-center gap-1">
-                            <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-                              {fmtDate(ride.datetime)} • {fmtTime(ride.datetime)}
-                          </span>
+                                                  <span className="inline-flex items-center gap-1">
+                                                    <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                                                      Ride request time: {fmtDate(ride.datetime)} • {fmtTime(ride.datetime)}
+                                                  </span>
                                                     <span className="inline-flex items-center gap-1">
-                            <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                                                        <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                                                         {money(ride.payment?.amountCents)}
-                          </span>
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>

@@ -11,4 +11,11 @@ export interface User {
     updatedAt?: string;
 }
 
+export interface RideCreatorUser {
+    _id: string;
+    name: string;
+    email: string;
+    phone?: string;
+}
+
 
