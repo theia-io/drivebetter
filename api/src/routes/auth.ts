@@ -186,7 +186,6 @@ router.post("/login", async (req: Request, res: Response) => {
     return res.status(401).json({ error: "Invalid credentials" });
 
   const ok = await verifyPassword(password, user.passwordHash);
-  console.log("ok", ok);
   if (!ok) return res.status(401).json({ error: "Invalid credentials" });
 
   // if (REQUIRE_EMAIL_VERIFICATION && !user.emailVerified) {

@@ -19,7 +19,7 @@ export default function LoginPage() {
     (async () => {
       const resolvedUser = user || (await fetchMe());
       if (isAuthenticated || resolvedUser) {
-        router.push("/dashboard");
+        router.push("/");
       }
     })();
   }, [isAuthenticated, user, router, fetchMe]);
@@ -31,7 +31,7 @@ export default function LoginPage() {
     try {
       const success = await login(email, password);
       if (success) {
-        router.push("/dashboard");
+        router.push("/");
       } else {
         setError("Invalid credentials");
       }

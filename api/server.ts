@@ -1,23 +1,26 @@
-import express, { RequestHandler } from "express"; // Import RequestHandler
+// @ts-ignore
+import express, { RequestHandler } from "express";
 import next from "next";
 import mongoose from "mongoose";
 import { setupSwagger } from "./src/lib/swagger";
+// @ts-ignore
 import cors from "cors";
 import { env, validateEnv, getCorsOrigins, isDevelopment } from "./src/lib/env";
 
-import users from "./src/routes/users";
-import rides from "./src/routes/rides";
-import ridesShares from "./src/routes/ridesShares";
-import auth from "./src/routes/auth";
+import usersRoutes from "./src/routes/users";
+import ridesRoutes from "./src/routes/rides";
+import ridesSharesRoutes from "./src/routes/ridesShares";
+import authRoutes from "./src/routes/auth";
 import oauth from "./src/routes/oauth";
-import groups from "./src/routes/groups";
-import calendar from "./src/routes/calendar";
-import clients from "./src/routes/clients";
-import notifications from "./src/routes/notifications";
+import groupsRoutes from "./src/routes/groups";
+import calendarRoutes from "./src/routes/calendar";
+import clientsRoutes from "./src/routes/clients";
+import notificationsRoutes from "./src/routes/notifications";
 import healthRoutes from "./src/routes/health";
-import geo from "./src/routes/geo";
-import driverReviews from "./src/routes/driverReviews";
-import driverDetails from "./src/routes/driverDetails";
+import geoRoutes from "./src/routes/geo";
+import driverReviewsRoutes from "./src/routes/driverReviews";
+import driverDetailsRoutes from "./src/routes/driverDetails";
+import versionRoutes from "./src/routes/version"
 
 async function startExpressServer(isNextJsEnabled: boolean, nextHandle?: ReturnType<typeof next>['getRequestHandler']) {
     try {
@@ -32,19 +35,20 @@ async function startExpressServer(isNextJsEnabled: boolean, nextHandle?: ReturnT
                 credentials: false,
             })
         );
-        server.use("/api/v1/users", users);
-        server.use("/api/v1/drivers-reviews", driverReviews);
-        server.use("/api/v1/driver-details", driverDetails);
-        server.use("/api/v1/ride-shares", ridesShares);
-        server.use("/api/v1/rides", rides);
-        server.use("/api/v1/auth", auth);
+        server.use("/api/v1/users", usersRoutes);
+        server.use("/api/v1/drivers-reviews", driverReviewsRoutes);
+        server.use("/api/v1/driver-details", driverDetailsRoutes);
+        server.use("/api/v1/ride-shares", ridesSharesRoutes);
+        server.use("/api/v1/rides", ridesRoutes);
+        server.use("/api/v1/auth", authRoutes);
         server.use("/api/v1/oauth", oauth);
-        server.use("/api/v1/groups", groups);
-        server.use("/api/v1/calendar", calendar);
-        server.use("/api/v1/clients", clients);
-        server.use("/api/v1/notifications", notifications);
+        server.use("/api/v1/groups", groupsRoutes);
+        server.use("/api/v1/calendar", calendarRoutes);
+        server.use("/api/v1/clients", clientsRoutes);
+        server.use("/api/v1/notifications", notificationsRoutes);
         server.use("/api/v1/health", healthRoutes);
-        server.use("/api/v1/geo", geo);
+        server.use("/api/v1/geo", geoRoutes);
+        server.use("/api/v1/version", versionRoutes)
 
         setupSwagger(server);
 

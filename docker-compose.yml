@@ -1,10 +1,19 @@
-version: '3.8'
-
 services:
   # 1. Database Service (MongoDB)
   # Port 27017 is exposed to the host for external connections (e.g., Compass).
-  mongo:
+  mongo_dev:
     image: mongo:latest
+    container_name: betterdrive_mongo_dev
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: betterdrive_db
+    volumes:
+      - mongodb_data:/data/db
+
+  mongo:
+    image: mongo:7
     container_name: betterdrive_mongo
     restart: always
     ports:
