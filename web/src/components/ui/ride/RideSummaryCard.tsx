@@ -6,7 +6,7 @@ import {
     Calendar,
     Car,
     Clock,
-    DollarSign,
+    DollarSign, Eye,
     MapPin,
     Navigation,
     User,
@@ -17,7 +17,7 @@ import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
 import AssignedDriverBadge from "@/components/ui/ride/AssignedDriverBadge";
 import RideCreatorBadge from "@/components/ui/ride/RideCreatorBadge";
 import { useAuthStore } from "@/stores";
-import AssignDriverSelect from "@/components/ui/ride/AssignDriverSelect";
+import {AssignDriverSelect} from "@/components/ui/ride/AssignDriverSelect";
 
 type RideSummaryCardProps = {
     ride: Ride;
@@ -199,19 +199,10 @@ export default function RideSummaryCard({
 
                     {/* Actions */}
                     {!hideActions && (
-                        <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2">
-                            <Link href={detailsHref || `/rides/${ride._id}`} className="w-full sm:w-auto">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full sm:w-auto text-xs"
-                                >
-                                    Details
-                                </Button>
-                            </Link>
-
+                        <div className="mt-3 sm:mt-4 flex flex-col gap-3">
+                            {/* Driver assignment above details */}
                             {showAssign && (
-                                <div className="w-full sm:w-auto space-y-1">
+                                <div className="w-full">
                                     <AssignDriverSelect
                                         rideId={ride._id}
                                         currentDriverId={ride.assignedDriverId || undefined}
@@ -222,17 +213,25 @@ export default function RideSummaryCard({
                                             onDriverAssigned?.(driverUserId);
                                         }}
                                     />
-                                    <Link href={`/rides/${ride._id}/assign`} className="w-full sm:w-auto">
-                                        <Button
-                                            size="sm"
-                                            className="w-full sm:w-auto text-xs"
-                                            leftIcon={<Car className="w-3.5 h-3.5" />}
-                                        >
-                                            Advanced assign
-                                        </Button>
-                                    </Link>
                                 </div>
                             )}
+
+                            {/* Centered, bigger Details button */}
+                            <div className="flex justify-center">
+                                <Link
+                                    href={detailsHref || `/rides/${ride._id}`}
+                                    className="w-full sm:w-auto"
+                                >
+                                    <Button
+                                        variant="outline"
+                                        size="md"
+                                        className="w-full sm:w-auto px-5 py-2 text-xs sm:text-sm font-medium flex items-center justify-center gap-2"
+                                    >
+                                        <Eye className="w-4 h-4" />
+                                        <span>View ride details</span>
+                                    </Button>
+                                </Link>
+                            </div>
                         </div>
                     )}
                 </CardBody>

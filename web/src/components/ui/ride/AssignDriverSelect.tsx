@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Loader2, User } from "lucide-react";
-import { apiPost } from "@/services/http";
-import type { EligibleDriver, EligibleDriverBody } from "@/types";
-import { inputClass } from "@/components/ui/commmon";
+import {useEffect, useMemo, useRef, useState} from "react";
+import {ChevronDown, Loader2, Search, User} from "lucide-react";
+import {apiPost} from "@/services/http";
+import type {EligibleDriver, EligibleDriverBody} from "@/types";
 
 type AssignDriverSelectProps = {
     rideId: string;
@@ -16,138 +15,318 @@ type AssignDriverSelectProps = {
     disabled?: boolean;
 };
 
-export default function AssignDriverSelect({
-                                               rideId,
-                                               currentDriverId,
-                                               filters,
-                                               onAssigned,
-                                               className = "",
-                                               label = "Assign driver",
-                                               disabled = false,
-                                           }: AssignDriverSelectProps) {
+type DriverOption = {
+    id: string;
+    main: string;
+    helper?: string;
+};
+
+export function AssignDriverSelect({
+                                       rideId,
+                                       currentDriverId,
+                                       filters,
+                                       onAssigned,
+                                       className = "",
+                                       label = "Driver",
+                                       disabled,
+                                   }: AssignDriverSelectProps) {
     const [drivers, setDrivers] = useState<EligibleDriver[]>([]);
     const [loading, setLoading] = useState(false);
     const [assigning, setAssigning] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const [selected, setSelected] = useState<string>(currentDriverId || "");
+    const [selectedDriverId, setSelectedDriverId] = useState<string>(currentDriverId ?? "");
+    const [pendingDriverId, setPendingDriverId] = useState<string | null>(null);
 
-    // keep selected in sync when parent changes assigned driver
+    const [search, setSearch] = useState("");
+    const [open, setOpen] = useState(false);
+
+    const rootRef = useRef<HTMLDivElement | null>(null);
+
     useEffect(() => {
-        setSelected(currentDriverId || "");
+        setSelectedDriverId(currentDriverId ?? "");
+        if (!currentDriverId) {
+            setPendingDriverId(null);
+        }
     }, [currentDriverId]);
 
-    // load eligible drivers once (or when filters change)
     useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (!rootRef.current) return;
+            if (!rootRef.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        }
+
+        if (open) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [open]);
+
+    useEffect(() => {
+        if (disabled) return;
+
         let cancelled = false;
-        (async () => {
+
+        async function load() {
             setLoading(true);
             setError(null);
             try {
                 const body: EligibleDriverBody = {
-                    limit: filters?.limit ?? 50,
-                    passengers: filters?.passengers,
-                    luggages: filters?.luggages,
-                    vehicleType: filters?.vehicleType,
-                    language: filters?.language,
-                    needs: filters?.needs,
-                    airportTrip: filters?.airportTrip,
-                    longDistance: filters?.longDistance,
-                };
+                    limit: 50,
+                    ...(filters || {}),
+                } as EligibleDriverBody;
 
-                const res = await apiPost<EligibleDriver[]>("/driver-details/eligible", body);
-                if (cancelled) return;
-                setDrivers(res || []);
+                const result = await apiPost("/driver-details/eligible", body);
+
+                const list: EligibleDriver[] = Array.isArray(result)
+                    ? result
+                    : Array.isArray((result as any)?.data)
+                        ? (result as any).data
+                        : [];
+
+                if (!cancelled) {
+                    setDrivers(list);
+                }
             } catch (e: any) {
-                if (cancelled) return;
-                setError(e?.message || "Failed to load drivers");
+                if (!cancelled) {
+                    setError(e?.message || "Failed to load drivers");
+                }
             } finally {
-                if (!cancelled) setLoading(false);
+                if (!cancelled) {
+                    setLoading(false);
+                }
             }
-        })();
+        }
+
+        void load();
+
         return () => {
             cancelled = true;
         };
-    }, [filters?.airportTrip, filters?.language, filters?.limit, filters?.luggages, filters?.longDistance, filters?.needs, filters?.passengers, filters?.vehicleType]);
+    }, [filters, disabled]);
 
-    const isBusy = loading || assigning || disabled;
-
-    const options = useMemo(() => {
+    const options: DriverOption[] = useMemo(() => {
         return drivers.map((d) => {
-            const v = d.vehicle || {};
-            const parts: string[] = [];
+            const v: any = (d as any).vehicle || {};
+            const user = (d as any).user || {};
 
-            if (d.user?.name) parts.push(d.user.name);
-            if (v.type) parts.push(v.type.toUpperCase());
+            // main text: name / full name / fallback to id
+            const main =
+                (user.name as string) ||
+                [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+                ((d as any).userId as string);
+
+            // helper text: type, car, plate, rating
+            const helperParts: string[] = [];
+
+            if (v.type) helperParts.push(String(v.type).toUpperCase());
+
             const car = [v.make, v.model].filter(Boolean).join(" ");
-            if (car) parts.push(car);
-            if (v.plate) parts.push(`(${v.plate})`);
-            if (d.stats?.ratingAvg && d.stats.ratingCount) {
-                parts.push(`★${d.stats.ratingAvg.toFixed(1)} (${d.stats.ratingCount})`);
+            if (car) helperParts.push(car);
+
+            if (v.plate) helperParts.push(`(${v.plate})`);
+
+            const stats = (d as any).stats;
+            if (stats?.ratingAvg && stats?.ratingCount) {
+                const avg = Number(stats.ratingAvg).toFixed(1);
+                const cnt = stats.ratingCount;
+                helperParts.push(`★${avg} (${cnt})`);
             }
 
-            const label = parts.join(" • ") || d.userId;
-            return { id: d.userId, label };
+            const helper =
+                helperParts.length > 0 ? helperParts.join(" • ") : undefined;
+
+            return {
+                id: (d as any).userId as string,
+                main,
+                helper,
+            };
         });
     }, [drivers]);
 
-    async function handleAssign(driverUserId: string) {
-        if (!driverUserId || driverUserId === selected) return;
+    const filteredOptions = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return options;
+
+        return options.filter((opt) => {
+            if (opt.main.toLowerCase().includes(q)) return true;
+            if (opt.helper && opt.helper.toLowerCase().includes(q)) return true;
+            return false;
+        });
+    }, [options, search]);
+
+    const selectedOption = useMemo(() => {
+        return options.find((o) => o.id === selectedDriverId) || null;
+    }, [options, selectedDriverId]);
+
+    useEffect(() => {
+        if (!open) return;
+        setPendingDriverId((prev) => prev || selectedDriverId || null);
+    }, [open, selectedDriverId]);
+
+    async function handleAssign() {
+        if (!pendingDriverId || pendingDriverId === selectedDriverId) return;
+
         setAssigning(true);
         setError(null);
+
         try {
-            await apiPost(`/rides/${rideId}/assign`, { driverId: driverUserId });
-            setSelected(driverUserId);
-            onAssigned?.(driverUserId);
+            await apiPost(`/rides/${rideId}/assign`, {driverId: pendingDriverId});
+            setSelectedDriverId(pendingDriverId);
+            if (onAssigned) onAssigned(pendingDriverId);
+            setOpen(false);
         } catch (e: any) {
             setError(e?.message || "Failed to assign driver");
-            // roll back selection visually
-            setSelected(currentDriverId || "");
         } finally {
             setAssigning(false);
         }
     }
 
-    const handleChange: React.ChangeEventHandler<HTMLSelectElement> = (e) => {
-        const next = e.target.value;
-        setSelected(next);
-        if (next) {
-            void handleAssign(next);
-        }
-    };
+    const isBusy = !!disabled || loading || assigning;
 
     return (
-        <div className={`space-y-1 ${className}`}>
-            <div className="flex items-center gap-2">
-        <span className="text-xs font-medium text-gray-700 uppercase tracking-wide flex items-center gap-1">
-          <User className="w-3 h-3 text-gray-500" />
-            {label}
-        </span>
-                {loading && <Loader2 className="w-3 h-3 animate-spin text-gray-400" />}
+        <div ref={rootRef} className={["flex items-start gap-2", className].join(" ")}>
+            <div className="flex items-center gap-1 pt-1">
+                <span className="inline-flex items-center gap-1 text-xs sm:text-sm text-gray-700">
+                    <User className="h-3 w-3 text-gray-500"/>
+                    {label}
+                </span>
+                {loading && (
+                    <Loader2 className="h-3 w-3 animate-spin text-gray-400"/>
+                )}
             </div>
 
-            <select
-                value={selected}
-                onChange={handleChange}
-                disabled={isBusy || options.length === 0}
-                className={inputClass() + " text-xs sm:text-sm"}
-            >
-                <option value="">{options.length ? "Select driver…" : "No drivers available"}</option>
-                {options.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                        {opt.label}
-                    </option>
-                ))}
-            </select>
+            {/* Trigger button with main + helper text */}
+            <div className="relative inline-block flex-1 text-left">
+                <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => setOpen((prev) => !prev)}
+                    className={[
+                        "inline-flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs sm:text-sm",
+                        "bg-white border-gray-300 text-gray-900",
+                        "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                        isBusy ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+                    ].join(" ")}
+                >
+                <span className="flex min-w-0 flex-col text-left">
+                    <span className="truncate">
+                        {selectedOption?.main || "Select driver"}
+                    </span>
+                    {selectedOption?.helper && (
+                        <span className="truncate text-[11px] text-gray-500">
+                            {selectedOption.helper}
+                        </span>
+                    )}
+                </span>
+                    <ChevronDown className="h-4 w-4 shrink-0 text-gray-500"/>
+                </button>
 
-            {assigning && (
-                <div className="text-[11px] text-gray-500 flex items-center gap-1">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Assigning…
-                </div>
-            )}
+                {open && (
+                    <div
+                        className="absolute z-20 mt-2 w-72 origin-top-right rounded-lg border border-gray-100 bg-white shadow-lg">
+                        {/* Search bar */}
+                        <div className="border-b border-gray-100 p-3">
+                            <label
+                                htmlFor={`driver-search-${rideId}`}
+                                className="sr-only"
+                            >
+                                Search driver
+                            </label>
+                            <div className="relative">
+                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                    <Search className="h-4 w-4 text-gray-400"/>
+                                </div>
+                                <input
+                                    id={`driver-search-${rideId}`}
+                                    type="text"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Search driver"
+                                    autoComplete="off"
+                                    className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 pl-9 text-xs sm:text-sm text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                        </div>
 
-            {error && <div className="text-[11px] text-red-600">{error}</div>}
+                        {/* Options list with main + helper text */}
+                        <div className="max-h-60 overflow-y-auto py-1 text-sm text-gray-700">
+                            {filteredOptions.length === 0 && (
+                                <div className="px-4 py-2 text-xs text-gray-500">
+                                    No drivers found
+                                </div>
+                            )}
+
+                            {filteredOptions.map((opt) => {
+                                const isSelected =
+                                    opt.id === pendingDriverId ||
+                                    (!pendingDriverId && opt.id === selectedDriverId);
+
+                                return (
+                                    <button
+                                        key={opt.id}
+                                        type="button"
+                                        onClick={() => setPendingDriverId(opt.id)}
+                                        className={[
+                                            "flex w-full items-start px-4 py-2 text-left",
+                                            "hover:bg-gray-100",
+                                            isSelected ? "bg-gray-100" : "",
+                                        ].join(" ")}
+                                    >
+                                        <div className="flex min-w-0 flex-col">
+                                        <span className="truncate text-xs sm:text-sm font-medium text-gray-900">
+                                            {opt.main}
+                                        </span>
+                                            {opt.helper && (
+                                                <span className="truncate text-[11px] text-gray-500">
+                                                {opt.helper}
+                                            </span>
+                                            )}
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Footer with helper text + full-width Assign button */}
+                        <div className="border-t border-gray-100 px-3 py-2 space-y-2">
+                            <div className="text-[11px] text-gray-500">
+                                {pendingDriverId
+                                    ? "Driver selected. Click Assign to confirm."
+                                    : "Select a driver to assign."}
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleAssign}
+                                disabled={!pendingDriverId || assigning}
+                                className={[
+                                    "inline-flex w-full items-center justify-center rounded-lg px-3 py-2.5 text-xs sm:text-sm font-medium",
+                                    !pendingDriverId || assigning
+                                        ? "cursor-not-allowed bg-blue-400 text-white opacity-70"
+                                        : "bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500",
+                                ].join(" ")}
+                            >
+                                {assigning && (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin"/>
+                                )}
+                                Assign
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {error && (
+                    <div className="mt-1 text-[11px] text-red-600">
+                        {error}
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
