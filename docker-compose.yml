@@ -1,57 +1,64 @@
-version: "3.9"
+version: '3.8'
 
 services:
+  # 1. Database Service (MongoDB)
+  # Port 27017 is exposed to the host for external connections (e.g., Compass).
   mongo:
-    image: mongo:7
-    container_name: drivebetter_mongo
-    restart: unless-stopped
+    image: mongo:latest
+    container_name: betterdrive_mongo
+    restart: always
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_DATABASE: drivebetter
+      MONGO_INITDB_ROOT_USERNAME: <MONGO_INITDB_ROOT_USERNAME>
+      MONGO_INITDB_ROOT_PASSWORD: <MONGO_INITDB_ROOT_PASSWORD>
+      MONGO_INITDB_DATABASE: <MONGO_INITDB_DATABASE>
     volumes:
-      - mongo_data:/data/db
+      - mongodb_data:/data/db
 
+  # 2. API Service (Node.js API)
   api:
-    build:
-      context: ./api
-      dockerfile: ./Dockerfile
-    container_name: drivebetter_api
-    working_dir: /app/api
-    command: npm run dev
+    image: kutsyk/betterdriver-api:latest
+    container_name: betterdrive_api
+    restart: on-failure
+    depends_on:
+      mongo:
+        condition: service_started
     environment:
-      NODE_ENV: development
-      PORT: 3000
-      MONGODB_URI: mongodb://mongo:27017/drivebetter
-      MAPTILER_API_KEY: jb2wR0kvhEyp9kwHP1UA
-      ORS_API_KEY: eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjU4YmRhNjkyNGE2NzRmNTNiMmE4Mzk2Njc5YTg2NGQ2IiwiaCI6Im11cm11cjY0In0=
+      MAPTILER_API_KEY: <MAPTILER_API_KEY>
+      ORS_API_KEY: <ORS_API_KEY>
+      MONGODB_URI: <MONGODB_URI>
+      PORT: 3000 # Internal API port (used by Nginx)
       JWT_SECRET: dev_super_secret
+      SWAGGER_ENABLED: true
+      REQUIRE_EMAIL_VERIFICATION: false
+      PUBLIC_BASE_URL: http://193.169.241.16
       GOOGLE_CLIENT_ID: your-google-client-id.apps.googleusercontent.com
       GOOGLE_CLIENT_SECRET: your-google-client-secret
       GOOGLE_CALLBACK_URL: http://localhost:3000/api/v1/oauth/google/callback
-    ports:
-      - "3000:3000"
-    volumes:
-      - .:/app
-      - /app/node_modules
-    depends_on:
-      - mongo
-
   web:
-    build:
-      context: ./web
-      dockerfile: ./Dockerfile
-    ports:
-      - "4200:4200"
+    image: kutsyk/betterdriver-web:latest
+    container_name: betterdrive_web
+    restart: always
     environment:
-      - NODE_ENV=production
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4200/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      NEXT_PUBLIC_API_BASE_URL: http://api:3000
+    expose:
+      - "4200" # Expose internal port 80 (used by Nginx)
+
+  # 4. Reverse Proxy Service (Nginx)
+  nginx:
+    image: nginx:latest
+    container_name: betterdrive_nginx
+    restart: always
+    ports:
+      - "80:80"
+      # - "443:443" # Uncomment when you set up SSL
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+      - web
 
 volumes:
-  mongo_data:
+  mongodb_data:
+    driver: local
