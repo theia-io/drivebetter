@@ -8,4 +8,3 @@ export type DriverDocument = {
     expiresAt?: string | null;
     note?: string;
 };
-
