@@ -62,7 +62,6 @@ export default function RideDetailsPage() {
     const { setRideStatus, isSettingStatus } = useSetRideStatus(id);
     const { deleteRide, isDeleting } = useDeleteRide(id);
     const canManage = user?.roles?.some((r) => r === "admin" || r === "dispatcher") || (ride?.creatorId as RideCreatorUser)?._id == user?._id;
-
     // Shares (used for the existing shares card)
     const { data: shares = [], isLoading: sharesLoading, mutate: mutateShares } = useRideShares(id);
 

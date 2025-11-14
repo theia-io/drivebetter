@@ -305,8 +305,9 @@ router.get("/:id([0-9a-fA-F]{24})",
     requireAuth,
     requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
-    const ride = await Ride.findById(req.params.id);
     const user = (req as any).user;
+    const ride = await Ride.findById(req.params.id)
+            .populate("creatorId", "name email phone");
     try {
         assertCanAccessRide(user, ride);
     } catch (e: any) {
