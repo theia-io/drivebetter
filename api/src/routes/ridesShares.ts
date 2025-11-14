@@ -311,7 +311,10 @@ router.patch("/:shareId([0-9a-fA-F]{24})", requireAuth, requireRole(["dispatcher
  *       404:
  *         description: Share not found
  */
-router.delete("/:shareId([0-9a-fA-F]{24})", requireAuth, requireRole(["dispatcher", "admin"]), async (req, res) => {
+router.delete("/:shareId([0-9a-fA-F]{24})",
+    requireAuth,
+    requireRole(["driver", "dispatcher", "admin"]),
+    async (req, res) => {
     const { shareId } = req.params;
     const share = await RideShare.findById(shareId).lean();
     if (!share) return res.status(404).json({ error: "Share not found" });

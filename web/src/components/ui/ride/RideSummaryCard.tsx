@@ -18,6 +18,7 @@ import AssignedDriverBadge from "@/components/ui/ride/AssignedDriverBadge";
 import RideCreatorBadge from "@/components/ui/ride/RideCreatorBadge";
 import { useAuthStore } from "@/stores";
 import {AssignDriverSelect} from "@/components/ui/ride/AssignDriverSelect";
+import RideShareQuickPanel from "@/components/ui/ride/RideShareQuickPanel";
 
 type RideSummaryCardProps = {
     ride: Ride;
@@ -215,6 +216,11 @@ export default function RideSummaryCard({
                                     />
                                 </div>
                             )}
+
+                            <RideShareQuickPanel
+                                rideId={ride._id}
+                                className="w-full"
+                            />
 
                             {/* Centered, bigger Details button */}
                             <div className="flex justify-center">

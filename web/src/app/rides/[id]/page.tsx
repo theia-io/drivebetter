@@ -42,6 +42,7 @@ import {
 } from "@/stores/rideClaims";
 import {fmtDate, fmtTime, km, mins, money} from "@/services/convertors";
 import {AssignDriverSelect} from "@/components/ui/ride/AssignDriverSelect";
+import RideShareQuickPanel from "@/components/ui/ride/RideShareQuickPanel";
 
 const STATUS: Ride["status"][] = [
     "unassigned",
@@ -418,7 +419,10 @@ export default function RideDetailsPage() {
                                     <Share2 className="w-4 h-4 text-indigo-600" />
                                     <Typography className="font-semibold text-gray-900">Ride Shares</Typography>
                                 </div>
-
+                                <RideShareQuickPanel
+                                    rideId={ride._id}
+                                    className="w-full"
+                                />
                                 {sharesLoading ? (
                                     <div className="text-sm text-gray-600">Loading shares…</div>
                                 ) : shares?.length === 0 ? (
