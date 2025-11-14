@@ -8,7 +8,7 @@ import Link from "next/link";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { ArrowLeft, Copy, Link2, Share2, Trash2, X, UserIcon, Users } from "lucide-react";
-import DriverCombobox from "@/components/ui/ride/DriverCombobox";
+import {DriverCombobox, SimpleDriver} from "@/components/ui/ride/DriverCombobox";
 import { dt, KV } from "@/components/ui/commmon";
 
 import {
@@ -23,7 +23,6 @@ import {
 import { useGroups } from "@/stores/groups";
 import { useDriversPublicBatchMap } from "@/stores/users";
 
-type DriverPick = { _id: string; email?: string; name?: string };
 
 const toStr = (v: any) => String(v || "");
 
@@ -65,7 +64,7 @@ export default function RideSharePage() {
     const [maxClaims, setMaxClaims] = useState<string>("");
     const [syncQueue, setSyncQueue] = useState<boolean>(true);
     const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
-    const [pickedDrivers, setPickedDrivers] = useState<DriverPick[]>([]);
+    const [pickedDrivers, setPickedDrivers] = useState<SimpleDriver[]>([]);
     const [creating, setCreating] = useState(false);
 
     // Edit form state
@@ -123,7 +122,7 @@ export default function RideSharePage() {
             const payload = {
                 visibility,
                 groupIds: visibility === "groups" ? selectedGroupIds : undefined,
-                driverIds: visibility === "drivers" ? pickedDrivers.map((d) => toStr(d._id)) : undefined,
+                driverIds: visibility === "drivers" ? pickedDrivers.map((d) => toStr(d.id)) : undefined,
                 expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
                 maxClaims: maxClaims ? Number(maxClaims) : undefined,
                 syncQueue,
@@ -506,14 +505,12 @@ export default function RideSharePage() {
                                     {editState.visibility === "drivers" && (
                                         <div className="flex flex-col gap-3">
                                             <DriverCombobox
-                                                id="edit-driver-pick"
-                                                valueEmail=""
-                                                onChange={(driver: any | null) => {
-                                                    const id = toStr(driver?._id);
-                                                    if (id && !editState.driverIds.includes(id)) {
-                                                        setEditState((s) => ({ ...s, driverIds: [...s.driverIds, id] }));
-                                                    }
-                                                }}
+                                                id="driver-pick"
+                                                mode="multi"
+                                                label="Drivers"
+                                                placeholder="Select drivers to share with"
+                                                values={pickedDrivers}
+                                                onChange={setPickedDrivers}
                                             />
                                             <div className="flex flex-wrap gap-2">
                                                 {editState.driverIds.map((id) => {
@@ -646,20 +643,11 @@ export default function RideSharePage() {
                                             <div className="mt-2 flex flex-col gap-3">
                                                 <DriverCombobox
                                                     id="driver-pick"
-                                                    valueEmail=""
-                                                    onChange={(driver: any | null) => {
-                                                        const id = toStr(driver?._id);
-                                                        if (id && !pickedDrivers.some((d) => toStr(d._id) === id)) {
-                                                            setPickedDrivers((prev) => [
-                                                                ...prev,
-                                                                {
-                                                                    _id: id,
-                                                                    name: driver.name,
-                                                                    email: driver.email,
-                                                                },
-                                                            ]);
-                                                        }
-                                                    }}
+                                                    mode="multi"
+                                                    label="Drivers"
+                                                    placeholder="Select drivers to share with"
+                                                    values={pickedDrivers}
+                                                    onChange={setPickedDrivers}
                                                 />
 
                                                 <div className="flex flex-wrap gap-2">
@@ -668,19 +656,19 @@ export default function RideSharePage() {
                                                     )}
                                                     {pickedDrivers.map((d) => (
                                                         <span
-                                                            key={d._id}
+                                                            key={d.id}
                                                             className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs bg-white"
-                                                            title={d.email || d._id}
+                                                            title={d.email || d.id}
                                                         >
                               <UserIcon className="w-3.5 h-3.5 mr-1 text-gray-500" />
                               <span className="font-medium text-gray-900 truncate max-w-[10rem]">
-                                {d.name || d.email || `User ${toStr(d._id).slice(-6)}`}
+                                {d.name || d.email || `User ${toStr(d.id).slice(-6)}`}
                               </span>
                               <button
                                   type="button"
                                   className="p-0.5 rounded hover:bg-gray-100"
-                                  onClick={() => setPickedDrivers((prev) => prev.filter((x) => x._id !== d._id))}
-                                  aria-label={`Remove ${d._id}`}
+                                  onClick={() => setPickedDrivers((prev) => prev.filter((x) => x.id !== d.id))}
+                                  aria-label={`Remove ${d.id}`}
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>

@@ -7,7 +7,7 @@ import Link from "next/link";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { ArrowLeft, Save, Users as UsersIcon, Plus, X } from "lucide-react";
-import DriverCombobox from "@/components/ui/ride/DriverCombobox";
+import {DriverCombobox, SimpleDriver} from "@/components/ui/ride/DriverCombobox";
 import { createGroup as apiCreateGroup } from "@/stores/groups";
 import type {CreateGroupRequest} from "@/types"; // uses your existing store/service
 
@@ -43,6 +43,7 @@ export default function NewGroupPage() {
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [saving, setSaving] = useState(false);
     const [selectedDriver, setSelectedDriver] = useState<any | null>(null);
+    const [pickedDrivers, setPickedDrivers] = useState<SimpleDriver[]>([]);
 
     const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((s) => ({ ...s, [k]: v }));
 
@@ -237,9 +238,12 @@ export default function NewGroupPage() {
                                     <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
                                         <div className="flex-1 min-w-0">
                                             <DriverCombobox
-                                                id="add-driver"
-                                                valueEmail={selectedDriver?.email || ""}
-                                                onChange={(driver: any | null) => setSelectedDriver(driver)}
+                                                id="driver-pick"
+                                                mode="multi"
+                                                label="Drivers"
+                                                placeholder="Select drivers to share with"
+                                                values={pickedDrivers}
+                                                onChange={setPickedDrivers}
                                             />
                                         </div>
                                         <Button
@@ -252,32 +256,6 @@ export default function NewGroupPage() {
                                             Add member
                                         </Button>
                                     </div>
-
-                                    {/* Chips */}
-                                    {!!form.members.length && (
-                                        <div className="mt-2 flex flex-wrap gap-2">
-                                            {form.members.map((m) => (
-                                                <span
-                                                    key={m._id}
-                                                    className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs bg-white"
-                                                    title={m.email || m._id}
-                                                >
-                          <span className="font-medium text-gray-900 truncate max-w-[10rem]">
-                            {m.name || m.email || `User ${m._id.slice(-6)}`}
-                          </span>
-                                                    {m.email && <span className="text-gray-600 truncate max-w-[10rem]">• {m.email}</span>}
-                                                    <button
-                                                        type="button"
-                                                        className="p-0.5 rounded hover:bg-gray-100"
-                                                        onClick={() => onRemoveMember(m._id)}
-                                                        aria-label={`Remove ${m.name || m.email || m._id}`}
-                                                    >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </span>
-                                            ))}
-                                        </div>
-                                    )}
                                 </div>
 
                                 {/* Actions */}
