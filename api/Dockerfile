@@ -33,7 +33,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Copy production artifacts
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/pages ./pages
