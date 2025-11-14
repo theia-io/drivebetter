@@ -9,15 +9,19 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "baseUrl": ".",
-    "paths": { "@/*": ["./src/*"] }
+    "baseUrl": "."
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "**/*.js",
-    "**/*.cjs",
-    "**/*.mjs"
+    "server.ts",
+    "src/lib/**/*.ts",
+    "src/routes/**/*.ts"
   ],
-  "exclude": ["node_modules", ".next", "dist", "tests"]
+  "exclude": [
+    "node_modules",
+    ".next",
+    "dist",
+    "tests",
+    "src/components",
+    "src/pages"
+  ]
 }
