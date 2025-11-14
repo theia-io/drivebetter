@@ -1,4 +1,4 @@
-name: Build Docker Images for API & UI
+name: Build and Deploy Docker Images
 
 on:
   push:
@@ -6,41 +6,53 @@ on:
   pull_request:
     branches: [ "main" ]
 
+  # 2. Manual CD: Enables the "Run workflow" button
+  workflow_dispatch:
+
 jobs:
 
+  # ----------------------------------------
+  # A. BUILD JOB (CI) - Runs automatically
+  # ----------------------------------------
   build:
     environment: dev
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-      
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_TOKEN }}
-  
-    - name: Build and Push API Image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./api
-        push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/betterdriver-api:latest, ${{ secrets.DOCKER_USERNAME }}/betterdriver-api:${{ github.sha }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-    - name: Build and Push WEB Image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./web
-        push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/betterdriver-web:latest, ${{ secrets.DOCKER_USERNAME }}/betterdriver-web:${{ github.sha }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Build and Push API Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./api
+          push: true
+          # Push both :latest and the specific SHA tag
+          tags: ${{ secrets.DOCKER_USERNAME }}/betterdriver-api:latest, ${{ secrets.DOCKER_USERNAME }}/betterdriver-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Build and Push WEB Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./web
+          push: true
+          # Push both :latest and the specific SHA tag
+          tags: ${{ secrets.DOCKER_USERNAME }}/betterdriver-web:latest, ${{ secrets.DOCKER_USERNAME }}/betterdriver-web:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ----------------------------------------
+  # B. DEPLOY JOB (CD) - Runs manually only
+  # ----------------------------------------
   deploy:
     name: Deploy to Dev Server
     needs: build
@@ -48,11 +60,13 @@ jobs:
       name: dev
     runs-on: ubuntu-latest
 
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Inject Secrets into docker-compose.yml on the GitHub Runner
+      # 1. Inject Secrets into docker-compose.yml on the GitHub Runner
       - name: Configure Docker Compose Secrets
         env:
           MONGO_USER: ${{ secrets.MONGO_INITDB_ROOT_USERNAME }}
@@ -66,7 +80,7 @@ jobs:
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
         run: |
           # Use 'sed' to perform in-place substitution (-i)
-          # We use '|' as the delimiter for 'sed' to avoid conflicts with slashes in URIs/keys.
+          # We use '|' as the delimiter for 'sed' to safely handle slashes in URIs/keys.
           sed -i 's|<MONGO_INITDB_ROOT_USERNAME>|'$MONGO_USER'|g' docker-compose.yml
           sed -i 's|<MONGO_INITDB_ROOT_PASSWORD>|'$MONGO_PASS'|g' docker-compose.yml
           sed -i 's|<MONGO_INITDB_DATABASE>|'$MONGO_DB'|g' docker-compose.yml
@@ -77,10 +91,11 @@ jobs:
           sed -i 's|<GOOGLE_CLIENT_ID>|'$GOOGLE_CLIENT_ID'|g' docker-compose.yml
           sed -i 's|<GOOGLE_CLIENT_SECRET>|'$GOOGLE_CLIENT_SECRET'|g' docker-compose.yml
           
-          echo "docker-compose.yml content after substitution:"
-          cat docker-compose.yml # Optional: Print for debugging
+          # Optional: Useful for troubleshooting to see the final file before transfer
+          echo "Final docker-compose.yml content:"
+          cat docker-compose.yml
 
-      # 3. Securely copy the modified docker-compose.yml file to the remote server
+      # 2. Securely copy the modified docker-compose.yml file to the remote server
       - name: Transfer Docker Compose File (SCP)
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -90,7 +105,7 @@ jobs:
           source: "docker-compose.yml"
           target: "/home/ubuntu/betterdrive-app/"
 
-      # 4. Execute deployment commands on the remote server
+      # 3. Execute deployment commands on the remote server
       - name: Deploy via SSH and Docker Compose
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -99,9 +114,15 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           script_host_key_strict: false
           script: |
+            # Navigate to the deployment directory
             cd /home/ubuntu/betterdrive-app/
             
+            # Pull the latest images (these were pushed in the 'build' job)
             docker compose pull api
             docker compose pull web
+            
+            # Restart the services using the transferred, secret-filled docker-compose.yml
             docker compose up -d --no-deps api web
+            
+            # Clean up old images
             docker image prune -f
