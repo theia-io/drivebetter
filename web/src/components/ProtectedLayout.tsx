@@ -4,6 +4,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Navigation from "./Navigation";
+import AppFooter from "@/components/layout/AppFooter";
 
 interface ProtectedLayoutProps {
   children: React.ReactNode;
@@ -37,6 +38,7 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
     <div className="min-h-screen bg-gray-50">
       <Navigation />
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">{children}</main>
+      <AppFooter />
     </div>
   );
 }
