@@ -1,0 +1,73 @@
+name: 2. Manual CD - Deploy to Dev
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Dev Server
+    environment:
+      name: dev
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Commit SHA Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: commit-sha
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 1. Inject Secrets into docker-compose.yml on the GitHub Runner
+      - name: Configure Docker Compose Secrets
+        env:
+          MONGO_USER: ${{ secrets.MONGO_INITDB_ROOT_USERNAME }}
+          MONGO_PASS: ${{ secrets.MONGO_INITDB_ROOT_PASSWORD }}
+          MONGO_DB: ${{ secrets.MONGO_INITDB_DATABASE }}
+          MAPTILER_KEY: ${{ secrets.MAPTILER_API_KEY }}
+          ORS_KEY: ${{ secrets.ORS_API_KEY }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          PUBLIC_BASE_URL: ${{ secrets.PUBLIC_BASE_URL }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+        run: |
+          sed -i 's|<MONGO_INITDB_ROOT_USERNAME>|'$MONGO_USER'|g' docker-compose.yml
+          sed -i 's|<MONGO_INITDB_ROOT_PASSWORD>|'$MONGO_PASS'|g' docker-compose.yml
+          sed -i 's|<MONGO_INITDB_DATABASE>|'$MONGO_DB'|g' docker-compose.yml
+          sed -i 's|<MAPTILER_API_KEY>|'$MAPTILER_KEY'|g' docker-compose.yml
+          sed -i 's|<ORS_API_KEY>|'$ORS_KEY'|g' docker-compose.yml
+          sed -i 's|<MONGODB_URI>|'$MONGODB_URI'|g' docker-compose.yml
+          sed -i 's|<PUBLIC_BASE_URL>|'$PUBLIC_BASE_URL'|g' docker-compose.yml
+          sed -i 's|<GOOGLE_CLIENT_ID>|'$GOOGLE_CLIENT_ID'|g' docker-compose.yml
+          sed -i 's|<GOOGLE_CLIENT_SECRET>|'$GOOGLE_CLIENT_SECRET'|g' docker-compose.yml
+
+      # 2. Transfer the modified docker-compose.yml to the remote server
+      - name: Transfer Docker Compose File (SCP)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          source: "docker-compose.yml"
+          target: "/home/ubuntu/betterdrive-app/"
+
+      # 3. Execute deployment commands on the remote server
+      - name: Deploy via SSH and Docker Compose
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script_host_key_strict: false
+          script: |
+            cd /home/ubuntu/betterdrive-app/
+            
+            # Pulls the most recently pushed images tagged as :latest
+            docker compose pull api
+            docker compose pull web
+            
+            # Restart the services
+            docker compose up -d --no-deps api web
+            
+            docker image prune -f
