@@ -190,8 +190,8 @@ export function AssignDriverSelect({
     const isBusy = !!disabled || loading || assigning;
 
     return (
-        <div ref={rootRef} className={["flex items-start gap-2", className].join(" ")}>
-            <div className="flex items-center gap-1 pt-1">
+        <div ref={rootRef} className={["relative z-[1000] flex items-start gap-2", className].join(" ")}>
+            <div className="flex h-10 items-center gap-1">
                 <span className="inline-flex items-center gap-1 text-xs sm:text-sm text-gray-700">
                     <User className="h-3 w-3 text-gray-500"/>
                     {label}
@@ -208,7 +208,7 @@ export function AssignDriverSelect({
                     disabled={isBusy}
                     onClick={() => setOpen((prev) => !prev)}
                     className={[
-                        "inline-flex w-full items-center justify-between rounded-lg border px-3 py-2 text-xs sm:text-sm",
+                        "inline-flex h-10 w-full items-center justify-between rounded-lg border px-3 text-xs sm:text-sm",
                         "bg-white border-gray-300 text-gray-900",
                         "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
                         isBusy ? "cursor-not-allowed opacity-60" : "cursor-pointer",
@@ -229,7 +229,7 @@ export function AssignDriverSelect({
 
                 {open && (
                     <div
-                        className="absolute z-20 mt-2 w-72 origin-top-right rounded-lg border border-gray-100 bg-white shadow-lg">
+                        className="absolute z-[1100] mt-2 w-72 origin-top-right rounded-lg border border-gray-100 bg-white shadow-lg">
                         {/* Search bar */}
                         <div className="border-b border-gray-100 p-3">
                             <label
