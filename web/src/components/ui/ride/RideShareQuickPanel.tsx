@@ -11,16 +11,19 @@ import {
     UserIcon,
     ChevronDown,
     Search,
+    X,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import {
     useRideShares,
     createRideShare,
+    updateRideShare,
     type RideShare,
     type RideShareVisibility,
 } from "@/stores/rideShares";
 import { useGroups } from "@/stores/groups";
-import { useDriversPublic, type DriverPublic } from "@/stores/users";
+import { useDriversPublicBatchMap } from "@/stores/users";
+import {DriverCombobox, type SimpleDriver } from "@/components/ui/ride/DriverCombobox";
 
 type RideShareQuickPanelProps = {
     rideId: string;
@@ -35,11 +38,7 @@ function pickPrimary(shares: RideShare[]): RideShare | null {
     if (!shares?.length) return null;
     const active = shares.filter((s) => s.status === "active");
     const src = active.length ? active : shares;
-    return (
-        src.find((s) => s.visibility === "public") ||
-        src[0] ||
-        null
-    );
+    return src.find((s) => s.visibility === "public") || src[0] || null;
 }
 
 function formatVisibility(v: RideShareVisibility): string {
@@ -49,10 +48,7 @@ function formatVisibility(v: RideShareVisibility): string {
     return v;
 }
 
-export default function RideShareQuickPanel({
-                                                rideId,
-                                                className = "",
-                                            }: RideShareQuickPanelProps) {
+export default function RideShareQuickPanel({ rideId, className = "" }: RideShareQuickPanelProps) {
     const {
         data: shares = [],
         isLoading: isLoadingShares,
@@ -62,9 +58,6 @@ export default function RideShareQuickPanel({
     const { data: groupsData } = useGroups({});
     const groups = groupsData?.items ?? [];
 
-    const { data: driversData, isLoading: driversLoading } = useDriversPublic();
-    const drivers = (driversData as DriverPublic[]) ?? [];
-
     const activeShares = useMemo(
         () => shares.filter((s) => s.status === "active"),
         [shares],
@@ -72,24 +65,20 @@ export default function RideShareQuickPanel({
 
     const primary = useMemo(() => pickPrimary(shares), [shares]);
     const hasPrimary = !!primary;
-    const url = hasPrimary
-        ? ((primary as any).url as string | undefined)
-        : undefined;
-    const visibilityLabel = hasPrimary
-        ? formatVisibility(primary!.visibility)
-        : null;
+    const url = hasPrimary ? ((primary as any).url as string | undefined) : undefined;
+    const visibilityLabel = hasPrimary ? formatVisibility(primary!.visibility) : null;
 
     const publicShareExists = useMemo(
         () => activeShares.some((s) => s.visibility === "public"),
         [activeShares],
     );
 
+    // Keep public + group counts as "shares"
     const shareCounts = useMemo(() => {
-        const res = { public: 0, groups: 0, drivers: 0 };
+        const res = { public: 0, groups: 0 };
         for (const s of activeShares) {
             if (s.visibility === "public") res.public += 1;
             if (s.visibility === "groups") res.groups += 1;
-            if (s.visibility === "drivers") res.drivers += 1;
         }
         return res;
     }, [activeShares]);
@@ -106,19 +95,32 @@ export default function RideShareQuickPanel({
     const [groupSearch, setGroupSearch] = useState("");
     const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
 
-    // Driver multi-select
-    const [driverDropdownOpen, setDriverDropdownOpen] = useState(false);
-    const [driverSearch, setDriverSearch] = useState("");
-    const [selectedDriverIds, setSelectedDriverIds] = useState<string[]>([]);
+    // Drivers: existing driver-shares and “new drivers to share with”
+    const driverShares = useMemo(
+        () => activeShares.filter((s) => s.visibility === "drivers"),
+        [activeShares],
+    );
+
+    const driverIdsInShares = useMemo(
+        () =>
+            Array.from(
+                new Set(
+                    driverShares.flatMap((s) => (s.driverIds || []).map((id) => toStr(id))),
+                ),
+            ),
+        [driverShares],
+    );
+
+    const { map: driversMap } = useDriversPublicBatchMap(driverIdsInShares);
+
+    const [driverValues, setDriverValues] = useState<SimpleDriver[]>([]);
+    const [removingDriverId, setRemovingDriverId] = useState<string | null>(null);
+
+    const driverCount = driverIdsInShares.length; // <- “Drivers X” now counts drivers, not shares
 
     const groupNameById = useMemo(
         () => new Map(groups.map((g: any) => [toStr(g._id), g.name as string])),
         [groups],
-    );
-
-    const driversById = useMemo(
-        () => new Map(drivers.map((d) => [toStr(d._id), d])),
-        [drivers],
     );
 
     const filteredGroups = useMemo(() => {
@@ -128,39 +130,9 @@ export default function RideShareQuickPanel({
             const name = String(g.name || "").toLowerCase();
             const city = String(g.city || "").toLowerCase();
             const tags = String(g.tags || "").toLowerCase();
-            return (
-                name.includes(q) ||
-                city.includes(q) ||
-                tags.includes(q)
-            );
+            return name.includes(q) || city.includes(q) || tags.includes(q);
         });
     }, [groups, groupSearch]);
-
-    const filteredDrivers = useMemo(() => {
-        const q = driverSearch.trim().toLowerCase();
-        if (!q) return drivers;
-        return drivers.filter((d) => {
-            const name = (d.name || "").toLowerCase();
-            const email = (d.email || "").toLowerCase();
-            return name.includes(q) || email.includes(q);
-        });
-    }, [drivers, driverSearch]);
-
-    const selectedDrivers = useMemo(
-        () =>
-            selectedDriverIds
-                .map((id) => {
-                    const d = driversById.get(id);
-                    if (!d) return null;
-                    return {
-                        id,
-                        name: d.name,
-                        email: d.email,
-                    };
-                })
-                .filter(Boolean) as { id: string; name?: string; email?: string }[],
-        [selectedDriverIds, driversById],
-    );
 
     function hasActiveGroupShareFor(groupId: string): boolean {
         return activeShares.some(
@@ -172,19 +144,14 @@ export default function RideShareQuickPanel({
     }
 
     function hasActiveDriverShareFor(userId: string): boolean {
-        return activeShares.some(
-            (s) =>
-                s.visibility === "drivers" &&
-                s.status === "active" &&
-                (s.driverIds || []).some((uid) => toStr(uid) === userId),
+        return driverShares.some((s) =>
+            (s.driverIds || []).some((uid) => toStr(uid) === userId),
         );
     }
 
     const anySelectedGroupWithoutShare = selectedGroupIds.some(
         (gid) => !hasActiveGroupShareFor(gid),
     );
-
-    const anySelectedDriver = selectedDriverIds.length > 0;
 
     async function handleCopy() {
         if (!url) return;
@@ -245,8 +212,14 @@ export default function RideShareQuickPanel({
         }
     }
 
-    async function handleCreateDriverShare() {
-        if (!selectedDriverIds.length) return;
+    async function handleCreateDriverShare(drivers: SimpleDriver[]) {
+        if (!drivers.length) return;
+
+        const newDrivers = drivers.filter((d) => !hasActiveDriverShareFor(d.id));
+        if (newDrivers.length === 0) {
+            setError("All selected drivers already have active shares for this ride.");
+            return;
+        }
 
         setCreating(true);
         setError(null);
@@ -254,19 +227,54 @@ export default function RideShareQuickPanel({
             const payload = {
                 visibility: "drivers" as RideShareVisibility,
                 groupIds: undefined,
-                driverIds: selectedDriverIds,
+                driverIds: newDrivers.map((d) => d.id),
                 expiresAt: null,
                 maxClaims: undefined,
                 syncQueue: true,
             };
             await createRideShare(rideId, payload);
             await mutate();
-            setSelectedDriverIds([]);
-            setDriverDropdownOpen(false);
+            setDriverValues([]);
         } catch (e: any) {
             setError(e?.message || "Failed to create drivers share");
         } finally {
             setCreating(false);
+        }
+    }
+
+    // IMPORTANT: use updateRideShare only, no revoke here.
+    // Matches semantics of onRemoveDriverFromShare in /share page.
+    async function handleRemoveDriverFromShares(userId: string) {
+        setRemovingDriverId(userId);
+        setError(null);
+        try {
+            const affected = driverShares.filter((s) =>
+                (s.driverIds || []).some((uid) => toStr(uid) === userId),
+            );
+
+            const ops: Promise<any>[] = [];
+
+            for (const s of affected) {
+                const remaining = (s.driverIds || [])
+                    .map((id) => toStr(id))
+                    .filter((id) => id !== userId);
+
+                ops.push(
+                    updateRideShare(s.shareId, {
+                        visibility: "drivers",
+                        driverIds: remaining,
+                    }),
+                );
+            }
+
+            if (ops.length) {
+                await Promise.all(ops);
+            }
+        } catch (e: any) {
+            setError(e?.message || "Failed to remove driver from share");
+        } finally {
+            setRemovingDriverId(null);
+            await mutate(); // always refresh, even if backend already deleted/revoked
         }
     }
 
@@ -286,9 +294,7 @@ export default function RideShareQuickPanel({
 
                 <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex items-center gap-2">
-                        <div className="font-medium text-gray-900">
-                            Share this ride
-                        </div>
+                        <div className="font-medium text-gray-900">Share this ride</div>
                         {totalActive > 0 && (
                             <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700">
                                 {totalActive} active share{totalActive > 1 ? "s" : ""}
@@ -302,17 +308,14 @@ export default function RideShareQuickPanel({
                         {!isLoadingShares && totalActive > 0 && (
                             <>
                                 <span>
-                                    Public {shareCounts.public} • Groups {shareCounts.groups} •
-                                    Drivers {shareCounts.drivers}
+                                    Public {shareCounts.public} • Groups {shareCounts.groups} • Drivers {driverCount}
                                 </span>
                                 {hasPrimary && (
                                     <>
                                         <span className="h-1 w-1 rounded-full bg-gray-300" />
                                         <span className="inline-flex items-center gap-1 truncate max-w-[12rem]">
                                             <Link2 className="h-3 w-3 shrink-0" />
-                                            <span className="truncate">
-                                                {url || "No URL"}
-                                            </span>
+                                            <span className="truncate">{url || "No URL"}</span>
                                         </span>
                                         <span className="h-1 w-1 rounded-full bg-gray-300" />
                                         <span>{visibilityLabel}</span>
@@ -484,9 +487,7 @@ export default function RideShareQuickPanel({
                                                     }}
                                                 />
                                                 <div className="flex flex-col">
-                                                    <span className="truncate text-gray-900">
-                                                        {g.name}
-                                                    </span>
+                                                    <span className="truncate text-gray-900">{g.name}</span>
                                                     <span className="text-[11px] text-gray-500">
                                                         {alreadyShared
                                                             ? "Already has an active share"
@@ -540,129 +541,65 @@ export default function RideShareQuickPanel({
 
             {/* Drivers mode */}
             {createMode === "drivers" && !isLoadingShares && (
-                <div className="mt-1 space-y-2">
-                    <div className="relative">
-                        <button
-                            type="button"
-                            onClick={() => setDriverDropdownOpen((open) => !open)}
-                            className="inline-flex w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-left text-xs sm:text-sm"
-                        >
-                            <span className="flex flex-col">
-                                <span className="font-medium text-gray-800">
-                                    {selectedDriverIds.length > 0
-                                        ? `${selectedDriverIds.length} driver${selectedDriverIds.length > 1 ? "s" : ""} selected`
-                                        : "Select drivers"}
-                                </span>
-                                <span className="text-[11px] text-gray-500">
-                                    {selectedDriverIds.length > 0
-                                        ? "You can select multiple drivers"
-                                        : "Share with specific drivers"}
-                                </span>
-                            </span>
-                            <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
-                        </button>
+                <div className="mt-1 space-y-3">
+                    {/* Existing driver shares as chips with delete */}
+                    {driverIdsInShares.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                            {driverIdsInShares.map((uid) => {
+                                const d = driversMap[uid];
+                                const display = d?.name || d?.email || `User ${uid.slice(-6)}`;
+                                const secondary = d?.email || "";
 
-                        {driverDropdownOpen && (
-                            <div className="absolute z-40 mt-1 w-full rounded-lg border border-gray-100 bg-white shadow-lg">
-                                <div className="border-b border-gray-100 p-2">
-                                    <div className="relative">
-                                        <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
-                                        <input
-                                            type="text"
-                                            className="w-full rounded-md border border-gray-200 bg-gray-50 pl-7 pr-2 py-1.5 text-xs focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                            placeholder="Search drivers…"
-                                            value={driverSearch}
-                                            onChange={(e) => setDriverSearch(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                                <div className="max-h-56 overflow-y-auto py-1 text-xs sm:text-sm">
-                                    {driversLoading && (
-                                        <div className="px-3 py-2 text-[11px] text-gray-500">
-                                            Loading drivers…
-                                        </div>
-                                    )}
-                                    {!driversLoading && filteredDrivers.length === 0 && (
-                                        <div className="px-3 py-2 text-[11px] text-gray-500">
-                                            No drivers found.
-                                        </div>
-                                    )}
-                                    {!driversLoading &&
-                                        filteredDrivers.map((d) => {
-                                            const id = toStr(d._id);
-                                            const checked = selectedDriverIds.includes(id);
-                                            const alreadyShared = hasActiveDriverShareFor(id);
-                                            const secondary =
-                                                d.email ||
-                                                (alreadyShared ? "Already has an active share" : "");
-                                            return (
-                                                <label
-                                                    key={id}
-                                                    className="flex cursor-pointer items-center gap-2 px-3 py-1.5 hover:bg-gray-50"
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        className="h-3 w-3 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                                        checked={checked}
-                                                        onChange={(e) => {
-                                                            const next = e.target.checked
-                                                                ? [...selectedDriverIds, id]
-                                                                : selectedDriverIds.filter((x) => x !== id);
-                                                            setSelectedDriverIds(next);
-                                                        }}
-                                                    />
-                                                    <div className="flex flex-col">
-                                                        <span className="truncate text-gray-900">
-                                                            {d.name || d.email || `User ${id.slice(-6)}`}
-                                                        </span>
-                                                        {secondary && (
-                                                            <span className="text-[11px] text-gray-500">
-                                                                {secondary}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </label>
-                                            );
-                                        })}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {selectedDrivers.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                            {selectedDrivers.map((d) => (
-                                <span
-                                    key={d.id}
-                                    className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px]"
-                                >
-                                    <UserIcon className="h-3 w-3 text-gray-500" />
-                                    <span className="truncate max-w-[8rem]">
-                                        {d.name || d.email || `User ${d.id.slice(-6)}`}
+                                return (
+                                    <span
+                                        key={uid}
+                                        className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-[11px] bg-white"
+                                        title={secondary || uid}
+                                    >
+                                        <UserIcon className="w-3.5 h-3.5 text-gray-500" />
+                                        <span className="font-medium text-gray-900 truncate max-w-[10rem]">
+                                            {display}
+                                        </span>
+                                        {secondary && (
+                                            <span className="text-gray-500 truncate max-w-[8rem]">
+                                                • {secondary}
+                                            </span>
+                                        )}
+                                        <button
+                                            type="button"
+                                            className="p-0.5 rounded hover:bg-gray-100"
+                                            onClick={() => handleRemoveDriverFromShares(uid)}
+                                            disabled={removingDriverId === uid || creating}
+                                            aria-label={`Remove ${display}`}
+                                        >
+                                            {removingDriverId === uid ? (
+                                                <span className="text-[10px] text-gray-500">
+                                                    Removing…
+                                                </span>
+                                            ) : (
+                                                <X className="w-3.5 h-3.5" />
+                                            )}
+                                        </button>
                                     </span>
-                                </span>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
 
-                    <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={handleCreateDriverShare}
-                        disabled={creating || !anySelectedDriver}
-                        className="w-full justify-center gap-2 text-xs sm:text-sm"
-                        leftIcon={<Share2 className="h-3.5 w-3.5" />}
-                    >
-                        {creating
-                            ? "Creating driver share…"
-                            : anySelectedDriver
-                                ? "Share with selected drivers"
-                                : "Select drivers to share with"}
-                    </Button>
-                    <span className="text-[11px] text-gray-500">
-                        Creates a driver-only share. Only selected drivers will see this ride in their inbox.
-                    </span>
+                    {/* Add new driver shares via DriverCombobox */}
+                    <DriverCombobox
+                        id="quick-share-drivers"
+                        mode="multi"
+                        label="Share with drivers"
+                        placeholder="Select drivers to share with"
+                        values={driverValues}
+                        onChange={setDriverValues}
+                        actionLabel="Share with selected drivers"
+                        actionHint="Creates a driver-only share for all selected drivers. Existing shares will be skipped."
+                        actionDisabled={creating}
+                        onAction={handleCreateDriverShare}
+                        className="w-full"
+                    />
                 </div>
             )}
 
