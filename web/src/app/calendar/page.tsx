@@ -2,7 +2,7 @@
 
 import {useCallback, useMemo, useState} from "react";
 import { Calendar as RBCalendar, dateFnsLocalizer, View, Event as RBCEvent } from "react-big-calendar";
-import { format, parse, startOfWeek, getDay, addMinutes } from "date-fns";
+import { format, parse, startOfWeek, getDay, addMinutes, addDays } from "date-fns";
 import {enGB} from "date-fns/locale/en-GB";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
@@ -112,6 +112,29 @@ function getStatusColors(status: string) {
     }
 }
 
+function formatRangeLabel(date: Date, view: View): string {
+    if (view === "month") {
+        // e.g. "November 2025"
+        return format(date, "MMMM yyyy");
+    }
+
+    if (view === "week") {
+        // week starts Monday (to match your localizer)
+        const start = startOfWeek(date, { weekStartsOn: 1 });
+        const end = addDays(start, 6);
+
+        // If same month: "10–16 Nov 2025"
+        if (start.getMonth() === end.getMonth()) {
+            return `${format(start, "d")}–${format(end, "d MMM yyyy")}`;
+        }
+        // If spanning months: "30 Sep – 6 Oct 2025"
+        return `${format(start, "d MMM")} – ${format(end, "d MMM yyyy")}`;
+    }
+
+    // "day" (and any other) → "14 Nov 2025"
+    return format(date, "d MMM yyyy");
+}
+
 export default function DriverCalendarPage() {
     const { user } = useAuthStore();
     const currentUserId = user?._id || (user as any)?.id || "";
@@ -209,7 +232,7 @@ export default function DriverCalendarPage() {
                             <div className="flex items-center gap-2">
                                 <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-2 py-1 text-xs sm:text-sm">
                                     <CalendarIcon className="w-4 h-4 text-gray-500" />
-                                    <span>{currentDate.toLocaleDateString()}</span>
+                                    <span>{formatRangeLabel(currentDate, view)}</span>
                                 </div>
                                 {isLoading && (
                                     <div className="inline-flex items-center gap-1 text-xs text-gray-500">
