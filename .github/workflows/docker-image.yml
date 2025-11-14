@@ -46,7 +46,6 @@ jobs:
     needs: build
     environment:
       name: dev
-      url: http://${{ secrets.SSH_HOST }}
     runs-on: ubuntu-latest
 
     steps:
@@ -83,7 +82,7 @@ jobs:
 
       # 3. Securely copy the modified docker-compose.yml file to the remote server
       - name: Transfer Docker Compose File (SCP)
-        uses: appleboy/scp-action@v0.1.7 # Use SCP action for file transfer
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
