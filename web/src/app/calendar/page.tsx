@@ -28,6 +28,8 @@ import {
     ChevronRight,
     Loader2,
     X,
+    Layers,
+    ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -53,7 +55,7 @@ const localizer = dateFnsLocalizer({
     locales,
 });
 
-// ---- Types ----
+// ---------- Types ----------
 
 type DayBuckets = {
     total: number;
@@ -62,15 +64,30 @@ type DayBuckets = {
     completed: number;
 };
 
+type ClusterResource = {
+    kind: "cluster";
+    rides: Ride[];
+    dateKey: string;
+    timeLabel: string; // "HH:mm"
+    start: Date;
+};
+
 type CalendarEventResource =
     | { kind: "ride"; ride: Ride }
-    | { kind: "analytics"; buckets: DayBuckets };
+    | { kind: "analytics"; buckets: DayBuckets; dateKey: string }
+    | ClusterResource;
 
 type CalendarEvent = RBCEvent & {
     resource: CalendarEventResource;
 };
 
-// ---- Helpers ----
+type ListModalState = {
+    date: Date;
+    title: string;
+    rides: Ride[];
+};
+
+// ---------- Helpers ----------
 
 function formatRangeLabel(date: Date, view: View): string {
     if (view === "month") return format(date, "MMMM yyyy");
@@ -87,33 +104,24 @@ function formatRangeLabel(date: Date, view: View): string {
     return format(date, "d MMM yyyy");
 }
 
-// top-left corner label
 const TimeGutterHeader = () => (
     <div className="px-1 text-[9px] sm:text-[10px] leading-tight text-gray-500">
         Daily stats
     </div>
 );
 
-// unified renderer
+// ---------- Event renderer ----------
+
 const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
     const e = event as CalendarEvent;
     const res = e.resource;
 
     if (!res) return null;
 
+    // All-day analytics row
     if (res.kind === "analytics") {
         const { total, unassigned, inProgress, completed } = res.buckets;
         if (!total) return null;
-
-        const dateKey = format(e.start as Date, "yyyy-MM-dd");
-
-        const scrollToFirst = (bucket: "unassigned" | "inProgress" | "completed") => {
-            const selector = `.ride-event.ride-day-${dateKey}.ride-bucket-${bucket}`;
-            const el = document.querySelector(selector) as HTMLElement | null;
-            if (el) {
-                el.scrollIntoView({ behavior: "smooth", block: "center" });
-            }
-        };
 
         return (
             <div className="flex h-full flex-col items-center justify-center py-0.5">
@@ -122,49 +130,72 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
         </span>
                 <div className="mt-0.5 flex items-center gap-1.5">
                     {unassigned > 0 && (
-                        <button
-                            type="button"
-                            onClick={(ev) => {
-                                ev.stopPropagation();
-                                scrollToFirst("unassigned");
-                            }}
-                            className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-amber-800 cursor-pointer"
-                        >
-                            <span className="h-2 w-2 rounded-full bg-amber-500" />
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-amber-800">
+              <span className="h-2 w-2 rounded-full bg-amber-500" />
                             {unassigned} unassigned
-                        </button>
+            </span>
                     )}
                     {inProgress > 0 && (
-                        <button
-                            type="button"
-                            onClick={(ev) => {
-                                ev.stopPropagation();
-                                scrollToFirst("inProgress");
-                            }}
-                            className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-blue-800 cursor-pointer"
-                        >
-                            <span className="h-2 w-2 rounded-full bg-blue-500" />
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-blue-800">
+              <span className="h-2 w-2 rounded-full bg-blue-500" />
                             {inProgress} in&nbsp;progress
-                        </button>
+            </span>
                     )}
                     {completed > 0 && (
-                        <button
-                            type="button"
-                            onClick={(ev) => {
-                                ev.stopPropagation();
-                                scrollToFirst("completed");
-                            }}
-                            className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-emerald-800 cursor-pointer"
-                        >
-                            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-emerald-800">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
                             {completed} completed
-                        </button>
+            </span>
                     )}
                 </div>
             </div>
         );
     }
 
+    // Cluster event
+    if (res.kind === "cluster") {
+        const rides = res.rides;
+        const total = rides.length;
+        let unassigned = 0;
+        let inProgress = 0;
+        let completed = 0;
+
+        for (const r of rides) {
+            if (r.status === "completed") completed += 1;
+            else if (r.status === "unassigned") unassigned += 1;
+            else inProgress += 1;
+        }
+
+        return (
+            <div className="flex items-start gap-1.5 text-[10px] sm:text-xs leading-snug">
+                <div className="mt-0.5 shrink-0">
+                    <Layers className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1">
+            <span className="truncate font-semibold">
+              {res.timeLabel} • {total} rides
+            </span>
+                        <span className="shrink-0 rounded-full border border-gray-300 bg-white px-1.5 py-[1px] text-[8px] font-semibold uppercase tracking-wide text-gray-600">
+              Group
+            </span>
+                    </div>
+                    <div className="truncate text-[9px] sm:text-[10px] text-gray-700">
+                        {unassigned > 0 && `${unassigned} unassigned`}
+                        {inProgress > 0 &&
+                            `${unassigned > 0 ? " • " : ""}${inProgress} in progress`}
+                        {completed > 0 &&
+                            `${unassigned > 0 || inProgress > 0 ? " • " : ""}${completed} completed`}
+                    </div>
+                    <div className="mt-0.5 text-[8px] sm:text-[9px] text-gray-400">
+                        Tap to view list
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Single ride event
     if (res.kind === "ride") {
         const r = res.ride;
         const Icon = getStatusIcon(r.status as RideStatus);
@@ -193,19 +224,22 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
     return null;
 };
 
+// ---------- Main component ----------
+
 export default function CalendarPage() {
     const [view, setView] = useState<View>("week");
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
     const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
 
-    // showMore modal state
-    const [showMoreState, setShowMoreState] = useState<{
-        date: Date;
-        events: CalendarEvent[];
-    } | null>(null);
+    // multi-ride modal state
+    const [listModal, setListModal] = useState<ListModalState | null>(null);
+    const [listModalSelectedId, setListModalSelectedId] = useState<string | null>(
+        null,
+    );
 
     const { items: allRides, isLoading, mutate } = useRidesInfinite({}, 200);
 
+    // Per-day buckets for analytics row
     const rideBucketsByDay = useMemo(() => {
         const map = new Map<string, DayBuckets>();
 
@@ -235,36 +269,74 @@ export default function CalendarPage() {
         return map;
     }, [allRides]);
 
+    // Events with clustering
     const events: CalendarEvent[] = useMemo(() => {
-        const rideEvents: CalendarEvent[] = allRides.map((ride) => {
+        type ClusterKey = string;
+
+        const clusters = new Map<ClusterKey, ClusterResource>();
+        const result: CalendarEvent[] = [];
+
+        // All rides -> clusters
+        for (const ride of allRides) {
             const start = new Date(ride.datetime);
-            const end = addMinutes(start, 60);
+            const dateKey = format(start, "yyyy-MM-dd");
+            const timeLabel = format(start, "HH:mm");
+            const key: ClusterKey = `${dateKey}|${timeLabel}`;
 
-            return {
-                id: String(ride._id),
-                title: `${ride.from} → ${ride.to}`,
-                start,
-                end,
-                allDay: false,
-                resource: { kind: "ride", ride },
-            };
-        });
+            if (!clusters.has(key)) {
+                clusters.set(key, {
+                    kind: "cluster",
+                    rides: [],
+                    dateKey,
+                    timeLabel,
+                    start,
+                });
+            }
+            clusters.get(key)!.rides.push(ride);
+        }
 
-        const analyticsEvents: CalendarEvent[] = Array.from(
-            rideBucketsByDay.entries(),
-        ).map(([key, buckets]) => {
-            const dayStart = startOfDay(new Date(`${key}T00:00:00`));
-            return {
-                id: `analytics-${key}`,
+        // All-day analytics
+        rideBucketsByDay.forEach((buckets, dateKey) => {
+            const dayStart = startOfDay(new Date(`${dateKey}T00:00:00`));
+            result.push({
+                id: `analytics-${dateKey}`,
                 title: "",
                 start: dayStart,
                 end: dayStart,
                 allDay: true,
-                resource: { kind: "analytics", buckets },
-            };
+                resource: { kind: "analytics", buckets, dateKey },
+            });
         });
 
-        return [...rideEvents, ...analyticsEvents];
+        // Cluster / single-ride events
+        clusters.forEach((cluster) => {
+            const { rides, start, dateKey, timeLabel } = cluster;
+            if (rides.length === 1) {
+                const ride = rides[0];
+                const rideStart = new Date(ride.datetime);
+                const rideEnd = addMinutes(rideStart, 60);
+                result.push({
+                    id: String(ride._id),
+                    title: `${ride.from} → ${ride.to}`,
+                    start: rideStart,
+                    end: rideEnd,
+                    allDay: false,
+                    resource: { kind: "ride", ride },
+                });
+            } else {
+                const end = addMinutes(start, 60);
+                result.push({
+                    id: `cluster-${dateKey}-${timeLabel}`,
+                    title: `${timeLabel} • ${rides.length} rides`,
+                    start,
+                    end,
+                    allDay: false,
+                    resource: cluster,
+                });
+            }
+        });
+
+        return result;
     }, [allRides, rideBucketsByDay]);
 
     const eventPropGetter = (event: RBCEvent) => {
@@ -272,19 +344,53 @@ export default function CalendarPage() {
         const res = e.resource;
         const dateKey = format(e.start as Date, "yyyy-MM-dd");
 
-        if (res?.kind === "analytics") {
+        if (!res) return {};
+
+        if (res.kind === "analytics") {
             return {
                 style: {
                     backgroundColor: "transparent",
                     border: "none",
                     boxShadow: "none",
                     padding: 0,
+                    overflow: "visible",
                 },
                 className: "",
             };
         }
 
-        if (res?.kind === "ride") {
+        if (res.kind === "cluster") {
+            const rides = res.rides;
+            let unassigned = 0;
+            let inProgress = 0;
+            let completed = 0;
+
+            for (const r of rides) {
+                if (r.status === "completed") completed += 1;
+                else if (r.status === "unassigned") unassigned += 1;
+                else inProgress += 1;
+            }
+
+            const bucketClasses: string[] = [];
+            if (unassigned > 0) bucketClasses.push("ride-bucket-unassigned");
+            if (inProgress > 0) bucketClasses.push("ride-bucket-inProgress");
+            if (completed > 0) bucketClasses.push("ride-bucket-completed");
+
+            return {
+                style: {
+                    backgroundColor: "#f9fafb",
+                    borderColor: "#d1d5db",
+                    color: "#111827",
+                    borderRadius: "6px",
+                    borderWidth: "1px",
+                    fontSize: "0.75rem",
+                    padding: "2px 4px",
+                },
+                className: `ride-event ride-day-${dateKey} ${bucketClasses.join(" ")}`,
+            };
+        }
+
+        if (res.kind === "ride") {
             const ride = res.ride;
             const { bg, border, text } = getStatusColors(ride.status as RideStatus);
 
@@ -310,6 +416,7 @@ export default function CalendarPage() {
         return {};
     };
 
+    // driver assignment: still needed
     const handleDriverAssigned = useCallback(
         async (rideId: string, driverUserId: string) => {
             setSelectedRide((prev) => {
@@ -322,6 +429,48 @@ export default function CalendarPage() {
                             ? ("assigned" as RideStatus)
                             : prev.status,
                 };
+            });
+
+            // update inside multi-ride modal if open
+            setListModal((prev) => {
+                if (!prev) return prev;
+                const updatedRides = prev.rides.map((r) =>
+                    String(r._id) === rideId
+                        ? {
+                            ...r,
+                            assignedDriverId: driverUserId,
+                            status:
+                                r.status === "unassigned"
+                                    ? ("assigned" as RideStatus)
+                                    : r.status,
+                        }
+                        : r,
+                );
+                return { ...prev, rides: updatedRides };
+            });
+
+            await mutate();
+        },
+        [mutate],
+    );
+
+    // status change from inside RideSummaryCard
+    const handleRideStatusChanged = useCallback(
+        async (updatedRide: Ride) => {
+            const id = String(updatedRide._id);
+
+            // update selectedRide modal
+            setSelectedRide((prev) =>
+                prev && String(prev._id) === id ? { ...prev, ...updatedRide } : prev,
+            );
+
+            // update multi-ride modal list and its selected item
+            setListModal((prev) => {
+                if (!prev) return prev;
+                const updatedRides = prev.rides.map((r) =>
+                    String(r._id) === id ? { ...r, ...updatedRide } : r,
+                );
+                return { ...prev, rides: updatedRides };
             });
 
             await mutate();
@@ -358,8 +507,25 @@ export default function CalendarPage() {
 
     const rangeLabel = formatRangeLabel(currentDate, view);
 
+    const focusedListRide: Ride | null =
+        listModal && listModalSelectedId
+            ? listModal.rides.find((r) => String(r._id) === listModalSelectedId) ||
+            null
+            : null;
+
+    const isListMode = !!listModal && !listModalSelectedId;
+
     return (
         <ProtectedLayout>
+            <style jsx global>{`
+                .rbc-allday-cell {
+                    min-height: 40px;
+                }
+                .rbc-allday-cell .rbc-event {
+                    overflow: visible;
+                }
+            `}</style>
+
             <Container className="px-3 sm:px-6 lg:px-8">
                 <div className="space-y-4 sm:space-y-6 pb-4 sm:pb-8">
                     {/* Header + controls */}
@@ -379,7 +545,6 @@ export default function CalendarPage() {
                         </div>
 
                         <div className="w-full sm:w-auto flex flex-col gap-2">
-                            {/* navigation + range + today */}
                             <div className="flex flex-wrap justify-center sm:justify-end gap-2">
                                 <Button
                                     variant="outline"
@@ -422,7 +587,6 @@ export default function CalendarPage() {
                                 </Button>
                             </div>
 
-                            {/* view switcher */}
                             <div className="flex justify-center sm:justify-end">
                                 <div className="inline-flex w-full max-w-xs sm:max-w-none sm:w-auto rounded-lg border border-gray-200 bg-white text-xs sm:text-sm">
                                     <button
@@ -477,20 +641,44 @@ export default function CalendarPage() {
                                     onView={onViewChange}
                                     onNavigate={onNavigate}
                                     toolbar={false}
-                                    popup={false}
                                     selectable={false}
+                                    popup={false}
+                                    dayLayoutAlgorithm="no-overlap"
                                     onSelectEvent={(event) => {
                                         const e = event as CalendarEvent;
-                                        if (e.resource.kind === "ride") {
-                                            setSelectedRide(e.resource.ride);
+                                        const res = e.resource;
+                                        if (res.kind === "ride") {
+                                            setSelectedRide(res.ride);
+                                        } else if (res.kind === "cluster") {
+                                            const rides = res.rides;
+                                            setListModalSelectedId(
+                                                rides.length ? String(rides[0]._id) : null,
+                                            );
+                                            setListModal({
+                                                date: res.start,
+                                                title: `Rides at ${res.timeLabel} on ${fmtDate(
+                                                    res.start.toISOString(),
+                                                )}`,
+                                                rides,
+                                            });
                                         }
                                     }}
-                                    onShowMore={(events, date) => {
-                                        const ridesOnly = (events as CalendarEvent[]).filter(
-                                            (e) => e.resource.kind === "ride",
-                                        );
-                                        if (!ridesOnly.length) return;
-                                        setShowMoreState({ date, events: ridesOnly });
+                                    onShowMore={(evts, date) => {
+                                        const rides: Ride[] = [];
+                                        (evts as CalendarEvent[]).forEach((e) => {
+                                            if (e.resource.kind === "ride") {
+                                                rides.push(e.resource.ride);
+                                            } else if (e.resource.kind === "cluster") {
+                                                rides.push(...e.resource.rides);
+                                            }
+                                        });
+                                        if (!rides.length) return;
+                                        setListModalSelectedId(String(rides[0]._id));
+                                        setListModal({
+                                            date,
+                                            title: `Rides on ${fmtDate(date.toISOString())}`,
+                                            rides,
+                                        });
                                     }}
                                     eventPropGetter={eventPropGetter}
                                     components={{
@@ -519,93 +707,184 @@ export default function CalendarPage() {
                 </div>
             </Container>
 
-            {/* Custom showMore modal for month view */}
-            {showMoreState && (
+            {/* Multi-ride modal: two modes (list / details) */}
+            {listModal && (
                 <div
                     className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/40"
-                    onClick={() => setShowMoreState(null)}
+                    onClick={async () => {
+                        setListModal(null);
+                        setListModalSelectedId(null);
+                        await mutate();
+                    }}
                 >
                     <div
-                        className="w-full max-w-md max-h-[80vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white p-4 sm:p-6 shadow-lg"
+                        className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white p-4 sm:p-6 shadow-lg"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="flex items-start justify-between gap-2 mb-3">
-                            <div className="min-w-0">
-                                <Typography className="text-sm sm:text-base font-semibold text-gray-900">
-                                    Rides on {fmtDate(showMoreState.date.toISOString())}
-                                </Typography>
-                                <Typography className="text-xs sm:text-sm text-gray-500">
-                                    Tap a ride to open details.
-                                </Typography>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setShowMoreState(null)}
-                                className="ml-2 text-gray-400 hover:text-gray-600"
-                                aria-label="Close"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-2">
-                            {showMoreState.events.map((ev) => {
-                                const r =
-                                    ev.resource.kind === "ride"
-                                        ? ev.resource.ride
-                                        : null;
-                                if (!r) return null;
-
-                                return (
+                        {/* LIST MODE */}
+                        {isListMode && (
+                            <>
+                                <div className="flex items-start justify-between gap-2 mb-3">
+                                    <div className="min-w-0">
+                                        <Typography className="text-sm sm:text-base font-semibold text-gray-900">
+                                            {listModal.title}
+                                        </Typography>
+                                        <Typography className="text-xs sm:text-sm text-gray-500">
+                                            Choose a ride to see details.
+                                        </Typography>
+                                    </div>
                                     <button
-                                        key={String(r._id)}
                                         type="button"
-                                        onClick={() => {
-                                            setSelectedRide(r);
-                                            setShowMoreState(null);
+                                        onClick={async () => {
+                                            setListModal(null);
+                                            setListModalSelectedId(null);
+                                            await mutate();
                                         }}
-                                        className="w-full text-left rounded-lg border border-gray-200 bg-white px-3 py-2 hover:bg-gray-50"
+                                        className="ml-2 text-gray-400 hover:text-gray-600"
+                                        aria-label="Close"
                                     >
-                                        <div className="flex items-start justify-between gap-2">
-                                            <div className="min-w-0">
-                                                <div className="text-xs font-semibold text-gray-900 truncate">
-                                                    {fmtTime(r.datetime)} · {r.from} → {r.to}
-                                                </div>
-                                                <div className="mt-0.5 text-[11px] text-gray-600 truncate">
-                                                    {r.distance ? km(r.distance) : ""}{" "}
-                                                    {mins((r as any).durationMinutes)
-                                                        ? `• ${mins((r as any).durationMinutes)}`
-                                                        : ""}
-                                                </div>
-                                            </div>
-                                            <span
-                                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${getPillStatusColor(
-                                                    r.status,
-                                                )}`}
-                                            >
-                        <span
-                            className={`mr-1 h-1.5 w-1.5 rounded-full ${getStatusDotColor(
-                                r.status,
-                            )}`}
-                        />
-                        <span className="capitalize">
-                          {r.status.replace(/_/g, " ")}
-                        </span>
-                      </span>
-                                        </div>
+                                        <X className="w-5 h-5" />
                                     </button>
-                                );
-                            })}
-                        </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    {listModal.rides.map((r) => {
+                                        const id = String(r._id);
+                                        return (
+                                            <button
+                                                key={id}
+                                                type="button"
+                                                onClick={() => setListModalSelectedId(id)}
+                                                className="w-full text-left rounded-lg border border-gray-200 bg-white px-3 py-2 hover:bg-gray-50"
+                                            >
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className="min-w-0">
+                                                        <div className="text-xs font-semibold text-gray-900 truncate">
+                                                            {fmtTime(r.datetime)} · {r.from} → {r.to}
+                                                        </div>
+                                                        <div className="mt-0.5 text-[11px] text-gray-600 truncate">
+                                                            {r.distance ? km(r.distance) : ""}{" "}
+                                                            {mins((r as any).durationMinutes)
+                                                                ? `• ${mins((r as any).durationMinutes)}`
+                                                                : ""}
+                                                        </div>
+                                                    </div>
+                                                    <span
+                                                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${getPillStatusColor(
+                                                            r.status,
+                                                        )}`}
+                                                    >
+                            <span
+                                className={`mr-1 h-1.5 w-1.5 rounded-full ${getStatusDotColor(
+                                    r.status,
+                                )}`}
+                            />
+                            <span className="capitalize">
+                              {r.status.replace(/_/g, " ")}
+                            </span>
+                          </span>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </>
+                        )}
+
+                        {/* DETAILS MODE (inside same modal, with back button) */}
+                        {!isListMode && focusedListRide && (
+                            <>
+                                <div className="flex items-start justify-between gap-2 mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setListModalSelectedId(null)}
+                                            className="inline-flex items-center rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+                                        >
+                                            <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                                            Back to list
+                                        </button>
+                                        <div className="min-w-0">
+                                            <Typography className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                                                {focusedListRide.from} → {focusedListRide.to}
+                                            </Typography>
+                                            <Typography className="text-xs sm:text-sm text-gray-500 truncate">
+                                                {fmtDate(focusedListRide.datetime)} •{" "}
+                                                {fmtTime(focusedListRide.datetime)}
+                                            </Typography>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            setListModal(null);
+                                            setListModalSelectedId(null);
+                                            await mutate();
+                                        }}
+                                        className="ml-2 text-gray-400 hover:text-gray-600"
+                                        aria-label="Close"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                <div
+                                    className={`mb-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getPillStatusColor(
+                                        focusedListRide.status,
+                                    )}`}
+                                >
+                  <span
+                      className={`mr-1 h-2 w-2 rounded-full ${getStatusDotColor(
+                          focusedListRide.status,
+                      )}`}
+                  />
+                                    <span className="capitalize">
+                    {focusedListRide.status.replace(/_/g, " ")}
+                  </span>
+                                </div>
+
+                                <div className="overflow-x-auto">
+                                    <RideSummaryCard
+                                        ride={focusedListRide}
+                                        onDriverAssigned={(driverUserId) =>
+                                            handleDriverAssigned(focusedListRide._id, driverUserId)
+                                        }
+                                        onStatusChanged={handleRideStatusChanged}
+                                    />
+                                </div>
+
+                                <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                                    <Link
+                                        href={`/rides/${focusedListRide._id}`}
+                                        className="w-full sm:w-auto"
+                                    >
+                                        <Button size="sm" className="w-full">
+                                            Open full ride
+                                        </Button>
+                                    </Link>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full sm:w-auto"
+                                        onClick={() => setListModalSelectedId(null)}
+                                    >
+                                        Back to list
+                                    </Button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
 
-            {/* Ride preview modal */}
+            {/* Single ride preview (direct from calendar cell) */}
             {selectedRide && (
                 <div
                     className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
-                    onClick={() => setSelectedRide(null)}
+                    onClick={async () => {
+                        setSelectedRide(null);
+                        await mutate();
+                    }}
                 >
                     <div
                         className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white p-4 sm:p-6 shadow-lg"
@@ -623,7 +902,10 @@ export default function CalendarPage() {
                             </div>
                             <button
                                 type="button"
-                                onClick={() => setSelectedRide(null)}
+                                onClick={async () => {
+                                    setSelectedRide(null);
+                                    await mutate();
+                                }}
                                 className="ml-2 text-gray-400 hover:text-gray-600"
                                 aria-label="Close"
                             >
@@ -652,6 +934,7 @@ export default function CalendarPage() {
                                 onDriverAssigned={(driverUserId) =>
                                     handleDriverAssigned(selectedRide._id, driverUserId)
                                 }
+                                onStatusChanged={handleRideStatusChanged}
                             />
                         </div>
 
@@ -668,7 +951,10 @@ export default function CalendarPage() {
                                 variant="outline"
                                 size="sm"
                                 className="w-full sm:w-auto"
-                                onClick={() => setSelectedRide(null)}
+                                onClick={async () => {
+                                    setSelectedRide(null);
+                                    await mutate();
+                                }}
                             >
                                 Close
                             </Button>
