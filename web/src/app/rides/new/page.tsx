@@ -13,9 +13,10 @@ import { PlaceHit } from "@/stores/geocode";
 import { getRoute } from "@/stores/routes";
 import { currentHourTimeInput, todayDateInput } from "@/services/datetime";
 import { VehicleType } from "@/types/driver-details";
-import { RideStatus, RideType } from "@/types/ride";
+import { RideType } from "@/types/ride";
 import { Field, FieldLabel, FieldError, inputClass } from "@/components/ui/commmon";
 import {useAuthStore} from "@/stores";
+import {RideStatus} from "@/types/rideStatus";
 
 /* ------------------------------- Types ------------------------------- */
 
