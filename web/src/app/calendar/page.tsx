@@ -1,22 +1,47 @@
 "use client";
 
-import {useCallback, useMemo, useState} from "react";
-import { Calendar as RBCalendar, dateFnsLocalizer, View, Event as RBCEvent } from "react-big-calendar";
-import { format, parse, startOfWeek, getDay, addMinutes, addDays } from "date-fns";
-import {enGB} from "date-fns/locale/en-GB";
+import { useCallback, useMemo, useState } from "react";
+import {
+    Calendar as RBCalendar,
+    dateFnsLocalizer,
+    View,
+    Event as RBCEvent,
+} from "react-big-calendar";
+import {
+    format,
+    parse,
+    startOfWeek,
+    getDay,
+    addMinutes,
+    addDays,
+    startOfDay,
+} from "date-fns";
+import { enGB } from "date-fns/locale/en-GB";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import {CalendarDays, CalendarIcon, ChevronLeft, ChevronRight, Clock, Loader2, MapPin, User, X} from "lucide-react";
-import { useAuthStore } from "@/stores";
-import { useRidesInfinite } from "@/stores/rides";
-import {Ride} from "@/types";
+import {
+    CalendarDays,
+    Calendar as CalendarIcon,
+    ChevronLeft,
+    ChevronRight,
+    Loader2,
+    X,
+} from "lucide-react";
 import Link from "next/link";
-import { fmtDate, fmtTime, money, km, mins } from "@/services/convertors";
+
+import { useRidesInfinite } from "@/stores/rides";
+import { Ride } from "@/types";
+import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
 import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
-import {mutate} from "swr";
-import {getPillStatusColor, getStatusColors, getStatusDotColor} from "@/types/rideStatus";
+import {
+    type RideStatus,
+    getStatusColors,
+    getStatusDotColor,
+    getPillStatusColor,
+    getStatusIcon,
+} from "@/types/rideStatus";
 
 // ---------- react-big-calendar localizer ----------
 
@@ -32,103 +57,245 @@ const localizer = dateFnsLocalizer({
     locales,
 });
 
+// ---------- Types ----------
+
+type DayBuckets = {
+    total: number;
+    unassigned: number;
+    inProgress: number;
+    completed: number;
+};
+
+type CalendarEventResource =
+    | { kind: "ride"; ride: Ride }
+    | { kind: "analytics"; buckets: DayBuckets };
+
+type CalendarEvent = RBCEvent & {
+    resource: CalendarEventResource;
+};
+
 // ---------- Helpers ----------
-
-type CalendarEvent = {
-    id: string;
-    title: string;
-    start: Date;
-    end: Date;
-    ride: Ride;
-};
-
-type RideEvent = RBCEvent & {
-    resource: Ride;
-};
 
 function formatRangeLabel(date: Date, view: View): string {
     if (view === "month") {
-        // e.g. "November 2025"
         return format(date, "MMMM yyyy");
     }
 
     if (view === "week") {
-        // week starts Monday (to match your localizer)
         const start = startOfWeek(date, { weekStartsOn: 1 });
         const end = addDays(start, 6);
 
-        // If same month: "10–16 Nov 2025"
         if (start.getMonth() === end.getMonth()) {
             return `${format(start, "d")}–${format(end, "d MMM yyyy")}`;
         }
-        // If spanning months: "30 Sep – 6 Oct 2025"
         return `${format(start, "d MMM")} – ${format(end, "d MMM yyyy")}`;
     }
 
-    // "day" (and any other) → "14 Nov 2025"
     return format(date, "d MMM yyyy");
 }
 
-export default function DriverCalendarPage() {
-    const { user } = useAuthStore();
-    const currentUserId = user?._id || (user as any)?.id || "";
+// text in empty top-left (time gutter header)
+const TimeGutterHeader = () => (
+    <div className="px-1 text-[9px] sm:text-[10px] leading-tight text-gray-500">
+        Daily stats
+    </div>
+);
 
+// One renderer for ALL events (rides + analytics)
+const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
+    const e = event as CalendarEvent;
+    const res = e.resource;
+
+    if (!res) return null;
+
+    if (res.kind === "analytics") {
+        const { total, unassigned, inProgress, completed } = res.buckets;
+        if (!total) return null;
+
+        // This will appear in the all-day row (because allDay: true)
+        return (
+            <div className="flex h-full flex-col items-center justify-center py-0.5">
+        <span className="text-[9px] sm:text-[10px] font-medium text-gray-600">
+          {total} ride{total > 1 ? "s" : ""}
+        </span>
+                <div className="mt-0.5 flex items-center gap-1.5">
+                    {unassigned > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-amber-800">
+              <span className="h-2 w-2 rounded-full bg-amber-500" />
+                            {unassigned}
+            </span>
+                    )}
+                    {inProgress > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-blue-800">
+              <span className="h-2 w-2 rounded-full bg-blue-500" />
+                            {inProgress}
+            </span>
+                    )}
+                    {completed > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-emerald-800">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                            {completed}
+            </span>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // Ride event
+    if (res.kind === "ride") {
+        const r = res.ride;
+        const Icon = getStatusIcon(r.status as RideStatus);
+        const hasAmount = !!r.payment?.amountCents;
+
+        return (
+            <div className="flex items-start gap-1.5 text-[10px] sm:text-xs leading-snug">
+                <div className="mt-0.5 shrink-0">
+                    <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <div className="truncate font-semibold">
+                        {fmtTime(r.datetime)} · {r.from} → {r.to}
+                    </div>
+                    <div className="truncate">
+                        {hasAmount ? money(r.payment!.amountCents) : km(r.distance || 0)}{" "}
+                        {mins((r as any).durationMinutes)
+                            ? `• ${mins((r as any).durationMinutes)}`
+                            : ""}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return null;
+};
+
+export default function CalendarPage() {
     const [view, setView] = useState<View>("week");
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
     const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
 
-    // Fetch LOTS of rides and filter client-side by creator/assigned
-    const { items: allRides, isLoading, mutate } = useRidesInfinite({}, 100);
+    const { items: allRides, isLoading, mutate } = useRidesInfinite({}, 200);
 
-    const eventPropGetter = (event: RideEvent) => {
-        const ride = event.ride;
-        const { bg, border, text } = getStatusColors(ride?.status);
-        return {
-            style: {
-                backgroundColor: bg,
-                borderColor: border,
-                color: text,
-                borderRadius: "4px",
-                borderWidth: "1px",
-                fontSize: "0.75rem",
-                padding: "2px 4px",
-            },
-        };
-    };
+    // Bucket per day for analytics
+    const rideBucketsByDay = useMemo(() => {
+        const map = new Map<string, DayBuckets>();
 
-    const events: CalendarEvent[] = useMemo(
-        () =>
-            allRides.map((ride) => {
-                const start = new Date(ride.datetime);
-                const end = addMinutes(start, 60);
-                return {
-                    id: String(ride._id),
-                    title: `${ride.from} → ${ride.to}`,
-                    start,
-                    end,
-                    ride,
+        for (const ride of allRides) {
+            const key = format(new Date(ride.datetime), "yyyy-MM-dd");
+            const curr =
+                map.get(key) || {
+                    total: 0,
+                    unassigned: 0,
+                    inProgress: 0,
+                    completed: 0,
                 };
-            }),
-        [allRides]
-    );
+
+            curr.total += 1;
+
+            if (ride.status === "completed") {
+                curr.completed += 1;
+            } else if (ride.status === "unassigned") {
+                curr.unassigned += 1;
+            } else {
+                curr.inProgress += 1;
+            }
+
+            map.set(key, curr);
+        }
+
+        return map;
+    }, [allRides]);
+
+    // Build events: rides (timed) + analytics (all-day) so stats appear in rbc-allday-cell
+    const events: CalendarEvent[] = useMemo(() => {
+        const rideEvents: CalendarEvent[] = allRides.map((ride) => {
+            const start = new Date(ride.datetime);
+            const end = addMinutes(start, 60);
+
+            return {
+                id: String(ride._id),
+                title: `${ride.from} → ${ride.to}`,
+                start,
+                end,
+                allDay: false,
+                resource: { kind: "ride", ride },
+            };
+        });
+
+        const analyticsEvents: CalendarEvent[] = Array.from(
+            rideBucketsByDay.entries(),
+        ).map(([key, buckets]) => {
+            const dayStart = startOfDay(new Date(`${key}T00:00:00`));
+
+            return {
+                id: `analytics-${key}`,
+                title: "",
+                start: dayStart,
+                end: dayStart,
+                allDay: true,
+                resource: { kind: "analytics", buckets },
+            };
+        });
+
+        return [...rideEvents, ...analyticsEvents];
+    }, [allRides, rideBucketsByDay]);
+
+    // style events
+    const eventPropGetter = (event: RBCEvent) => {
+        const e = event as CalendarEvent;
+        const res = e.resource;
+
+        if (res?.kind === "analytics") {
+            // let analytics be “labels” in all-day row, not colored blocks
+            return {
+                style: {
+                    backgroundColor: "transparent",
+                    border: "none",
+                    boxShadow: "none",
+                    padding: 0,
+                },
+            };
+        }
+
+        if (res?.kind === "ride") {
+            const ride = res.ride;
+            const { bg, border, text } = getStatusColors(ride.status as RideStatus);
+
+            return {
+                style: {
+                    backgroundColor: bg,
+                    borderColor: border,
+                    color: text,
+                    borderRadius: "6px",
+                    borderWidth: "1px",
+                    fontSize: "0.75rem",
+                    padding: "2px 4px",
+                },
+            };
+        }
+
+        return {};
+    };
 
     const handleDriverAssigned = useCallback(
         async (rideId: string, driverUserId: string) => {
-            // update the ride shown in the preview
             setSelectedRide((prev) => {
                 if (!prev || prev._id !== rideId) return prev;
                 return {
                     ...prev,
                     assignedDriverId: driverUserId,
-                    // status usually becomes "assigned" from "unassigned"
-                    status: prev.status === "unassigned" ? "assigned" : prev.status,
+                    status:
+                        prev.status === "unassigned"
+                            ? ("assigned" as RideStatus)
+                            : prev.status,
                 };
             });
 
-            // refresh the underlying list used by the calendar
             await mutate();
         },
-        [mutate]
+        [mutate],
     );
 
     const onNavigate = (date: Date) => {
@@ -139,119 +306,131 @@ export default function DriverCalendarPage() {
         setView(nextView);
     };
 
+    const goToPrevious = () => {
+        if (view === "month") {
+            onNavigate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+        } else if (view === "week") {
+            onNavigate(addDays(currentDate, -7));
+        } else {
+            onNavigate(addDays(currentDate, -1));
+        }
+    };
+
+    const goToNext = () => {
+        if (view === "month") {
+            onNavigate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+        } else if (view === "week") {
+            onNavigate(addDays(currentDate, 7));
+        } else {
+            onNavigate(addDays(currentDate, 1));
+        }
+    };
+
+    const rangeLabel = formatRangeLabel(currentDate, view);
+
     return (
         <ProtectedLayout>
             <Container className="px-3 sm:px-6 lg:px-8">
                 <div className="space-y-4 sm:space-y-6 pb-4 sm:pb-8">
                     {/* Header + controls */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+                    <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        {/* Title */}
                         <div className="flex items-start gap-2">
                             <div className="mt-0.5 sm:mt-1">
                                 <CalendarDays className="w-5 h-5 text-indigo-600" />
                             </div>
                             <div className="min-w-0">
-                                <Typography
-                                    variant="h1"
-                                    className="text-lg sm:text-2xl font-bold text-gray-900 truncate"
-                                >
-                                    My Calendar
+                                <Typography className="text-lg sm:text-2xl font-bold text-gray-900 truncate">
+                                    Calendar
                                 </Typography>
                                 <Typography className="text-xs sm:text-sm text-gray-600">
-                                    Rides you created or are assigned to, in a calendar view.
+                                    Rides schedule with daily stats and quick preview.
                                 </Typography>
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                            <div className="flex items-center gap-2">
-                                <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-2 py-1 text-xs sm:text-sm">
-                                    <CalendarIcon className="w-4 h-4 text-gray-500" />
-                                    <span>{formatRangeLabel(currentDate, view)}</span>
-                                </div>
-                                {isLoading && (
-                                    <div className="inline-flex items-center gap-1 text-xs text-gray-500">
-                                        <Loader2 className="w-3 h-3 animate-spin" /> Loading rides…
-                                    </div>
-                                )}
-                            </div>
-                            {/* Date navigation */}
-                            <div className="inline-flex items-center rounded-lg border border-gray-200 bg-white">
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        onNavigate(
-                                            view === "month"
-                                                ? new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
-                                                : view === "week"
-                                                    ? new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 7)
-                                                    : new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() - 1)
-                                        )
-                                    }
-                                    className="px-2 py-1.5 text-gray-600 hover:bg-gray-50"
-                                    aria-label="Previous"
+                        {/* Controls – centered on mobile, right-aligned desktop */}
+                        <div className="w-full sm:w-auto flex flex-col gap-2">
+                            {/* Prev / range / Next / Today */}
+                            <div className="flex flex-wrap justify-center sm:justify-end gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={goToPrevious}
+                                    leftIcon={<ChevronLeft className="w-4 h-4" />}
                                 >
-                                    <ChevronLeft className="w-4 h-4" />
-                                </button>
-                                <button
-                                    type="button"
+                                    Previous
+                                </Button>
+
+                                <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs sm:text-sm">
+                                    <CalendarDays className="w-4 h-4 text-gray-500" />
+                                    <span className="font-medium text-gray-800">
+                    {rangeLabel}
+                  </span>
+                                    {isLoading && (
+                                        <span className="inline-flex items-center gap-1 text-[11px] text-gray-500">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Loading…
+                    </span>
+                                    )}
+                                </div>
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={goToNext}
+                                    rightIcon={<ChevronRight className="w-4 h-4" />}
+                                >
+                                    Next
+                                </Button>
+
+                                <Button
+                                    variant="solid"
+                                    size="sm"
+                                    leftIcon={<CalendarIcon className="w-4 h-4" />}
                                     onClick={() => onNavigate(new Date())}
-                                    className="px-3 py-1.5 text-xs sm:text-sm font-medium text-gray-700 hover:bg-gray-50"
                                 >
                                     Today
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        onNavigate(
-                                            view === "month"
-                                                ? new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
-                                                : view === "week"
-                                                    ? new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 7)
-                                                    : new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1)
-                                        )
-                                    }
-                                    className="px-2 py-1.5 text-gray-600 hover:bg-gray-50"
-                                    aria-label="Next"
-                                >
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
+                                </Button>
                             </div>
 
-                            {/* View switcher */}
-                            <div className="inline-flex rounded-lg border border-gray-200 bg-white text-xs sm:text-sm">
-                                <button
-                                    type="button"
-                                    onClick={() => onViewChange("day")}
-                                    className={`px-2 sm:px-3 py-1.5 rounded-l-lg ${
-                                        view === "day"
-                                            ? "bg-indigo-50 text-indigo-700 border-r border-indigo-100"
-                                            : "text-gray-600 hover:bg-gray-50 border-r border-gray-200"
-                                    }`}
-                                >
-                                    Day
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => onViewChange("week")}
-                                    className={`px-2 sm:px-3 py-1.5 ${
-                                        view === "week"
-                                            ? "bg-indigo-50 text-indigo-700 border-x border-indigo-100"
-                                            : "text-gray-600 hover:bg-gray-50 border-x border-gray-200"
-                                    }`}
-                                >
-                                    Week
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => onViewChange("month")}
-                                    className={`px-2 sm:px-3 py-1.5 rounded-r-lg ${
-                                        view === "month"
-                                            ? "bg-indigo-50 text-indigo-700"
-                                            : "text-gray-600 hover:bg-gray-50"
-                                    }`}
-                                >
-                                    Month
-                                </button>
+                            {/* View switcher – full-width segmented on mobile */}
+                            <div className="flex justify-center sm:justify-end">
+                                <div className="inline-flex w-full max-w-xs sm:max-w-none sm:w-auto rounded-lg border border-gray-200 bg-white text-xs sm:text-sm">
+                                    <button
+                                        type="button"
+                                        onClick={() => onViewChange("day")}
+                                        className={`flex-1 px-3 py-1.5 rounded-l-lg ${
+                                            view === "day"
+                                                ? "bg-indigo-50 text-indigo-700 border-r border-indigo-100"
+                                                : "border-r border-gray-200 text-gray-600 hover:bg-gray-50"
+                                        }`}
+                                    >
+                                        Day
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => onViewChange("week")}
+                                        className={`flex-1 px-3 py-1.5 ${
+                                            view === "week"
+                                                ? "bg-indigo-50 text-indigo-700 border-x border-indigo-100"
+                                                : "border-x border-gray-200 text-gray-600 hover:bg-gray-50"
+                                        }`}
+                                    >
+                                        Week
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => onViewChange("month")}
+                                        className={`flex-1 px-3 py-1.5 rounded-r-lg ${
+                                            view === "month"
+                                                ? "bg-indigo-50 text-indigo-700"
+                                                : "text-gray-600 hover:bg-gray-50"
+                                        }`}
+                                    >
+                                        Month
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -272,20 +451,16 @@ export default function DriverCalendarPage() {
                                     toolbar={false}
                                     popup
                                     selectable={false}
-                                    onSelectEvent={(event) => setSelectedRide(event.ride)}
+                                    onSelectEvent={(event) => {
+                                        const e = event as CalendarEvent;
+                                        if (e.resource.kind === "ride") {
+                                            setSelectedRide(e.resource.ride);
+                                        }
+                                    }}
                                     eventPropGetter={eventPropGetter}
                                     components={{
-                                        event: ({ event }) => {
-                                            const r = (event as CalendarEvent).ride;
-                                            return (
-                                                <div className="flex flex-col text-[10px] sm:text-xs leading-tight">
-                                                    <span className="font-semibold truncate">{r.from} → {r.to}</span>
-                                                    <span className="truncate">
-                            {fmtTime(r.datetime)} • {r.payment?.amountCents ? money(r.payment.amountCents) : ""}
-                          </span>
-                                                </div>
-                                            );
-                                        },
+                                        event: CalendarEventRenderer,
+                                        timeGutterHeader: TimeGutterHeader,
                                     }}
                                 />
                             </div>
@@ -293,13 +468,16 @@ export default function DriverCalendarPage() {
                             {/* Legend */}
                             <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-gray-600">
                                 <div className="inline-flex items-center gap-1">
-                                    <span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Unassigned
+                                    <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />{" "}
+                                    Unassigned
                                 </div>
                                 <div className="inline-flex items-center gap-1">
-                                    <span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> Assigned
+                                    <span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> In
+                                    progress
                                 </div>
                                 <div className="inline-flex items-center gap-1">
-                                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> Completed
+                                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />{" "}
+                                    Completed
                                 </div>
                             </div>
                         </CardBody>
@@ -307,15 +485,14 @@ export default function DriverCalendarPage() {
                 </div>
             </Container>
 
-            {/* Mobile-friendly ride preview modal */}
+            {/* Ride preview modal */}
             {selectedRide && (
                 <div
-                    className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40"
+                    className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center"
                     onClick={() => setSelectedRide(null)}
                 >
                     <div
-                        className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-lg p-4 sm:p-6
-                       max-h-[90vh] overflow-y-auto"
+                        className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white p-4 sm:p-6 shadow-lg"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
@@ -325,7 +502,8 @@ export default function DriverCalendarPage() {
                                     {selectedRide.from} → {selectedRide.to}
                                 </Typography>
                                 <div className="text-xs sm:text-sm text-gray-500">
-                                    {fmtDate(selectedRide.datetime)} • {fmtTime(selectedRide.datetime)}
+                                    {fmtDate(selectedRide.datetime)} •{" "}
+                                    {fmtTime(selectedRide.datetime)}
                                 </div>
                             </div>
                             <button
@@ -341,24 +519,35 @@ export default function DriverCalendarPage() {
                         {/* Status pill */}
                         <div
                             className={`mb-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getPillStatusColor(
-                                selectedRide.status
+                                selectedRide.status,
                             )}`}
                         >
-                            <span className={`mr-1 h-2 w-2 rounded-full ${getStatusDotColor(selectedRide.status)}`} />
-                            <span className="capitalize">{selectedRide.status.replace(/_/g, " ")}</span>
+              <span
+                  className={`mr-1 h-2 w-2 rounded-full ${getStatusDotColor(
+                      selectedRide.status,
+                  )}`}
+              />
+                            <span className="capitalize">
+                {selectedRide.status.replace(/_/g, " ")}
+              </span>
                         </div>
 
-                        {/* Main info */}
-                        <RideSummaryCard
-                            ride={selectedRide}
-                            onDriverAssigned={(driverUserId) =>
-                                handleDriverAssigned(selectedRide._id, driverUserId)
-                            }
-                        />
+                        {/* Card with stepper inside; allow horizontal scroll */}
+                        <div className="mt-2 sm:mt-3 overflow-x-auto">
+                            <RideSummaryCard
+                                ride={selectedRide}
+                                onDriverAssigned={(driverUserId) =>
+                                    handleDriverAssigned(selectedRide._id, driverUserId)
+                                }
+                            />
+                        </div>
 
                         {/* Actions */}
                         <div className="mt-4 flex flex-col sm:flex-row gap-2">
-                            <Link href={`/rides/${selectedRide._id}`} className="w-full sm:w-auto">
+                            <Link
+                                href={`/rides/${selectedRide._id}`}
+                                className="w-full sm:w-auto"
+                            >
                                 <Button size="sm" className="w-full">
                                     Open ride
                                 </Button>

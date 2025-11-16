@@ -50,12 +50,10 @@ export default function RideStatusStepper({
             <div
                 ref={containerRef}
                 className="
-          flex items-center gap-2
-          overflow-x-auto no-scrollbar
-          sm:overflow-visible sm:justify-between
-          py-1
-        "
-            >
+                    flex items-center gap-2
+                    overflow-x-auto no-scrollbar
+                    justify-start sm:justify-between
+                    py-1">
                 {STATUS_FLOW.map((status, idx) => {
                     const isCompleted = currentIndex > idx;
                     const isCurrent = currentIndex === idx;
