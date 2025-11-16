@@ -96,7 +96,12 @@ export default function RidesPage() {
                             <RideSummaryCard
                                 key={ride._id}
                                 ride={ride}
+                                variant="accordion"
+                                defaultExpanded={false}
                                 onDriverAssigned={() => {
+                                    mutate();
+                                }}
+                                onStatusChanged={() => {
                                     mutate();
                                 }}
                             />
