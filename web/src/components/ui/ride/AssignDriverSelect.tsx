@@ -21,7 +21,7 @@ type DriverOption = {
     helper?: string;
 };
 
-export function AssignDriverSelect({
+export default function AssignDriverSelect({
                                        rideId,
                                        currentDriverId,
                                        filters,

@@ -1,4 +1,3 @@
-// app/rides/[id]/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -9,9 +8,7 @@ import {
     ArrowLeft,
     Calendar,
     Clock,
-    Copy,
     DollarSign,
-    Link2,
     MapPin,
     Navigation,
     PhoneIcon,
@@ -27,32 +24,25 @@ import {
 import Link from "next/link";
 
 import LeafletMap from "@/components/ui/maps/LeafletMap";
-import {Ride, RideCreatorUser} from "@/types";
+import { Ride, RideCreatorUser } from "@/types";
 import { useRide, useSetRideStatus, useDeleteRide } from "@/stores/rides";
 import { useUser, useDriversPublicBatchMap } from "@/stores/users";
 import { getRoute } from "@/stores/routes";
 import { useAuthStore } from "@/stores";
-import { useGroups } from "@/stores/groups";
-import { useRideShares } from "@/stores/rideShares";
-
 import {
     useRideClaims,
     useApproveRideClaim,
     useRejectRideClaim,
 } from "@/stores/rideClaims";
-import {fmtDate, fmtTime, km, mins, money} from "@/services/convertors";
-import {AssignDriverSelect} from "@/components/ui/ride/AssignDriverSelect";
+import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
+import AssignDriverSelect from "@/components/ui/ride/AssignDriverSelect";
 import RideShareQuickPanel from "@/components/ui/ride/RideShareQuickPanel";
-
-const STATUS: Ride["status"][] = [
-    "unassigned",
-    "assigned",
-    "on_my_way",
-    "on_location",
-    "pob",
-    "clear",
-    "completed",
-];
+import RideStatusDropdown from "@/components/ui/ride/RideStatusDropdown";
+import {
+    getPillStatusColor,
+    getStatusLabel,
+    type RideStatus,
+} from "@/types/rideStatus";
 
 export default function RideDetailsPage() {
     const { user } = useAuthStore();
@@ -62,9 +52,17 @@ export default function RideDetailsPage() {
     const { data: ride, mutate } = useRide(id);
     const { setRideStatus, isSettingStatus } = useSetRideStatus(id);
     const { deleteRide, isDeleting } = useDeleteRide(id);
-    const canManage = user?.roles?.some((r) => r === "admin" || r === "dispatcher") || (ride?.creatorId as RideCreatorUser)?._id == user?._id;
-    // Shares (used for the existing shares card)
-    const { data: shares = [], isLoading: sharesLoading, mutate: mutateShares } = useRideShares(id);
+
+    const canManage =
+        user?.roles?.some((r) => r === "admin" || r === "dispatcher") ||
+        ((ride?.creatorId as RideCreatorUser)?._id == user?._id);
+
+    const isAssignedDriver =
+        ride?.assignedDriverId && user?._id
+            ? String(ride.assignedDriverId) === String(user._id)
+            : false;
+
+    const canChangeStatus = !!ride && (canManage || isAssignedDriver);
 
     // Assigned driver display
     const assignedDriverId = ride?.assignedDriverId;
@@ -82,44 +80,33 @@ export default function RideDetailsPage() {
 
     const queuedClaims = useMemo(
         () => claims.filter((c) => c.status === "queued"),
-        [claims]
+        [claims],
     );
     const approvedClaim = useMemo(
         () => claims.find((c) => c.status === "approved"),
-        [claims]
+        [claims],
     );
 
     // Resolve driver names/emails for all claims once
     const claimDriverIds = useMemo(
         () => Array.from(new Set(claims.map((c) => c.driverId))),
-        [claims]
+        [claims],
     );
-    const { map: claimDriversMap, isLoading: claimDriversLoading } =
-        useDriversPublicBatchMap(claimDriverIds);
-
-    // Groups (to show names inside shares ACL block)
-    const { data: groupsData } = useGroups({});
-    const groupNameById = useMemo(
-        () => new Map((groupsData?.items ?? []).map((g: any) => [String(g._id), g.name])),
-        [groupsData]
-    );
-
-    // Resolve share driver names (for existing "Ride Shares" card)
-    const allShareDriverIds = useMemo(
-        () =>
-            Array.from(
-                new Set((shares ?? []).flatMap((s: any) => (s?.driverIds ?? []).map((id: any) => String(id))))
-            ),
-        [shares]
-    );
-    const { map: shareDriversMap, isLoading: shareDriversLoading } =
-        useDriversPublicBatchMap(allShareDriverIds);
+    const {
+        map: claimDriversMap,
+        isLoading: claimDriversLoading,
+    } = useDriversPublicBatchMap(claimDriverIds);
 
     const [routeLine, setRouteLine] = useState<[number, number][]>([]);
     const [error, setError] = useState<string | null>(null);
 
     const hasA = !!ride?.fromLocation?.coordinates?.length;
     const hasB = !!ride?.toLocation?.coordinates?.length;
+
+    // Status derived values (safe even before ride is loaded)
+    const statusValue: RideStatus = (ride?.status as RideStatus) || "unassigned";
+    const statusLabel = getStatusLabel(statusValue);
+    const statusPillClasses = getPillStatusColor(statusValue);
 
     useEffect(() => {
         let cancelled = false;
@@ -139,13 +126,19 @@ export default function RideDetailsPage() {
         };
     }, [ride?.fromLocation, ride?.toLocation]);
 
-    const statusValue = ride?.status || "unassigned";
-    const header = useMemo(() => {
-        if (!ride) return "";
-        return `${ride.from} → ${ride.to}`;
-    }, [ride]);
+    if (!ride) {
+        return (
+            <ProtectedLayout>
+                <Container className="px-3 sm:px-6 lg:px-8">
+                    <div className="py-8 text-sm text-gray-600">Loading…</div>
+                </Container>
+            </ProtectedLayout>
+        );
+    }
 
-    async function onChangeStatus(next: Ride["status"]) {
+    const header = `${ride.from} → ${ride.to}`;
+
+    async function handleStatusChange(next: RideStatus) {
         const res = await setRideStatus({ status: next });
         if (res?.ok) await mutate();
     }
@@ -160,8 +153,7 @@ export default function RideDetailsPage() {
     async function onApproveClaim(claimId: string) {
         try {
             await approve(claimId);
-            // Refresh everything that can change: ride (assignment), claims list, shares
-            await Promise.all([mutate(), mutateClaims(), mutateShares()]);
+            await Promise.all([mutate(), mutateClaims()]);
         } catch (e: any) {
             setError(e?.message || "Failed to approve request");
         }
@@ -176,22 +168,12 @@ export default function RideDetailsPage() {
         }
     }
 
-    if (!ride) {
-        return (
-            <ProtectedLayout>
-                <Container className="px-3 sm:px-6 lg:px-8">
-                    <div className="py-8 text-sm text-gray-600">Loading…</div>
-                </Container>
-            </ProtectedLayout>
-        );
-    }
-
     return (
         <ProtectedLayout>
             <Container className="px-3 sm:px-6 lg:px-8">
                 <div className="space-y-4 sm:space-y-6">
-                    {/* Toolbar */}
-                    <div className="flex items-center justify-between gap-2">
+                    {/* Toolbar: back + title + colored status pill */}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-2 min-w-0">
                             <Button
                                 variant="outline"
@@ -208,37 +190,64 @@ export default function RideDetailsPage() {
                                 {header}
                             </Typography>
                         </div>
-                        {canManage && (
-                        <div className="flex items-center gap-2">
-                            <select
-                                value={statusValue}
-                                onChange={(e) => onChangeStatus(e.target.value as Ride["status"])}
-                                disabled={isSettingStatus}
-                                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            >
-                                {STATUS.map((s) => (
-                                    <option key={s} value={s}>
-                                        {s.replace(/_/g, " ")}
-                                    </option>
-                                ))}
-                            </select>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                leftIcon={<Trash2 className="w-4 h-4" />}
-                                onClick={onDelete}
-                                disabled={isDeleting}
-                            >
-                                Delete
-                            </Button>
-                            <Link href={`/rides/${id}/share`}>
-                                <Button variant="outline" size="sm" leftIcon={<Share2 className="w-4 h-4" />}>
-                                    Manage Shares
-                                </Button>
-                            </Link>
-                        </div>
+
+                        {canChangeStatus && (
+                            <div className="flex justify-start sm:justify-end">
+                <span
+                    className={[
+                        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
+                        statusPillClasses,
+                    ].join(" ")}
+                >
+                  <span className="mr-1 text-[10px] uppercase tracking-wide text-gray-600/80">
+                    Status
+                  </span>
+                  <span className="capitalize">{statusLabel}</span>
+                </span>
+                            </div>
                         )}
                     </div>
+
+                    {/* Status / actions card */}
+                    {canChangeStatus && (
+                        <Card variant="elevated">
+                            <CardBody className="p-4 sm:p-5">
+                                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                    <div>
+                                        <Typography className="text-sm font-semibold text-gray-900">
+                                            Ride status
+                                        </Typography>
+                                        <p className="mt-1 text-xs sm:text-sm text-gray-600 max-w-md">
+                                            Update ride progress as you move: assigned, on my way, on
+                                            location, passenger on board, clear, completed.
+                                        </p>
+                                    </div>
+
+                                    <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center">
+                                        <RideStatusDropdown
+                                            value={statusValue}
+                                            disabled={isSettingStatus}
+                                            onChange={handleStatusChange}
+                                            className="w-full sm:w-80"
+                                        />
+
+                                        {canManage && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                leftIcon={<Trash2 className="w-4 h-4" />}
+                                                onClick={onDelete}
+                                                disabled={isDeleting}
+                                                className="w-full sm:w-auto"
+                                            >
+                                                Delete ride
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            </CardBody>
+                        </Card>
+                    )}
 
                     {/* Summary */}
                     <Card variant="elevated">
@@ -295,23 +304,31 @@ export default function RideDetailsPage() {
                                     </div>
                                     <div className="flex items-center text-sm text-gray-700">
                                         <User className="w-4 h-4 mr-2 text-gray-400" />
-                                        <span className="font-medium mr-1">Assigned driver:</span>
+                                        <span className="font-medium mr-1">
+                      Assigned driver:
+                    </span>
                                         {ride.assignedDriverId ? (
                                             <Link
                                                 href={`/users/${ride.assignedDriverId}`}
                                                 className="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/20 hover:bg-indigo-100 transition-colors truncate"
                                             >
-                                                <span className="truncate">{driver?.name || "View driver"}</span>
+                        <span className="truncate">
+                          {driver?.name || "View driver"}
+                        </span>
                                                 {driver?.email ? (
-                                                    <span className="ml-1 text-gray-600/80"> • {driver.email}</span>
+                                                    <span className="ml-1 text-gray-600/80">
+                            {" "}
+                                                        • {driver.email}
+                          </span>
                                                 ) : null}
                                             </Link>
                                         ) : (
                                             "—"
                                         )}
                                     </div>
-                                    {ride.status === "unassigned" && (
-                                        <div>
+
+                                    {ride.status === "unassigned" && canManage && (
+                                        <div className="pt-1">
                                             <AssignDriverSelect
                                                 rideId={ride._id}
                                                 currentDriverId={ride.assignedDriverId || undefined}
@@ -326,13 +343,15 @@ export default function RideDetailsPage() {
                         </CardBody>
                     </Card>
 
-                    {/* ➕ Driver Requests (queue) — visible to dispatcher/admin */}
+                    {/* Driver Requests */}
                     {canManage && (
                         <Card variant="elevated">
                             <CardBody className="p-4 sm:p-6 space-y-3">
                                 <div className="flex items-center gap-2">
                                     <Users className="w-4 h-4 text-indigo-600" />
-                                    <Typography className="font-semibold text-gray-900">Driver Requests</Typography>
+                                    <Typography className="font-semibold text-gray-900">
+                                        Driver Requests
+                                    </Typography>
                                     {approvedClaim && (
                                         <span className="ml-auto inline-flex items-center rounded-full border px-2 py-0.5 text-xs bg-green-50 text-green-700 border-green-200">
                       <Check className="w-3.5 h-3.5 mr-1" />
@@ -343,15 +362,19 @@ export default function RideDetailsPage() {
 
                                 {claimsLoading ? (
                                     <div className="text-sm text-gray-600 flex items-center gap-2">
-                                        <Loader2 className="w-4 h-4 animate-spin" /> Loading requests…
+                                        <Loader2 className="w-4 h-4 animate-spin" /> Loading
+                                        requests…
                                     </div>
                                 ) : queuedClaims.length === 0 ? (
-                                    <div className="text-sm text-gray-600">No pending requests.</div>
+                                    <div className="text-sm text-gray-600">
+                                        No pending requests.
+                                    </div>
                                 ) : (
                                     <div className="space-y-2">
                                         {queuedClaims.map((c) => {
                                             const d = claimDriversMap[c.driverId];
-                                            const name = d?.name || `User ${c.driverId.slice(-6)}`;
+                                            const name =
+                                                d?.name || `User ${c.driverId.slice(-6)}`;
                                             const email = d?.email;
 
                                             return (
@@ -363,11 +386,16 @@ export default function RideDetailsPage() {
                                                         <UserIcon className="w-4 h-4 text-gray-500" />
                                                         <div className="min-w-0">
                                                             <div className="text-sm font-medium text-gray-900 truncate">
-                                                                <Link href={`/users/${c.driverId}`} className="hover:underline">
+                                                                <Link
+                                                                    href={`/users/${c.driverId}`}
+                                                                    className="hover:underline"
+                                                                >
                                                                     {name}
                                                                 </Link>
                                                             </div>
-                                                            <div className="text-xs text-gray-600 truncate">{email || "—"}</div>
+                                                            <div className="text-xs text-gray-600 truncate">
+                                                                {email || "—"}
+                                                            </div>
                                                         </div>
                                                     </div>
 
@@ -377,7 +405,11 @@ export default function RideDetailsPage() {
                                                             onClick={() => onApproveClaim(c.claimId)}
                                                             disabled={isApproving}
                                                             leftIcon={
-                                                                isApproving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />
+                                                                isApproving ? (
+                                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                                ) : (
+                                                                    <Check className="w-4 h-4" />
+                                                                )
                                                             }
                                                         >
                                                             Approve
@@ -388,7 +420,11 @@ export default function RideDetailsPage() {
                                                             onClick={() => onRejectClaim(c.claimId)}
                                                             disabled={isRejecting}
                                                             leftIcon={
-                                                                isRejecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <XIcon className="w-4 h-4" />
+                                                                isRejecting ? (
+                                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                                ) : (
+                                                                    <XIcon className="w-4 h-4" />
+                                                                )
                                                             }
                                                         >
                                                             Reject
@@ -401,152 +437,31 @@ export default function RideDetailsPage() {
                                 )}
 
                                 {claimDriversLoading && queuedClaims.length > 0 && (
-                                    <div className="text-xs text-gray-600">Loading driver info…</div>
+                                    <div className="text-xs text-gray-600">
+                                        Loading driver info…
+                                    </div>
                                 )}
 
                                 {error && (
-                                    <div className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">{error}</div>
+                                    <div className="rounded-lg border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+                                        {error}
+                                    </div>
                                 )}
                             </CardBody>
                         </Card>
                     )}
 
-                    {/* Shares (existing block) */}
+                    {/* Shares */}
                     {canManage && (
-                        <Card variant="elevated" className="mt-2">
+                        <Card variant="elevated">
                             <CardBody className="p-4 sm:p-6 space-y-3">
                                 <div className="flex items-center gap-2">
                                     <Share2 className="w-4 h-4 text-indigo-600" />
-                                    <Typography className="font-semibold text-gray-900">Ride Shares</Typography>
+                                    <Typography className="font-semibold text-gray-900">
+                                        Ride Shares
+                                    </Typography>
                                 </div>
-                                <RideShareQuickPanel
-                                    rideId={ride._id}
-                                    className="w-full"
-                                />
-                                {sharesLoading ? (
-                                    <div className="text-sm text-gray-600">Loading shares…</div>
-                                ) : shares?.length === 0 ? (
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-sm text-gray-600">No active shares.</div>
-                                        <Link href={`/rides/${id}/share`}>
-                                            <Button size="sm" leftIcon={<Share2 className="w-4 h-4" />}>
-                                                Create Share
-                                            </Button>
-                                        </Link>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {shares.map((s: any) => {
-                                            const groups = (s.groupIds ?? []).map((gid: any) => String(gid));
-                                            const drivers = (s.driverIds ?? []).map((uid: any) => String(uid));
-
-                                            return (
-                                                <div key={s.shareId} className="rounded-lg border p-3 space-y-2 bg-white">
-                                                    {/* Top row: basic meta */}
-                                                    <div className="flex flex-wrap items-center gap-2">
-                            <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs capitalize">
-                              {s.visibility}
-                            </span>
-                                                        {typeof s.maxClaims === "number" && (
-                                                            <span className="text-xs text-gray-600">Max claims: {s.maxClaims}</span>
-                                                        )}
-                                                        <span className="text-xs text-gray-600">
-                              Expires: {s.expiresAt ? new Date(s.expiresAt).toLocaleString() : "—"}
-                            </span>
-                                                        <span className="text-xs text-gray-600">Status: {s.status || "active"}</span>
-                                                    </div>
-
-                                                    {/* ACL: Groups */}
-                                                    {groups.length > 0 && (
-                                                        <div className="mt-1">
-                                                            <div className="flex items-center gap-1 text-xs text-gray-700 mb-1">
-                                                                <Users className="w-3.5 h-3.5 text-gray-500" />
-                                                                <span className="font-medium">Groups</span>
-                                                            </div>
-                                                            <div className="flex flex-wrap gap-2">
-                                                                {groups.map((gid) => (
-                                                                    <span
-                                                                        key={gid}
-                                                                        className="inline-flex items-center rounded-full border px-2.5 py-1 text-xs bg-white"
-                                                                        title={gid}
-                                                                    >
-                                    {groupNameById.get(gid) || `Group ${gid.slice(-6)}`}
-                                  </span>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* ACL: Drivers */}
-                                                    {drivers.length > 0 && (
-                                                        <div className="mt-1">
-                                                            <div className="flex items-center gap-1 text-xs text-gray-700 mb-1">
-                                                                <UserIcon className="w-3.5 h-3.5 text-gray-500" />
-                                                                <span className="font-medium">Drivers</span>
-                                                            </div>
-                                                            <div className="flex flex-wrap gap-2">
-                                                                {drivers.map((uid) => {
-                                                                    const d = shareDriversMap[uid];
-                                                                    const display = d?.name || `User ${uid.slice(-6)}`;
-                                                                    const secondary = d?.email || "";
-                                                                    return (
-                                                                        <span
-                                                                            key={uid}
-                                                                            className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs bg-white"
-                                                                            title={secondary || uid}
-                                                                        >
-                                      <Link
-                                          href={`/users/${uid}`}
-                                          className="hover:underline font-medium text-gray-900 truncate max-w-[12rem]"
-                                      >
-                                        {display}
-                                      </Link>
-                                                                            {secondary && (
-                                                                                <span className="text-gray-600 truncate max-w-[10rem]">• {secondary}</span>
-                                                                            )}
-                                    </span>
-                                                                    );
-                                                                })}
-                                                                {shareDriversLoading && (
-                                                                    <span className="text-xs text-gray-600">Loading drivers…</span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* URL (only if present) */}
-                                                    {s.url && (
-                                                        <div className="flex items-center gap-2 rounded-md border p-2">
-                                                            <Link2 className="w-4 h-4 text-gray-500 shrink-0" />
-                                                            <div className="truncate text-sm">{s.url}</div>
-                                                            <button
-                                                                type="button"
-                                                                className="ml-auto inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-gray-50"
-                                                                onClick={() => navigator.clipboard.writeText(s.url!)}
-                                                            >
-                                                                <Copy className="w-3.5 h-3.5" /> Copy
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-
-                                        {/* Footer CTA */}
-                                        <div className="pt-1">
-                                            <Link href={`/rides/${id}/share`}>
-                                                <Button variant="outline" size="sm">
-                                                    Manage Shares
-                                                </Button>
-                                            </Link>
-                                            <Link href={`/rides/${id}/share`}>
-                                                <Button size="sm" variant="outline" className="ml-2">
-                                                    Create Another Share
-                                                </Button>
-                                            </Link>
-                                        </div>
-                                    </div>
-                                )}
+                                <RideShareQuickPanel rideId={ride._id} className="w-full" />
                             </CardBody>
                         </Card>
                     )}
@@ -557,16 +472,28 @@ export default function RideDetailsPage() {
                             <CardBody className="p-3 sm:p-4">
                                 <LeafletMap
                                     heightClass="h-64 sm:h-80"
-                                    markerA={hasA ? (ride!.fromLocation!.coordinates as [number, number]) : undefined}
+                                    markerA={
+                                        hasA
+                                            ? (ride!.fromLocation!
+                                                .coordinates as [number, number])
+                                            : undefined
+                                    }
                                     markerALabel="A"
-                                    markerB={hasB ? (ride!.toLocation!.coordinates as [number, number]) : undefined}
+                                    markerB={
+                                        hasB
+                                            ? (ride!.toLocation!
+                                                .coordinates as [number, number])
+                                            : undefined
+                                    }
                                     markerBLabel="B"
                                     routeLine={routeLine}
                                     center={
                                         hasA
-                                            ? (ride!.fromLocation!.coordinates as [number, number])
+                                            ? (ride!.fromLocation!
+                                                .coordinates as [number, number])
                                             : hasB
-                                                ? (ride!.toLocation!.coordinates as [number, number])
+                                                ? (ride!.toLocation!
+                                                    .coordinates as [number, number])
                                                 : undefined
                                     }
                                 />
@@ -578,7 +505,9 @@ export default function RideDetailsPage() {
                     <Card variant="elevated">
                         <CardBody className="p-4 sm:p-6 space-y-4">
                             <div>
-                                <Typography className="text-sm font-medium text-gray-900 mb-1">Notes</Typography>
+                                <Typography className="text-sm font-medium text-gray-900 mb-1">
+                                    Notes
+                                </Typography>
                                 <div className="rounded-lg border border-gray-200 p-3 text-sm text-gray-700 min-h-[44px] bg-white">
                                     {ride.notes?.trim() || "—"}
                                 </div>
@@ -586,19 +515,27 @@ export default function RideDetailsPage() {
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
                                 <div className="rounded-lg border border-gray-200 p-3">
                                     <div className="text-gray-500">Payment Method</div>
-                                    <div className="font-medium text-gray-900">{ride.payment?.method || "—"}</div>
+                                    <div className="font-medium text-gray-900">
+                                        {ride.payment?.method || "—"}
+                                    </div>
                                 </div>
                                 <div className="rounded-lg border border-gray-200 p-3">
                                     <div className="text-gray-500">Paid</div>
-                                    <div className="font-medium text-gray-900">{ride.payment?.paid ? "Yes" : "No"}</div>
+                                    <div className="font-medium text-gray-900">
+                                        {ride.payment?.paid ? "Yes" : "No"}
+                                    </div>
                                 </div>
                                 <div className="rounded-lg border border-gray-200 p-3">
                                     <div className="text-gray-500">Driver Settled</div>
-                                    <div className="font-medium text-gray-900">{ride.payment?.driverPaid ? "Yes" : "No"}</div>
+                                    <div className="font-medium text-gray-900">
+                                        {ride.payment?.driverPaid ? "Yes" : "No"}
+                                    </div>
                                 </div>
                                 <div className="rounded-lg border border-gray-200 p-3">
                                     <div className="text-gray-500">Visibility</div>
-                                    <div className="font-medium text-gray-900">{ride.coveredVisible ? "Visible" : "Hidden"}</div>
+                                    <div className="font-medium text-gray-900">
+                                        {ride.coveredVisible ? "Visible" : "Hidden"}
+                                    </div>
                                 </div>
                             </div>
                         </CardBody>

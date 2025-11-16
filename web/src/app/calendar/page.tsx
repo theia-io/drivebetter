@@ -16,6 +16,7 @@ import Link from "next/link";
 import { fmtDate, fmtTime, money, km, mins } from "@/services/convertors";
 import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
 import {mutate} from "swr";
+import {getPillStatusColor, getStatusColors, getStatusDotColor} from "@/types/rideStatus";
 
 // ---------- react-big-calendar localizer ----------
 
@@ -41,76 +42,9 @@ type CalendarEvent = {
     ride: Ride;
 };
 
-function getPillStatusColor(status: string) {
-    switch (status) {
-        case "completed":
-            return "bg-emerald-100 text-emerald-800 border-emerald-200";
-        case "assigned":
-        case "on_my_way":
-        case "on_location":
-        case "pob":
-        case "clear":
-            return "bg-blue-100 text-blue-800 border-blue-200";
-        case "unassigned":
-            return "bg-amber-100 text-amber-800 border-amber-200";
-        default:
-            return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-}
-
-function statusDotColor(status: string) {
-    switch (status) {
-        case "completed":
-            return "bg-emerald-500";
-        case "assigned":
-        case "on_my_way":
-        case "on_location":
-        case "pob":
-        case "clear":
-            return "bg-blue-500";
-        case "unassigned":
-            return "bg-amber-500";
-        default:
-            return "bg-gray-400";
-    }
-}
-
 type RideEvent = RBCEvent & {
     resource: Ride;
 };
-
-function getStatusColors(status: string) {
-    switch (status) {
-        case "completed":
-            return {
-                bg: "#dcfce7",
-                border: "#86efac",
-                text: "#166534",
-            };
-        case "assigned":
-        case "on_my_way":
-        case "on_location":
-        case "pob":
-        case "clear":
-            return {
-                bg: "#dbeafe",
-                border: "#93c5fd",
-                text: "#1d4ed8",
-            };
-        case "unassigned":
-            return {
-                bg: "#fef9c3",
-                border: "#facc15",
-                text: "#854d0e",
-            };
-        default:
-            return {
-                bg: "#e5e7eb",
-                border: "#9ca3af",
-                text: "#111827",
-            };
-    }
-}
 
 function formatRangeLabel(date: Date, view: View): string {
     if (view === "month") {
@@ -410,7 +344,7 @@ export default function DriverCalendarPage() {
                                 selectedRide.status
                             )}`}
                         >
-                            <span className={`mr-1 h-2 w-2 rounded-full ${statusDotColor(selectedRide.status)}`} />
+                            <span className={`mr-1 h-2 w-2 rounded-full ${getStatusDotColor(selectedRide.status)}`} />
                             <span className="capitalize">{selectedRide.status.replace(/_/g, " ")}</span>
                         </div>
 

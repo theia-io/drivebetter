@@ -1,8 +1,8 @@
 import {VehicleType} from "@/types/driver-details";
 import {RideCreatorUser} from "@/types/user";
+import {RideStatus} from "@/types/rideStatus";
 
 export type RideType = "reservation" | "asap";
-export type RideStatus = "unassigned" | "assigned" | "on_my_way" | "on_location" | "pob" | "clear" | "completed";
 export type PaymentMethod = "cash" | "zelle" | "card" | "qr";
 
 export type GeoPoint = {

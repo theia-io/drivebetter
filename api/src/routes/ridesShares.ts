@@ -7,8 +7,6 @@ import Group from "../models/group.model";
 import {RideClaim} from "../models/rideClaim.model";
 
 const router = Router();
-const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
-const isObjectId = (v: any) => Types.ObjectId.isValid(String(v));
 
 const serializeShare = (s: any) => ({
     shareId: String(s._id),       // alias for UI compatibility
@@ -234,7 +232,9 @@ router.post(
  *       404: { description: Share not found }
  *       400: { description: Validation error }
  */
-router.patch("/:shareId([0-9a-fA-F]{24})", requireAuth, requireRole(["dispatcher", "admin"]), async (req, res) => {
+router.patch("/:shareId([0-9a-fA-F]{24})",
+    requireAuth,
+    requireRole(["driver", "dispatcher", "admin"]), async (req, res) => {
     const { shareId } = req.params;
     const share = await RideShare.findById(shareId);
     if (!share) return res.status(404).json({ error: "Share not found" });
