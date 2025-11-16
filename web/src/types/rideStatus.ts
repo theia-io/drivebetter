@@ -1,5 +1,7 @@
 // src/types/rideStatus.ts
 
+import {Car, Check, MapPin, Navigation, User, Users} from "lucide-react";
+
 export type RideStatus =
     | "unassigned"
     | "assigned"
@@ -8,6 +10,17 @@ export type RideStatus =
     | "pob"
     | "clear"
     | "completed";
+
+/** Canonical lifecycle order for all UI (stepper, analytics, etc.) */
+export const STATUS_FLOW: RideStatus[] = [
+    "unassigned",
+    "assigned",
+    "on_my_way",
+    "on_location",
+    "pob",
+    "clear",
+    "completed",
+];
 
 export type RideStatusColors = {
     bg: string;
@@ -20,6 +33,26 @@ export type RideStatusMeta = {
     label: string;
     description: string;
 };
+
+export function getStatusIcon(status: RideStatus) {
+    switch (status) {
+        case "unassigned":
+            return User;
+        case "assigned":
+            return Users;
+        case "on_my_way":
+            return Navigation;
+        case "on_location":
+            return MapPin;
+        case "pob":
+            return Car;
+        case "clear":
+        case "completed":
+            return Check;
+        default:
+            return User;
+    }
+}
 
 export const STATUS_OPTIONS: RideStatusMeta[] = [
     {

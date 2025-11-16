@@ -21,8 +21,9 @@ import { useAuthStore } from "@/stores";
 import AssignDriverSelect from "@/components/ui/ride/AssignDriverSelect";
 import RideShareQuickPanel from "@/components/ui/ride/RideShareQuickPanel";
 import RideStatusDropdown from "@/components/ui/ride/RideStatusDropdown";
+import RideStatusStepper from "@/components/ui/ride/RideStatusStepper";
+import { getStatusLabel, type RideStatus } from "@/types/rideStatus";
 import { useSetRideStatus } from "@/stores/rides";
-import {getPillStatusColor, getStatusLabel, RideStatus} from "@/types/rideStatus";
 
 type RideSummaryCardProps = {
     ride: Ride;
@@ -80,9 +81,8 @@ export default function RideSummaryCard({
 
     const statusValue: RideStatus = localStatus;
     const statusLabel = getStatusLabel(statusValue);
-    const statusPillClasses = getPillStatusColor(statusValue);
 
-    // IMPORTANT: use *localStatus* for UI logic (driver select visibility)
+    // use local status for UI logic (driver select visibility)
     const showAssign = isPrivileged && statusValue === "unassigned";
 
     // optimistic update: change local status immediately, then call API
@@ -94,23 +94,18 @@ export default function RideSummaryCard({
 
         try {
             await setRideStatus({ status: next });
-            // parent list / SWR can refetch later; local state already correct
         } catch {
-            // revert on failure if you want
             setLocalStatus(prev);
         }
     }
 
     return (
-        <Card
-            variant="elevated"
-            className="hover:shadow-lg transition-shadow"
-        >
+        <Card variant="elevated" className="hover:shadow-lg transition-shadow">
             <div className="p-3 sm:p-4">
                 <CardBody className="p-0 space-y-3 sm:space-y-4">
-                    {/* Header: stacked on mobile, row on larger screens */}
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        {/* Left: avatar + title + meta */}
+                    {/* Header – vertical stack, mobile friendly */}
+                    <div className="flex flex-col gap-3">
+                        {/* Title + avatar + meta */}
                         <div className="flex items-start gap-2 sm:gap-3 min-w-0">
                             <div className="w-9 h-9 sm:w-10 sm:h-10 bg-indigo-100 rounded-full flex items-center justify-center shrink-0">
                                 <User className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
@@ -121,24 +116,24 @@ export default function RideSummaryCard({
                                 </Typography>
 
                                 <div className="flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs text-gray-600">
-                                    <span className="inline-flex items-center gap-1">
-                                        <Clock className="w-3 h-3 text-gray-400" />
-                                        <span className="font-medium">
-                                            {rideDate} · {rideTime}
-                                        </span>
-                                    </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-gray-400" />
+                    <span className="font-medium">
+                      {rideDate} · {rideTime}
+                    </span>
+                  </span>
                                     {amountText && (
                                         <span className="inline-flex items-center gap-1">
-                                            <DollarSign className="w-3 h-3 text-gray-400" />
-                                            <span>{amountText}</span>
-                                        </span>
+                      <DollarSign className="w-3 h-3 text-gray-400" />
+                      <span>{amountText}</span>
+                    </span>
                                     )}
                                     <span className="inline-flex items-center gap-1">
-                                        <Calendar className="w-3 h-3 text-gray-400" />
-                                        <span className="uppercase tracking-wide text-[10px]">
-                                            {ride.type === "reservation" ? "RESERVATION" : "ASAP"}
-                                        </span>
-                                    </span>
+                    <Calendar className="w-3 h-3 text-gray-400" />
+                    <span className="uppercase tracking-wide text-[10px]">
+                      {ride.type === "reservation" ? "RESERVATION" : "ASAP"}
+                    </span>
+                  </span>
                                 </div>
 
                                 <div className="mt-0.5">
@@ -149,29 +144,28 @@ export default function RideSummaryCard({
                             </div>
                         </div>
 
-                        {/* Right: status block – full row on mobile, compact on larger screens */}
-                        <div
-                            className="w-full sm:w-auto"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            {canChangeStatus ? (
+                        {/* Progress stepper – lifecycle visualization */}
+                        <div className="mt-1">
+                            <RideStatusStepper value={statusValue} />
+                            <div className="mt-1 text-[11px] text-gray-600">
+                                Current: <span className="font-semibold">{statusLabel}</span>
+                            </div>
+                        </div>
+
+                        {/* Status control – full width row, mobile-friendly */}
+                        {canChangeStatus && (
+                            <div
+                                className="mt-1"
+                                onClick={(e) => e.stopPropagation()}
+                            >
                                 <RideStatusDropdown
                                     value={statusValue}
                                     disabled={isSettingStatus}
                                     onChange={handleStatusChange}
-                                    className="w-full sm:w-56"
+                                    className="w-full"
                                 />
-                            ) : (
-                                <span
-                                    className={[
-                                        "inline-flex items-center px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-medium border",
-                                        statusPillClasses,
-                                    ].join(" ")}
-                                >
-                                    <span className="capitalize">{statusLabel}</span>
-                                </span>
-                            )}
-                        </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Secondary info: stacked grid, 1 col on mobile */}
@@ -191,8 +185,8 @@ export default function RideSummaryCard({
                         <div className="flex items-center">
                             <Calendar className="w-3 h-3 mr-1.5 text-gray-400 shrink-0" />
                             <span className="truncate">
-                                {etaText ? `ETA: ${etaText}` : "ETA: —"}
-                            </span>
+                {etaText ? `ETA: ${etaText}` : "ETA: —"}
+              </span>
                         </div>
                     </div>
 
