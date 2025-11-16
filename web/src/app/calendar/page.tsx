@@ -282,6 +282,12 @@ export default function CalendarPage() {
     const [listModalSelectedId, setListModalSelectedId] = useState<string | null>(
         null,
     );
+    const [listFilterStatus, setListFilterStatus] = useState<RideStatus | "all">("all");
+
+    const [listSort, setListSort] = useState<
+        "timeAsc" | "timeDesc" | "status" | "amountDesc"
+    >("timeAsc");
+
 
     const { items: allRides, isLoading, mutate } = useRidesInfinite({}, 200);
 
