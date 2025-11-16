@@ -33,6 +33,8 @@ type RideSummaryCardProps = {
     hideActions?: boolean;
     /** Called when driver has been successfully assigned via the select. */
     onDriverAssigned?: (driverUserId: string) => void;
+    /** Called when status was successfully changed (for calendar, stats, etc.). */
+    onStatusChanged?: (updatedRide: Ride) => void;
 };
 
 export default function RideSummaryCard({
@@ -40,6 +42,7 @@ export default function RideSummaryCard({
                                             detailsHref,
                                             hideActions = false,
                                             onDriverAssigned,
+                                            onStatusChanged,
                                         }: RideSummaryCardProps) {
     const { user } = useAuthStore();
     const roles = user?.roles ?? [];
@@ -85,7 +88,7 @@ export default function RideSummaryCard({
     // use local status for UI logic (driver select visibility)
     const showAssign = isPrivileged && statusValue === "unassigned";
 
-    // optimistic update: change local status immediately, then call API
+    // optimistic update: change local status immediately, then call API and notify parent
     async function handleStatusChange(next: RideStatus): Promise<void> {
         if (!next || next === localStatus) return;
 
@@ -93,8 +96,16 @@ export default function RideSummaryCard({
         setLocalStatus(next);
 
         try {
+            // hit backend / store
             await setRideStatus({ status: next });
+
+            // notify parent (calendar) so it can adjust selectedRide, listModal, stats
+            onStatusChanged?.({
+                ...(ride as Ride),
+                status: next,
+            });
         } catch {
+            // revert local UI
             setLocalStatus(prev);
         }
     }
@@ -116,24 +127,24 @@ export default function RideSummaryCard({
                                 </Typography>
 
                                 <div className="flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs text-gray-600">
-                  <span className="inline-flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-gray-400" />
-                    <span className="font-medium">
-                      {rideDate} · {rideTime}
-                    </span>
-                  </span>
+                                    <span className="inline-flex items-center gap-1">
+                                        <Clock className="w-3 h-3 text-gray-400" />
+                                        <span className="font-medium">
+                                            {rideDate} · {rideTime}
+                                        </span>
+                                    </span>
                                     {amountText && (
                                         <span className="inline-flex items-center gap-1">
-                      <DollarSign className="w-3 h-3 text-gray-400" />
-                      <span>{amountText}</span>
-                    </span>
+                                            <DollarSign className="w-3 h-3 text-gray-400" />
+                                            <span>{amountText}</span>
+                                        </span>
                                     )}
                                     <span className="inline-flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-gray-400" />
-                    <span className="uppercase tracking-wide text-[10px]">
-                      {ride.type === "reservation" ? "RESERVATION" : "ASAP"}
-                    </span>
-                  </span>
+                                        <Calendar className="w-3 h-3 text-gray-400" />
+                                        <span className="uppercase tracking-wide text-[10px]">
+                                            {ride.type === "reservation" ? "RESERVATION" : "ASAP"}
+                                        </span>
+                                    </span>
                                 </div>
 
                                 <div className="mt-0.5">
@@ -185,8 +196,8 @@ export default function RideSummaryCard({
                         <div className="flex items-center">
                             <Calendar className="w-3 h-3 mr-1.5 text-gray-400 shrink-0" />
                             <span className="truncate">
-                {etaText ? `ETA: ${etaText}` : "ETA: —"}
-              </span>
+                                {etaText ? `ETA: ${etaText}` : "ETA: —"}
+                            </span>
                         </div>
                     </div>
 

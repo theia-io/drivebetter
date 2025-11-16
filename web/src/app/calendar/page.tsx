@@ -28,8 +28,7 @@ import {
     ChevronRight,
     Loader2,
     X,
-    Layers,
-    ArrowLeft,
+    Layers, ArrowLeft,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -60,7 +59,11 @@ const localizer = dateFnsLocalizer({
 type DayBuckets = {
     total: number;
     unassigned: number;
-    inProgress: number;
+    assigned: number;
+    on_my_way: number;
+    on_location: number;
+    pob: number;
+    clear: number;
     completed: number;
 };
 
@@ -110,6 +113,13 @@ const TimeGutterHeader = () => (
     </div>
 );
 
+// Map status → bucket used by clustering
+function bucketForStatus(status: RideStatus): "unassigned" | "inProgress" | "completed" {
+    if (status === "completed") return "completed";
+    if (status === "unassigned") return "unassigned";
+    return "inProgress";
+}
+
 // ---------- Event renderer ----------
 
 const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
@@ -118,35 +128,71 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
 
     if (!res) return null;
 
-    // All-day analytics row
+    // All-day analytics row (daily stats)
     if (res.kind === "analytics") {
-        const { total, unassigned, inProgress, completed } = res.buckets;
-        if (!total) return null;
+        const { buckets, dateKey } = res;
+        if (!buckets.total) return null;
+
+        const scrollToStatus = (status: RideStatus) => {
+            if (typeof document === "undefined") return;
+
+            // 1) try a single ride with exact status
+            const selectorExact = `.ride-event.ride-day-${dateKey}.ride-status-${status}`;
+            let el = document.querySelector(selectorExact) as HTMLElement | null;
+
+            // 2) if not found (clustered), fallback to bucket (unassigned / inProgress / completed)
+            if (!el) {
+                const bucket = bucketForStatus(status);
+                const selectorBucket = `.ride-event.ride-day-${dateKey}.ride-bucket-${bucket}`;
+                el = document.querySelector(selectorBucket) as HTMLElement | null;
+            }
+
+            if (!el) return;
+
+            el.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+                inline: "nearest",
+            });
+        };
+
+        const renderChip = (status: RideStatus, count: number) => {
+            if (!count) return null;
+            return (
+                <button
+                    key={status}
+                    type="button"
+                    onClick={() => scrollToStatus(status)}
+                    className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] sm:text-[10px] border ${getPillStatusColor(
+                        status,
+                    )} hover:bg-white/70 hover:shadow-sm focus:outline-none focus:ring-1 focus:ring-gray-300`}
+                >
+                    <span
+                        className={`h-2 w-2 rounded-full ${getStatusDotColor(status)}`}
+                    />
+                    <span className="font-medium">
+                        {count}{" "}
+                        <span className="normal-case">
+                            {status.replace(/_/g, " ")}
+                        </span>
+                    </span>
+                </button>
+            );
+        };
 
         return (
             <div className="flex h-full flex-col items-center justify-center py-0.5">
-        <span className="text-[9px] sm:text-[10px] font-medium text-gray-600">
-          {total} ride{total > 1 ? "s" : ""}
-        </span>
-                <div className="mt-0.5 flex items-center gap-1.5">
-                    {unassigned > 0 && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-amber-800">
-              <span className="h-2 w-2 rounded-full bg-amber-500" />
-                            {unassigned} unassigned
-            </span>
-                    )}
-                    {inProgress > 0 && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-blue-800">
-              <span className="h-2 w-2 rounded-full bg-blue-500" />
-                            {inProgress} in&nbsp;progress
-            </span>
-                    )}
-                    {completed > 0 && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-emerald-800">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                            {completed} completed
-            </span>
-                    )}
+                <span className="text-[9px] sm:text-[10px] font-medium text-gray-600">
+                    {buckets.total} ride{buckets.total > 1 ? "s" : ""}
+                </span>
+                <div className="mt-0.5 flex flex-wrap items-center justify-center gap-1.5">
+                    {renderChip("unassigned", buckets.unassigned)}
+                    {renderChip("assigned", buckets.assigned)}
+                    {renderChip("on_my_way", buckets.on_my_way)}
+                    {renderChip("on_location", buckets.on_location)}
+                    {renderChip("pob", buckets.pob)}
+                    {renderChip("clear", buckets.clear)}
+                    {renderChip("completed", buckets.completed)}
                 </div>
             </div>
         );
@@ -173,12 +219,12 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
                 </div>
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1">
-            <span className="truncate font-semibold">
-              {res.timeLabel} • {total} rides
-            </span>
+                        <span className="truncate font-semibold">
+                            {res.timeLabel} • {total} rides
+                        </span>
                         <span className="shrink-0 rounded-full border border-gray-300 bg-white px-1.5 py-[1px] text-[8px] font-semibold uppercase tracking-wide text-gray-600">
-              Group
-            </span>
+                            {total >= 4 ? "Show rides" : "Multiple rides"}
+                        </span>
                     </div>
                     <div className="truncate text-[9px] sm:text-[10px] text-gray-700">
                         {unassigned > 0 && `${unassigned} unassigned`}
@@ -188,7 +234,7 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
                             `${unassigned > 0 || inProgress > 0 ? " • " : ""}${completed} completed`}
                     </div>
                     <div className="mt-0.5 text-[8px] sm:text-[9px] text-gray-400">
-                        Tap to view list
+                        Tap to see rides list
                     </div>
                 </div>
             </div>
@@ -239,37 +285,72 @@ export default function CalendarPage() {
 
     const { items: allRides, isLoading, mutate } = useRidesInfinite({}, 200);
 
-    // Per-day buckets for analytics row
+    // local optimistic overrides by ride id
+    const [rideOverrides, setRideOverrides] = useState<Record<string, Ride>>({});
+
+    // merge SWR data with local overrides
+    const mergedRides: Ride[] = useMemo(() => {
+        if (!Object.keys(rideOverrides).length) return allRides;
+        return allRides.map((r) => {
+            const id = String(r._id);
+            const override = rideOverrides[id];
+            return override ? { ...r, ...override } : r;
+        });
+    }, [allRides, rideOverrides]);
+
+    // Per-day buckets for analytics row, derived from mergedRides
     const rideBucketsByDay = useMemo(() => {
         const map = new Map<string, DayBuckets>();
 
-        for (const ride of allRides) {
+        for (const ride of mergedRides) {
             const key = format(new Date(ride.datetime), "yyyy-MM-dd");
             const curr =
                 map.get(key) || {
                     total: 0,
                     unassigned: 0,
-                    inProgress: 0,
+                    assigned: 0,
+                    on_my_way: 0,
+                    on_location: 0,
+                    pob: 0,
+                    clear: 0,
                     completed: 0,
                 };
 
             curr.total += 1;
 
-            if (ride.status === "completed") {
-                curr.completed += 1;
-            } else if (ride.status === "unassigned") {
-                curr.unassigned += 1;
-            } else {
-                curr.inProgress += 1;
+            switch (ride.status as RideStatus) {
+                case "unassigned":
+                    curr.unassigned += 1;
+                    break;
+                case "assigned":
+                    curr.assigned += 1;
+                    break;
+                case "on_my_way":
+                    curr.on_my_way += 1;
+                    break;
+                case "on_location":
+                    curr.on_location += 1;
+                    break;
+                case "pob":
+                    curr.pob += 1;
+                    break;
+                case "clear":
+                    curr.clear += 1;
+                    break;
+                case "completed":
+                    curr.completed += 1;
+                    break;
+                default:
+                    break;
             }
 
             map.set(key, curr);
         }
 
         return map;
-    }, [allRides]);
+    }, [mergedRides]);
 
-    // Events with clustering
+    // Events with clustering, from mergedRides
     const events: CalendarEvent[] = useMemo(() => {
         type ClusterKey = string;
 
@@ -277,7 +358,7 @@ export default function CalendarPage() {
         const result: CalendarEvent[] = [];
 
         // All rides -> clusters
-        for (const ride of allRides) {
+        for (const ride of mergedRides) {
             const start = new Date(ride.datetime);
             const dateKey = format(start, "yyyy-MM-dd");
             const timeLabel = format(start, "HH:mm");
@@ -337,7 +418,7 @@ export default function CalendarPage() {
         });
 
         return result;
-    }, [allRides, rideBucketsByDay]);
+    }, [mergedRides, rideBucketsByDay]);
 
     const eventPropGetter = (event: RBCEvent) => {
         const e = event as CalendarEvent;
@@ -409,71 +490,97 @@ export default function CalendarPage() {
                     fontSize: "0.75rem",
                     padding: "2px 4px",
                 },
-                className: `ride-event ride-day-${dateKey} ride-bucket-${bucket}`,
+                className: `ride-event ride-day-${dateKey} ride-bucket-${bucket} ride-status-${ride.status}`,
             };
         }
 
         return {};
     };
 
-    // driver assignment: still needed
+    // driver assignment
     const handleDriverAssigned = useCallback(
         async (rideId: string, driverUserId: string) => {
+            // update selected ride modal
             setSelectedRide((prev) => {
-                if (!prev || prev._id !== rideId) return prev;
+                if (!prev || String(prev._id) !== rideId) return prev;
+                const newStatus: RideStatus =
+                    prev.status === "unassigned" ? "assigned" : prev.status;
                 return {
                     ...prev,
                     assignedDriverId: driverUserId,
-                    status:
-                        prev.status === "unassigned"
-                            ? ("assigned" as RideStatus)
-                            : prev.status,
+                    status: newStatus,
                 };
             });
 
-            // update inside multi-ride modal if open
+            // update multi-ride modal
             setListModal((prev) => {
                 if (!prev) return prev;
-                const updatedRides = prev.rides.map((r) =>
-                    String(r._id) === rideId
-                        ? {
-                            ...r,
-                            assignedDriverId: driverUserId,
-                            status:
-                                r.status === "unassigned"
-                                    ? ("assigned" as RideStatus)
-                                    : r.status,
-                        }
-                        : r,
-                );
+                const updatedRides = prev.rides.map((r) => {
+                    if (String(r._id) !== rideId) return r;
+                    const newStatus: RideStatus =
+                        r.status === "unassigned" ? "assigned" : r.status;
+                    return {
+                        ...r,
+                        assignedDriverId: driverUserId,
+                        status: newStatus,
+                    };
+                });
                 return { ...prev, rides: updatedRides };
             });
 
-            await mutate();
+            // update overrides so stats + events react immediately
+            setRideOverrides((prev) => {
+                const current =
+                    prev[rideId] ||
+                    mergedRides.find((r) => String(r._id) === rideId) ||
+                    ({} as Ride);
+                const newStatus: RideStatus =
+                    current.status === "unassigned" ? "assigned" : current.status;
+                return {
+                    ...prev,
+                    [rideId]: {
+                        ...current,
+                        assignedDriverId: driverUserId,
+                        status: newStatus,
+                    },
+                };
+            });
+
+            mutate(); // background revalidate
         },
-        [mutate],
+        [mutate, mergedRides],
     );
 
     // status change from inside RideSummaryCard
     const handleRideStatusChanged = useCallback(
-        async (updatedRide: Ride) => {
+        (updatedRide: Ride) => {
             const id = String(updatedRide._id);
+            const status = updatedRide.status as RideStatus;
 
-            // update selectedRide modal
+            // 1) overrides used to derive mergedRides => events + daily stats
+            setRideOverrides((prev) => ({
+                ...prev,
+                [id]: {
+                    _id: updatedRide._id,
+                    status,
+                } as Ride,
+            }));
+
+            // 2) single selected ride preview modal
             setSelectedRide((prev) =>
-                prev && String(prev._id) === id ? { ...prev, ...updatedRide } : prev,
+                prev && String(prev._id) === id ? { ...prev, status } : prev,
             );
 
-            // update multi-ride modal list and its selected item
+            // 3) multi-ride modal (list + details)
             setListModal((prev) => {
                 if (!prev) return prev;
                 const updatedRides = prev.rides.map((r) =>
-                    String(r._id) === id ? { ...r, ...updatedRide } : r,
+                    String(r._id) === id ? { ...r, status } : r,
                 );
                 return { ...prev, rides: updatedRides };
             });
 
-            await mutate();
+            mutate();
         },
         [mutate],
     );
@@ -509,8 +616,15 @@ export default function CalendarPage() {
 
     const focusedListRide: Ride | null =
         listModal && listModalSelectedId
-            ? listModal.rides.find((r) => String(r._id) === listModalSelectedId) ||
-            null
+            ? (() => {
+                const base =
+                    listModal.rides.find(
+                        (r) => String(r._id) === listModalSelectedId,
+                    ) || null;
+                if (!base) return null;
+                const override = rideOverrides[String(base._id)];
+                return override ? { ...base, ...override } : base;
+            })()
             : null;
 
     const isListMode = !!listModal && !listModalSelectedId;
@@ -558,13 +672,13 @@ export default function CalendarPage() {
                                 <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs sm:text-sm">
                                     <CalendarDays className="w-4 h-4 text-gray-500" />
                                     <span className="font-medium text-gray-800">
-                    {rangeLabel}
-                  </span>
+                                        {rangeLabel}
+                                    </span>
                                     {isLoading && (
                                         <span className="inline-flex items-center gap-1 text-[11px] text-gray-500">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Loading…
-                    </span>
+                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                            Loading…
+                                        </span>
                                     )}
                                 </div>
 
@@ -648,12 +762,18 @@ export default function CalendarPage() {
                                         const e = event as CalendarEvent;
                                         const res = e.resource;
                                         if (res.kind === "ride") {
-                                            setSelectedRide(res.ride);
+                                            const base = res.ride;
+                                            const override =
+                                                rideOverrides[String(base._id)];
+                                            const ride = override
+                                                ? { ...base, ...override }
+                                                : base;
+                                            setSelectedRide(ride);
                                         } else if (res.kind === "cluster") {
                                             const rides = res.rides;
-                                            setListModalSelectedId(
-                                                rides.length ? String(rides[0]._id) : null,
-                                            );
+                                            if (!rides.length) return;
+                                            // open in LIST mode
+                                            setListModalSelectedId(null);
                                             setListModal({
                                                 date: res.start,
                                                 title: `Rides at ${res.timeLabel} on ${fmtDate(
@@ -673,7 +793,8 @@ export default function CalendarPage() {
                                             }
                                         });
                                         if (!rides.length) return;
-                                        setListModalSelectedId(String(rides[0]._id));
+                                        // open in LIST mode
+                                        setListModalSelectedId(null);
                                         setListModal({
                                             date,
                                             title: `Rides on ${fmtDate(date.toISOString())}`,
@@ -718,38 +839,88 @@ export default function CalendarPage() {
                     }}
                 >
                     <div
-                        className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white p-4 sm:p-6 shadow-lg"
+                        className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white shadow-lg"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* LIST MODE */}
-                        {isListMode && (
-                            <>
-                                <div className="flex items-start justify-between gap-2 mb-3">
+                        {/* Header */}
+                        <div className="flex items-center justify-between gap-2 border-b px-4 py-3 sm:px-6 sm:py-4">
+                            <div className="flex items-center gap-2 min-w-0">
+                                {/* Back arrow only in details mode */}
+                                {!isListMode && focusedListRide && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setListModalSelectedId(null)}
+                                        className="inline-flex items-center justify-center rounded-md border border-gray-200 bg-white p-1.5 text-gray-600 hover:bg-gray-50 hover:text-gray-800 shrink-0"
+                                        aria-label="Back to list"
+                                    >
+                                        <ArrowLeft className="w-4 h-4" />
+                                    </button>
+                                )}
+
+                                {isListMode ? (
                                     <div className="min-w-0">
-                                        <Typography className="text-sm sm:text-base font-semibold text-gray-900">
+                                        <Typography className="text-sm sm:text-base font-semibold text-gray-900 truncate">
                                             {listModal.title}
                                         </Typography>
                                         <Typography className="text-xs sm:text-sm text-gray-500">
                                             Choose a ride to see details.
                                         </Typography>
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={async () => {
-                                            setListModal(null);
-                                            setListModalSelectedId(null);
-                                            await mutate();
-                                        }}
-                                        className="ml-2 text-gray-400 hover:text-gray-600"
-                                        aria-label="Close"
-                                    >
-                                        <X className="w-5 h-5" />
-                                    </button>
-                                </div>
+                                ) : (
+                                    focusedListRide && (
+                                        <div className="min-w-0">
+                                            <Typography className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                                                {focusedListRide.from} → {focusedListRide.to}
+                                            </Typography>
 
+                                            <div className="mt-0.5 flex items-center justify-between gap-2">
+            <span className="text-xs sm:text-sm text-gray-500 truncate">
+                {fmtDate(focusedListRide.datetime)} • {fmtTime(focusedListRide.datetime)}
+            </span>
+
+                                                <span
+                                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border ${getPillStatusColor(
+                                                        focusedListRide.status,
+                                                    )}`}
+                                                >
+                <span
+                    className={`mr-1 h-2 w-2 rounded-full ${getStatusDotColor(
+                        focusedListRide.status,
+                    )}`}
+                />
+                <span className="capitalize">
+                    {focusedListRide.status.replace(/_/g, " ")}
+                </span>
+            </span>
+                                            </div>
+                                        </div>
+                                    )
+
+                                )}
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    setListModal(null);
+                                    setListModalSelectedId(null);
+                                    await mutate();
+                                }}
+                                className="ml-2 text-gray-400 hover:text-gray-600 shrink-0"
+                                aria-label="Close"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="max-h-[60vh] overflow-y-auto px-4 py-3 sm:px-6 sm:py-4">
+                            {isListMode ? (
                                 <div className="space-y-2">
                                     {listModal.rides.map((r) => {
                                         const id = String(r._id);
+                                        const override = rideOverrides[id];
+                                        const ride = override ? { ...r, ...override } : r;
                                         return (
                                             <button
                                                 key={id}
@@ -760,119 +931,95 @@ export default function CalendarPage() {
                                                 <div className="flex items-start justify-between gap-2">
                                                     <div className="min-w-0">
                                                         <div className="text-xs font-semibold text-gray-900 truncate">
-                                                            {fmtTime(r.datetime)} · {r.from} → {r.to}
+                                                            {fmtTime(ride.datetime)} · {ride.from} →{" "}
+                                                            {ride.to}
                                                         </div>
                                                         <div className="mt-0.5 text-[11px] text-gray-600 truncate">
-                                                            {r.distance ? km(r.distance) : ""}{" "}
-                                                            {mins((r as any).durationMinutes)
-                                                                ? `• ${mins((r as any).durationMinutes)}`
+                                                            {ride.distance ? km(ride.distance) : ""}{" "}
+                                                            {mins((ride as any).durationMinutes)
+                                                                ? `• ${mins(
+                                                                    (ride as any)
+                                                                        .durationMinutes,
+                                                                )}`
                                                                 : ""}
                                                         </div>
                                                     </div>
                                                     <span
                                                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${getPillStatusColor(
-                                                            r.status,
+                                                            ride.status,
                                                         )}`}
                                                     >
-                            <span
-                                className={`mr-1 h-1.5 w-1.5 rounded-full ${getStatusDotColor(
-                                    r.status,
-                                )}`}
-                            />
-                            <span className="capitalize">
-                              {r.status.replace(/_/g, " ")}
-                            </span>
-                          </span>
+                                                        <span
+                                                            className={`mr-1 h-1.5 w-1.5 rounded-full ${getStatusDotColor(
+                                                                ride.status,
+                                                            )}`}
+                                                        />
+                                                        <span className="capitalize">
+                                                            {ride.status.replace(/_/g, " ")}
+                                                        </span>
+                                                    </span>
                                                 </div>
                                             </button>
                                         );
                                     })}
                                 </div>
-                            </>
-                        )}
-
-                        {/* DETAILS MODE (inside same modal, with back button) */}
-                        {!isListMode && focusedListRide && (
-                            <>
-                                <div className="flex items-start justify-between gap-2 mb-3">
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => setListModalSelectedId(null)}
-                                            className="inline-flex items-center rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
-                                        >
-                                            <ArrowLeft className="w-3.5 h-3.5 mr-1" />
-                                            Back to list
-                                        </button>
-                                        <div className="min-w-0">
-                                            <Typography className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                                                {focusedListRide.from} → {focusedListRide.to}
-                                            </Typography>
-                                            <Typography className="text-xs sm:text-sm text-gray-500 truncate">
-                                                {fmtDate(focusedListRide.datetime)} •{" "}
-                                                {fmtTime(focusedListRide.datetime)}
-                                            </Typography>
-                                        </div>
+                            ) : (
+                                focusedListRide && (
+                                    <div>
+                                        <RideSummaryCard
+                                            ride={focusedListRide}
+                                            onDriverAssigned={(driverUserId) =>
+                                                handleDriverAssigned(
+                                                    String(focusedListRide._id),
+                                                    driverUserId,
+                                                )
+                                            }
+                                            onStatusChanged={handleRideStatusChanged}
+                                        />
                                     </div>
-                                    <button
-                                        type="button"
+                                )
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="border-t px-4 py-3 sm:px-6 sm:py-3">
+                            {isListMode ? (
+                                <div className="flex justify-end">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
                                         onClick={async () => {
                                             setListModal(null);
                                             setListModalSelectedId(null);
                                             await mutate();
                                         }}
-                                        className="ml-2 text-gray-400 hover:text-gray-600"
-                                        aria-label="Close"
                                     >
-                                        <X className="w-5 h-5" />
-                                    </button>
-                                </div>
-
-                                <div
-                                    className={`mb-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getPillStatusColor(
-                                        focusedListRide.status,
-                                    )}`}
-                                >
-                  <span
-                      className={`mr-1 h-2 w-2 rounded-full ${getStatusDotColor(
-                          focusedListRide.status,
-                      )}`}
-                  />
-                                    <span className="capitalize">
-                    {focusedListRide.status.replace(/_/g, " ")}
-                  </span>
-                                </div>
-
-                                <div className="overflow-x-auto">
-                                    <RideSummaryCard
-                                        ride={focusedListRide}
-                                        onDriverAssigned={(driverUserId) =>
-                                            handleDriverAssigned(focusedListRide._id, driverUserId)
-                                        }
-                                        onStatusChanged={handleRideStatusChanged}
-                                    />
-                                </div>
-
-                                <div className="mt-3 flex flex-col sm:flex-row gap-2">
-                                    <Link
-                                        href={`/rides/${focusedListRide._id}`}
-                                        className="w-full sm:w-auto"
-                                    >
-                                        <Button size="sm" className="w-full">
-                                            Open full ride
-                                        </Button>
-                                    </Link>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="w-full sm:w-auto"
-                                        onClick={() => setListModalSelectedId(null)}
-                                    >
-                                        Back to list
+                                        Close
                                     </Button>
                                 </div>
-                            </>
-                        )}
+                            ) : (
+                                focusedListRide && (
+                                    <div className="flex flex-col sm:flex-row gap-2">
+                                        <Link
+                                            href={`/rides/${focusedListRide._id}`}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            <Button size="sm" className="w-full">
+                                                Open full ride
+                                            </Button>
+                                        </Link>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="w-full sm:w-auto"
+                                            onClick={() => setListModalSelectedId(null)}
+                                        >
+                                            Back to list
+                                        </Button>
+                                    </div>
+                                )
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
@@ -887,15 +1034,16 @@ export default function CalendarPage() {
                     }}
                 >
                     <div
-                        className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white p-4 sm:p-6 shadow-lg"
+                        className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white shadow-lg"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="flex items-start justify-between gap-2 mb-3">
+                        {/* Header */}
+                        <div className="flex items-center justify-between gap-2 border-b px-4 py-3 sm:px-6 sm:py-4">
                             <div className="min-w-0">
                                 <Typography className="text-sm sm:text-base font-semibold text-gray-900 truncate">
                                     {selectedRide.from} → {selectedRide.to}
                                 </Typography>
-                                <div className="text-xs sm:text-sm text-gray-500">
+                                <div className="text-xs sm:text-sm text-gray-500 truncate">
                                     {fmtDate(selectedRide.datetime)} •{" "}
                                     {fmtTime(selectedRide.datetime)}
                                 </div>
@@ -906,58 +1054,65 @@ export default function CalendarPage() {
                                     setSelectedRide(null);
                                     await mutate();
                                 }}
-                                className="ml-2 text-gray-400 hover:text-gray-600"
+                                className="ml-2 text-gray-400 hover:text-gray-600 shrink-0"
                                 aria-label="Close"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        <div
-                            className={`mb-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getPillStatusColor(
-                                selectedRide.status,
-                            )}`}
-                        >
-              <span
-                  className={`mr-1 h-2 w-2 rounded-full ${getStatusDotColor(
-                      selectedRide.status,
-                  )}`}
-              />
-                            <span className="capitalize">
-                {selectedRide.status.replace(/_/g, " ")}
-              </span>
-                        </div>
+                        {/* Body */}
+                        <div className="max-h-[70vh] overflow-y-auto px-4 py-3 sm:px-6 sm:py-4">
+                            <div
+                                className={`mb-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getPillStatusColor(
+                                    selectedRide.status,
+                                )}`}
+                            >
+                                <span
+                                    className={`mr-1 h-2 w-2 rounded-full ${getStatusDotColor(
+                                        selectedRide.status,
+                                    )}`}
+                                />
+                                <span className="capitalize">
+                                    {selectedRide.status.replace(/_/g, " ")}
+                                </span>
+                            </div>
 
-                        <div className="mt-2 sm:mt-3 overflow-x-auto">
                             <RideSummaryCard
                                 ride={selectedRide}
                                 onDriverAssigned={(driverUserId) =>
-                                    handleDriverAssigned(selectedRide._id, driverUserId)
+                                    handleDriverAssigned(
+                                        String(selectedRide._id),
+                                        driverUserId,
+                                    )
                                 }
                                 onStatusChanged={handleRideStatusChanged}
                             />
                         </div>
 
-                        <div className="mt-4 flex flex-col sm:flex-row gap-2">
-                            <Link
-                                href={`/rides/${selectedRide._id}`}
-                                className="w-full sm:w-auto"
-                            >
-                                <Button size="sm" className="w-full">
-                                    Open ride
+                        {/* Footer */}
+                        <div className="border-t px-4 py-3 sm:px-6 sm:py-3">
+                            <div className="flex flex-col sm:flex-row gap-2">
+                                <Link
+                                    href={`/rides/${selectedRide._id}`}
+                                    className="w-full sm:w-auto"
+                                >
+                                    <Button size="sm" className="w-full">
+                                        Open ride
+                                    </Button>
+                                </Link>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full sm:w-auto"
+                                    onClick={async () => {
+                                        setSelectedRide(null);
+                                        await mutate();
+                                    }}
+                                >
+                                    Close
                                 </Button>
-                            </Link>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full sm:w-auto"
-                                onClick={async () => {
-                                    setSelectedRide(null);
-                                    await mutate();
-                                }}
-                            >
-                                Close
-                            </Button>
+                            </div>
                         </div>
                     </div>
                 </div>

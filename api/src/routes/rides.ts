@@ -1134,7 +1134,7 @@ router.post(
  *           default: active
  *     responses:
  *       200:
- *         description: Shares for the requested status
+ *         description: Shares for the requested status (empty array if none)
  *         content:
  *           application/json:
  *             schema:
@@ -1150,7 +1150,7 @@ router.post(
  *                   status:      { type: string, enum: [active, revoked] }
  *                   revokedAt:   { type: string, format: date-time, nullable: true }
  *       404:
- *         description: None
+ *         description: Ride not found
  */
 router.get(
     "/:id([0-9a-fA-F]{24})/share",
@@ -1159,11 +1159,18 @@ router.get(
     async (req: Request, res: Response) => {
         const { id } = req.params;
         const user = (req as any).user;
+
         const ride = await Ride.findById(id);
+        if (!ride) {
+            return res.status(404).json({ error: "Ride not found" });
+        }
+
         try {
             assertCanAccessRide(user, ride);
         } catch (e: any) {
-            return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
+            return res
+                .status(e.status || 403)
+                .json({ error: e.message || "Forbidden" });
         }
 
         const raw = String(req.query.status ?? "active");
@@ -1173,12 +1180,7 @@ router.get(
             .sort({ createdAt: -1 })
             .lean();
 
-        if (!shares.length) {
-            return res
-                .status(404)
-                .json({ error: `No ${status} shares` });
-        }
-
+        // No 404 here anymore, just empty array
         return res.json(
             shares.map((s) => ({
                 shareId: String(s._id),
@@ -1190,9 +1192,9 @@ router.get(
                 groupIds: s.groupIds,
                 status: s.status,
                 revokedAt: s.revokedAt ?? null,
-            }))
+            })),
         );
-    }
+    },
 );
 
 /**
