@@ -184,6 +184,9 @@ export default function Navigation() {
     const bottomAssignments = findByName("My Assignments");
     const bottomCreated = findByName("My Created");
 
+    // Mobile menu items without "Create Ride" (we show it as a primary button instead)
+    const mobileItems = items.filter((i) => i.name !== "Create Ride");
+
     return (
         <>
             {/* TOP NAVBAR */}
@@ -336,8 +339,28 @@ export default function Navigation() {
                 {/* Mobile slide-down panel */}
                 {mobileOpen && (
                     <div className="sm:hidden border-t bg-white">
-                        <div className="pt-2 pb-3 space-y-1">
-                            {items.map((item) => (
+                        {/* Create ride primary button (same style as desktop, full width) */}
+                        {createRideItem && (
+                            <div className="px-4 pt-3 pb-2">
+                                <Link
+                                    href={createRideItem.href}
+                                    onClick={() => setMobileOpen(false)}
+                                >
+                                    <Button
+                                        variant="solid"
+                                        size="sm"
+                                        className="w-full bg-emerald-600 hover:bg-emerald-700 border border-emerald-600 text-white shadow-sm"
+                                    >
+                                        <Plus className="h-4 w-4 mr-1" />
+                                        <span>Create ride</span>
+                                    </Button>
+                                </Link>
+                            </div>
+                        )}
+
+                        {/* Other nav items */}
+                        <div className="pt-1 pb-3 space-y-1">
+                            {mobileItems.map((item) => (
                                 <Link
                                     key={item.name}
                                     href={item.href}
