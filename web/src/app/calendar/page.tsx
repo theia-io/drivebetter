@@ -43,11 +43,7 @@ import {
     getStatusIcon,
 } from "@/types/rideStatus";
 
-// ---------- react-big-calendar localizer ----------
-
-const locales = {
-    "en-GB": enGB,
-};
+const locales = { "en-GB": enGB };
 
 const localizer = dateFnsLocalizer({
     format,
@@ -57,7 +53,7 @@ const localizer = dateFnsLocalizer({
     locales,
 });
 
-// ---------- Types ----------
+// ---- Types ----
 
 type DayBuckets = {
     total: number;
@@ -74,17 +70,14 @@ type CalendarEvent = RBCEvent & {
     resource: CalendarEventResource;
 };
 
-// ---------- Helpers ----------
+// ---- Helpers ----
 
 function formatRangeLabel(date: Date, view: View): string {
-    if (view === "month") {
-        return format(date, "MMMM yyyy");
-    }
+    if (view === "month") return format(date, "MMMM yyyy");
 
     if (view === "week") {
         const start = startOfWeek(date, { weekStartsOn: 1 });
         const end = addDays(start, 6);
-
         if (start.getMonth() === end.getMonth()) {
             return `${format(start, "d")}–${format(end, "d MMM yyyy")}`;
         }
@@ -94,14 +87,14 @@ function formatRangeLabel(date: Date, view: View): string {
     return format(date, "d MMM yyyy");
 }
 
-// text in empty top-left (time gutter header)
+// top-left corner label
 const TimeGutterHeader = () => (
     <div className="px-1 text-[9px] sm:text-[10px] leading-tight text-gray-500">
         Daily stats
     </div>
 );
 
-// One renderer for ALL events (rides + analytics)
+// unified renderer
 const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
     const e = event as CalendarEvent;
     const res = e.resource;
@@ -112,7 +105,16 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
         const { total, unassigned, inProgress, completed } = res.buckets;
         if (!total) return null;
 
-        // This will appear in the all-day row (because allDay: true)
+        const dateKey = format(e.start as Date, "yyyy-MM-dd");
+
+        const scrollToFirst = (bucket: "unassigned" | "inProgress" | "completed") => {
+            const selector = `.ride-event.ride-day-${dateKey}.ride-bucket-${bucket}`;
+            const el = document.querySelector(selector) as HTMLElement | null;
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
+        };
+
         return (
             <div className="flex h-full flex-col items-center justify-center py-0.5">
         <span className="text-[9px] sm:text-[10px] font-medium text-gray-600">
@@ -120,29 +122,49 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
         </span>
                 <div className="mt-0.5 flex items-center gap-1.5">
                     {unassigned > 0 && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-amber-800">
-              <span className="h-2 w-2 rounded-full bg-amber-500" />
-                            {unassigned}
-            </span>
+                        <button
+                            type="button"
+                            onClick={(ev) => {
+                                ev.stopPropagation();
+                                scrollToFirst("unassigned");
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-amber-800 cursor-pointer"
+                        >
+                            <span className="h-2 w-2 rounded-full bg-amber-500" />
+                            {unassigned} unassigned
+                        </button>
                     )}
                     {inProgress > 0 && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-blue-800">
-              <span className="h-2 w-2 rounded-full bg-blue-500" />
-                            {inProgress}
-            </span>
+                        <button
+                            type="button"
+                            onClick={(ev) => {
+                                ev.stopPropagation();
+                                scrollToFirst("inProgress");
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-blue-800 cursor-pointer"
+                        >
+                            <span className="h-2 w-2 rounded-full bg-blue-500" />
+                            {inProgress} in&nbsp;progress
+                        </button>
                     )}
                     {completed > 0 && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-emerald-800">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                            {completed}
-            </span>
+                        <button
+                            type="button"
+                            onClick={(ev) => {
+                                ev.stopPropagation();
+                                scrollToFirst("completed");
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] text-emerald-800 cursor-pointer"
+                        >
+                            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                            {completed} completed
+                        </button>
                     )}
                 </div>
             </div>
         );
     }
 
-    // Ride event
     if (res.kind === "ride") {
         const r = res.ride;
         const Icon = getStatusIcon(r.status as RideStatus);
@@ -176,9 +198,14 @@ export default function CalendarPage() {
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
     const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
 
+    // showMore modal state
+    const [showMoreState, setShowMoreState] = useState<{
+        date: Date;
+        events: CalendarEvent[];
+    } | null>(null);
+
     const { items: allRides, isLoading, mutate } = useRidesInfinite({}, 200);
 
-    // Bucket per day for analytics
     const rideBucketsByDay = useMemo(() => {
         const map = new Map<string, DayBuckets>();
 
@@ -208,7 +235,6 @@ export default function CalendarPage() {
         return map;
     }, [allRides]);
 
-    // Build events: rides (timed) + analytics (all-day) so stats appear in rbc-allday-cell
     const events: CalendarEvent[] = useMemo(() => {
         const rideEvents: CalendarEvent[] = allRides.map((ride) => {
             const start = new Date(ride.datetime);
@@ -228,7 +254,6 @@ export default function CalendarPage() {
             rideBucketsByDay.entries(),
         ).map(([key, buckets]) => {
             const dayStart = startOfDay(new Date(`${key}T00:00:00`));
-
             return {
                 id: `analytics-${key}`,
                 title: "",
@@ -242,13 +267,12 @@ export default function CalendarPage() {
         return [...rideEvents, ...analyticsEvents];
     }, [allRides, rideBucketsByDay]);
 
-    // style events
     const eventPropGetter = (event: RBCEvent) => {
         const e = event as CalendarEvent;
         const res = e.resource;
+        const dateKey = format(e.start as Date, "yyyy-MM-dd");
 
         if (res?.kind === "analytics") {
-            // let analytics be “labels” in all-day row, not colored blocks
             return {
                 style: {
                     backgroundColor: "transparent",
@@ -256,12 +280,18 @@ export default function CalendarPage() {
                     boxShadow: "none",
                     padding: 0,
                 },
+                className: "",
             };
         }
 
         if (res?.kind === "ride") {
             const ride = res.ride;
             const { bg, border, text } = getStatusColors(ride.status as RideStatus);
+
+            let bucket: "unassigned" | "inProgress" | "completed";
+            if (ride.status === "completed") bucket = "completed";
+            else if (ride.status === "unassigned") bucket = "unassigned";
+            else bucket = "inProgress";
 
             return {
                 style: {
@@ -273,6 +303,7 @@ export default function CalendarPage() {
                     fontSize: "0.75rem",
                     padding: "2px 4px",
                 },
+                className: `ride-event ride-day-${dateKey} ride-bucket-${bucket}`,
             };
         }
 
@@ -298,17 +329,14 @@ export default function CalendarPage() {
         [mutate],
     );
 
-    const onNavigate = (date: Date) => {
-        setCurrentDate(date);
-    };
-
-    const onViewChange = (nextView: View) => {
-        setView(nextView);
-    };
+    const onNavigate = (date: Date) => setCurrentDate(date);
+    const onViewChange = (nextView: View) => setView(nextView);
 
     const goToPrevious = () => {
         if (view === "month") {
-            onNavigate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+            onNavigate(
+                new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
+            );
         } else if (view === "week") {
             onNavigate(addDays(currentDate, -7));
         } else {
@@ -318,7 +346,9 @@ export default function CalendarPage() {
 
     const goToNext = () => {
         if (view === "month") {
-            onNavigate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+            onNavigate(
+                new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
+            );
         } else if (view === "week") {
             onNavigate(addDays(currentDate, 7));
         } else {
@@ -334,7 +364,6 @@ export default function CalendarPage() {
                 <div className="space-y-4 sm:space-y-6 pb-4 sm:pb-8">
                     {/* Header + controls */}
                     <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        {/* Title */}
                         <div className="flex items-start gap-2">
                             <div className="mt-0.5 sm:mt-1">
                                 <CalendarDays className="w-5 h-5 text-indigo-600" />
@@ -349,9 +378,8 @@ export default function CalendarPage() {
                             </div>
                         </div>
 
-                        {/* Controls – centered on mobile, right-aligned desktop */}
                         <div className="w-full sm:w-auto flex flex-col gap-2">
-                            {/* Prev / range / Next / Today */}
+                            {/* navigation + range + today */}
                             <div className="flex flex-wrap justify-center sm:justify-end gap-2">
                                 <Button
                                     variant="outline"
@@ -394,7 +422,7 @@ export default function CalendarPage() {
                                 </Button>
                             </div>
 
-                            {/* View switcher – full-width segmented on mobile */}
+                            {/* view switcher */}
                             <div className="flex justify-center sm:justify-end">
                                 <div className="inline-flex w-full max-w-xs sm:max-w-none sm:w-auto rounded-lg border border-gray-200 bg-white text-xs sm:text-sm">
                                     <button
@@ -449,13 +477,20 @@ export default function CalendarPage() {
                                     onView={onViewChange}
                                     onNavigate={onNavigate}
                                     toolbar={false}
-                                    popup
+                                    popup={false}
                                     selectable={false}
                                     onSelectEvent={(event) => {
                                         const e = event as CalendarEvent;
                                         if (e.resource.kind === "ride") {
                                             setSelectedRide(e.resource.ride);
                                         }
+                                    }}
+                                    onShowMore={(events, date) => {
+                                        const ridesOnly = (events as CalendarEvent[]).filter(
+                                            (e) => e.resource.kind === "ride",
+                                        );
+                                        if (!ridesOnly.length) return;
+                                        setShowMoreState({ date, events: ridesOnly });
                                     }}
                                     eventPropGetter={eventPropGetter}
                                     components={{
@@ -465,7 +500,6 @@ export default function CalendarPage() {
                                 />
                             </div>
 
-                            {/* Legend */}
                             <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-gray-600">
                                 <div className="inline-flex items-center gap-1">
                                     <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />{" "}
@@ -485,6 +519,88 @@ export default function CalendarPage() {
                 </div>
             </Container>
 
+            {/* Custom showMore modal for month view */}
+            {showMoreState && (
+                <div
+                    className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/40"
+                    onClick={() => setShowMoreState(null)}
+                >
+                    <div
+                        className="w-full max-w-md max-h-[80vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white p-4 sm:p-6 shadow-lg"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                            <div className="min-w-0">
+                                <Typography className="text-sm sm:text-base font-semibold text-gray-900">
+                                    Rides on {fmtDate(showMoreState.date.toISOString())}
+                                </Typography>
+                                <Typography className="text-xs sm:text-sm text-gray-500">
+                                    Tap a ride to open details.
+                                </Typography>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowMoreState(null)}
+                                className="ml-2 text-gray-400 hover:text-gray-600"
+                                aria-label="Close"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-2">
+                            {showMoreState.events.map((ev) => {
+                                const r =
+                                    ev.resource.kind === "ride"
+                                        ? ev.resource.ride
+                                        : null;
+                                if (!r) return null;
+
+                                return (
+                                    <button
+                                        key={String(r._id)}
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedRide(r);
+                                            setShowMoreState(null);
+                                        }}
+                                        className="w-full text-left rounded-lg border border-gray-200 bg-white px-3 py-2 hover:bg-gray-50"
+                                    >
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="min-w-0">
+                                                <div className="text-xs font-semibold text-gray-900 truncate">
+                                                    {fmtTime(r.datetime)} · {r.from} → {r.to}
+                                                </div>
+                                                <div className="mt-0.5 text-[11px] text-gray-600 truncate">
+                                                    {r.distance ? km(r.distance) : ""}{" "}
+                                                    {mins((r as any).durationMinutes)
+                                                        ? `• ${mins((r as any).durationMinutes)}`
+                                                        : ""}
+                                                </div>
+                                            </div>
+                                            <span
+                                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium border ${getPillStatusColor(
+                                                    r.status,
+                                                )}`}
+                                            >
+                        <span
+                            className={`mr-1 h-1.5 w-1.5 rounded-full ${getStatusDotColor(
+                                r.status,
+                            )}`}
+                        />
+                        <span className="capitalize">
+                          {r.status.replace(/_/g, " ")}
+                        </span>
+                      </span>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Ride preview modal */}
             {selectedRide && (
                 <div
@@ -495,7 +611,6 @@ export default function CalendarPage() {
                         className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white p-4 sm:p-6 shadow-lg"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Header */}
                         <div className="flex items-start justify-between gap-2 mb-3">
                             <div className="min-w-0">
                                 <Typography className="text-sm sm:text-base font-semibold text-gray-900 truncate">
@@ -516,7 +631,6 @@ export default function CalendarPage() {
                             </button>
                         </div>
 
-                        {/* Status pill */}
                         <div
                             className={`mb-3 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getPillStatusColor(
                                 selectedRide.status,
@@ -532,7 +646,6 @@ export default function CalendarPage() {
               </span>
                         </div>
 
-                        {/* Card with stepper inside; allow horizontal scroll */}
                         <div className="mt-2 sm:mt-3 overflow-x-auto">
                             <RideSummaryCard
                                 ride={selectedRide}
@@ -542,7 +655,6 @@ export default function CalendarPage() {
                             />
                         </div>
 
-                        {/* Actions */}
                         <div className="mt-4 flex flex-col sm:flex-row gap-2">
                             <Link
                                 href={`/rides/${selectedRide._id}`}
