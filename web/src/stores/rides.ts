@@ -3,7 +3,8 @@ import useSWRInfinite from "swr/infinite";
 import useSWRMutation from 'swr/mutation';
 import { mutate as globalMutate } from "swr";
 import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from "@/services/http";
-import {CreateRideRequest, RideStatus, RideType, Ride} from "@/types";
+import {CreateRideRequest, RideType, Ride} from "@/types";
+import {RideStatus} from "@/types/rideStatus";
 
 /* ------------------------------- Types ------------------------------- */
 

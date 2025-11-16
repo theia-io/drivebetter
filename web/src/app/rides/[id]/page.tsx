@@ -43,6 +43,7 @@ import {
     getStatusLabel,
     type RideStatus,
 } from "@/types/rideStatus";
+import RideStatusStepper from "@/components/ui/ride/RideStatusStepper";
 
 export default function RideDetailsPage() {
     const { user } = useAuthStore();
@@ -208,42 +209,56 @@ export default function RideDetailsPage() {
                         )}
                     </div>
 
-                    {/* Status / actions card */}
+                    {/* Status / actions card with lifecycle stepper */}
                     {canChangeStatus && (
                         <Card variant="elevated">
-                            <CardBody className="p-4 sm:p-5">
-                                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                                    <div>
-                                        <Typography className="text-sm font-semibold text-gray-900">
-                                            Ride status
-                                        </Typography>
-                                        <p className="mt-1 text-xs sm:text-sm text-gray-600 max-w-md">
-                                            Update ride progress as you move: assigned, on my way, on
-                                            location, passenger on board, clear, completed.
-                                        </p>
-                                    </div>
+                            <CardBody className="p-4 sm:p-5 space-y-4">
+                                {/* Title + helper text */}
+                                <div>
+                                    <Typography className="text-sm font-semibold text-gray-900">
+                                        Ride status
+                                    </Typography>
+                                    <p className="mt-1 text-xs sm:text-sm text-gray-600 max-w-md">
+                                        Track and update the ride lifecycle: unassigned, assigned, on my way,
+                                        on location, passenger on board, clear, completed.
+                                    </p>
+                                </div>
 
-                                    <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center">
+                                {/* Visual lifecycle stepper */}
+                                <div>
+                                    <RideStatusStepper value={statusValue} />
+                                    <div className="mt-1 text-[11px] text-gray-600">
+                                        Current:{" "}
+                                        <span className="font-semibold">
+                        {statusLabel}
+                    </span>
+                                    </div>
+                                </div>
+
+                                {/* Controls: dropdown + delete. Vertical on mobile, row on desktop */}
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="w-full sm:w-80" onClick={(e) => e.stopPropagation()}>
                                         <RideStatusDropdown
                                             value={statusValue}
                                             disabled={isSettingStatus}
                                             onChange={handleStatusChange}
-                                            className="w-full sm:w-80"
+                                            className="w-full"
                                         />
-
-                                        {canManage && (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                leftIcon={<Trash2 className="w-4 h-4" />}
-                                                onClick={onDelete}
-                                                disabled={isDeleting}
-                                                className="w-full sm:w-auto"
-                                            >
-                                                Delete ride
-                                            </Button>
-                                        )}
                                     </div>
+
+                                    {canManage && (
+                                        <Button
+                                            variant="outline"
+                                            colorScheme="error"
+                                            size="sm"
+                                            leftIcon={<Trash2 className="w-4 h-4" />}
+                                            onClick={onDelete}
+                                            disabled={isDeleting}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            Delete ride
+                                        </Button>
+                                    )}
                                 </div>
                             </CardBody>
                         </Card>

@@ -1,4 +1,3 @@
-// components/ui/ride/RideStatusStepper.tsx
 "use client";
 
 import { useEffect, useRef, type CSSProperties } from "react";
@@ -25,7 +24,7 @@ export default function RideStatusStepper({
     const idx = STATUS_FLOW.indexOf(value);
     const currentIndex = idx === -1 ? 0 : idx;
 
-    // auto-scroll so current step is brought into view
+    // auto-scroll so current step is brought into view (useful on mobile)
     useEffect(() => {
         const container = containerRef.current;
         const active = activeRef.current;
@@ -50,7 +49,12 @@ export default function RideStatusStepper({
         <div className={["w-full", className].filter(Boolean).join(" ")}>
             <div
                 ref={containerRef}
-                className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1"
+                className="
+          flex items-center gap-2
+          overflow-x-auto no-scrollbar
+          sm:overflow-visible sm:justify-between
+          py-1
+        "
             >
                 {STATUS_FLOW.map((status, idx) => {
                     const isCompleted = currentIndex > idx;
@@ -86,7 +90,7 @@ export default function RideStatusStepper({
                     return (
                         <div
                             key={status}
-                            className="flex items-center flex-shrink-0"
+                            className="flex items-center flex-shrink-0 sm:flex-1"
                             ref={isCurrent ? activeRef : undefined}
                         >
                             <div className="flex flex-col items-center">
@@ -100,11 +104,20 @@ export default function RideStatusStepper({
                                     {label}
                                 </div>
                             </div>
+
                             {idx < STATUS_FLOW.length - 1 && (
-                                <div
-                                    className="h-0.5 w-6 sm:w-8 mx-1 rounded-full"
-                                    style={lineStyle}
-                                />
+                                <>
+                                    {/* Mobile / small screens: short fixed connector */}
+                                    <div
+                                        className="h-0.5 w-6 mx-1 rounded-full sm:hidden"
+                                        style={lineStyle}
+                                    />
+                                    {/* Desktop: connector stretches to fill remaining width */}
+                                    <div
+                                        className="hidden sm:block h-0.5 mx-2 rounded-full flex-1"
+                                        style={lineStyle}
+                                    />
+                                </>
                             )}
                         </div>
                     );
