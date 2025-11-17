@@ -8,7 +8,7 @@
     "build": "next build && tsc -p tsconfig.server.json",
     "start": "NODE_ENV=production node dist/server.js",
     "seed:local": "MONGODB_URI=mongodb://localhost:27017/betterdrive_db tsx src/lib/seed/seed.ts",
-    "seed:dev": "MONGODB_URI='mongodb://TO_CHANGE:TO_CHANGE@TO_CHANGE:27017/betterdrive_db?authSource=admin&retryWrites=true&w=majority' tsx src/lib/seed/seed.ts",
+    "seed:dev": "MONGODB_URI='mongodb://<username>:<password>@<mongo_uri>:27017/betterdrive_db?authSource=admin&retryWrites=true&w=majority' tsx src/lib/seed/seed.ts",
     "lint": "next lint"
   },
   "dependencies": {

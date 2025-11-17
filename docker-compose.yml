@@ -4,7 +4,7 @@ services:
   mongo_dev:
     image: mongo:latest
     container_name: betterdrive_mongo_dev
-    restart: unless-stopped
+    restart: on-failure
     ports:
       - "27017:27017"
     environment:
@@ -15,7 +15,7 @@ services:
   mongo:
     image: mongo:7
     container_name: betterdrive_mongo
-    restart: always
+    restart: on-failure
     ports:
       - "27017:27017"
     environment:
