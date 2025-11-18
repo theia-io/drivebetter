@@ -1,10 +1,21 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Layers, X } from "lucide-react";
+import {
+    ArrowLeft,
+    ArrowUpDown,
+    ChevronDown,
+    ChevronUp,
+    Filter,
+    Layers,
+    SlidersHorizontal,
+    Users,
+    X,
+} from "lucide-react";
 
 import { Button, Typography } from "@/components/ui";
+import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
 import { Ride } from "@/types";
 import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
 import {
@@ -12,7 +23,6 @@ import {
     getPillStatusColor,
     getStatusDotColor,
 } from "@/types/rideStatus";
-import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
 
 type ListModalState = {
     date: Date;
@@ -25,7 +35,6 @@ export type ListSortKey = "timeAsc" | "timeDesc" | "status" | "amountDesc";
 type MultiRideModalProps = {
     listModal: ListModalState | null;
     listModalSelectedId: string | null;
-    listFilterStatus: RideStatus | "all";
     listSort: ListSortKey;
     isListMode: boolean;
     focusedListRide: Ride | null;
@@ -34,21 +43,19 @@ type MultiRideModalProps = {
     onClose: () => Promise<void> | void;
     onSelectRide: (rideId: string) => void;
     onBackToList: () => void;
-    onChangeFilterStatus: (status: RideStatus | "all") => void;
     onChangeSort: (sort: ListSortKey) => void;
     onDriverAssigned: (rideId: string, driverUserId: string) => Promise<void> | void;
     onRideStatusChanged: (updatedRide: Ride) => void;
 };
 
-const STATUS_FILTER_ORDER: (RideStatus | "all")[] = [
-    "all",
-    "unassigned",
-    "assigned",
-    "on_my_way",
-    "on_location",
-    "pob",
-    "clear",
-    "completed",
+const STATUS_FILTER_OPTIONS: { key: RideStatus; label: string }[] = [
+    { key: "unassigned", label: "Unassigned" },
+    { key: "assigned", label: "Assigned" },
+    { key: "on_my_way", label: "On my way" },
+    { key: "on_location", label: "On location" },
+    { key: "pob", label: "POB" },
+    { key: "clear", label: "Clear" },
+    { key: "completed", label: "Completed" },
 ];
 
 const STATUS_SORT_RANK: Record<RideStatus, number> = {
@@ -61,10 +68,28 @@ const STATUS_SORT_RANK: Record<RideStatus, number> = {
     completed: 7,
 };
 
+function getStatusLabel(status: RideStatus): string {
+    return String(status).replace(/_/g, " ");
+}
+
+function getSortLabel(sort: ListSortKey): string {
+    switch (sort) {
+        case "timeAsc":
+            return "Time ↑";
+        case "timeDesc":
+            return "Time ↓";
+        case "status":
+            return "Status";
+        case "amountDesc":
+            return "Amount ↓";
+        default:
+            return sort;
+    }
+}
+
 export default function MultiRideModal({
                                            listModal,
                                            listModalSelectedId,
-                                           listFilterStatus,
                                            listSort,
                                            isListMode,
                                            focusedListRide,
@@ -72,21 +97,67 @@ export default function MultiRideModal({
                                            onClose,
                                            onSelectRide,
                                            onBackToList,
-                                           onChangeFilterStatus,
                                            onChangeSort,
                                            onDriverAssigned,
                                            onRideStatusChanged,
                                        }: MultiRideModalProps) {
-    if (!listModal) return null;
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+    const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+    const [selectedStatuses, setSelectedStatuses] = useState<RideStatus[]>([]);
+    const [pendingOnly, setPendingOnly] = useState(false);
+
+    const statusDropdownRef = useRef<HTMLDivElement | null>(null);
+    const sortDropdownRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            const target = e.target as Node;
+            if (
+                statusDropdownOpen &&
+                statusDropdownRef.current &&
+                !statusDropdownRef.current.contains(target)
+            ) {
+                setStatusDropdownOpen(false);
+            }
+            if (
+                sortDropdownOpen &&
+                sortDropdownRef.current &&
+                !sortDropdownRef.current.contains(target)
+            ) {
+                setSortDropdownOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, [statusDropdownOpen, sortDropdownOpen]);
 
     const visibleRides = useMemo(() => {
-        let rides = listRides;
+        if (!listModal) return [];
 
-        if (listFilterStatus !== "all") {
-            rides = rides.filter(
-                (r) => (r.status as RideStatus) === listFilterStatus,
-            );
-        }
+        let rides = listRides;
+        const hasStatusFilters = selectedStatuses.length > 0;
+
+        rides = rides.filter((r) => {
+            const rideStatus = r.status as RideStatus;
+
+            const pendingCount =
+                (r as any).pendingClaimsCount ??
+                ((r as any).hasPendingClaims ? 1 : 0);
+            const hasPending =
+                (r as any).hasPendingClaims === true || pendingCount > 0;
+
+            if (hasStatusFilters && !selectedStatuses.includes(rideStatus)) {
+                return false;
+            }
+
+            if (pendingOnly && !hasPending) {
+                return false;
+            }
+
+            return true;
+        });
 
         const sorted = [...rides];
 
@@ -115,9 +186,27 @@ export default function MultiRideModal({
         }
 
         return sorted;
-    }, [listRides, listFilterStatus, listSort]);
+    }, [listModal, listRides, selectedStatuses, pendingOnly, listSort]);
 
     const ridesCount = visibleRides.length;
+
+    const toggleStatusFilter = (key: RideStatus) => {
+        setSelectedStatuses((prev) =>
+            prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key],
+        );
+    };
+
+    const clearStatusFilters = () => {
+        setSelectedStatuses([]);
+    };
+
+    const activeFilterCount =
+        selectedStatuses.length + (pendingOnly ? 1 : 0);
+
+    const statusSummary =
+        selectedStatuses.length === 0
+            ? "All statuses"
+            : `${selectedStatuses.length} selected`;
 
     const handleBackdropClick = async () => {
         await onClose();
@@ -127,13 +216,15 @@ export default function MultiRideModal({
         await onClose();
     };
 
+    if (!listModal) return null;
+
     return (
         <div
             className="fixed inset-0 z-40 flex items-end sm:items-center justify-center bg-black/40"
             onClick={handleBackdropClick}
         >
             <div
-                className="w-full max-w-md rounded-t-2xl sm:rounded-2xl bg-white shadow-lg"
+                className="w-full max-w-md max-h-[80vh] min-h-[60vh] rounded-t-2xl sm:rounded-2xl bg-white shadow-lg flex flex-col"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -156,9 +247,7 @@ export default function MultiRideModal({
 
                         <div className="min-w-0">
                             <Typography className="text-sm sm:text-base font-semibold text-gray-900 truncate">
-                                {isListMode
-                                    ? listModal.title
-                                    : "Ride details"}
+                                {isListMode ? listModal.title : "Ride details"}
                             </Typography>
                             <Typography className="text-[11px] sm:text-xs text-gray-500 truncate">
                                 {isListMode
@@ -166,7 +255,9 @@ export default function MultiRideModal({
                                     : focusedListRide
                                         ? `${fmtDate(
                                             focusedListRide.datetime,
-                                        )} • ${fmtTime(focusedListRide.datetime)}`
+                                        )} • ${fmtTime(
+                                            focusedListRide.datetime,
+                                        )}`
                                         : ""}
                             </Typography>
                         </div>
@@ -183,83 +274,257 @@ export default function MultiRideModal({
                 </div>
 
                 {/* Body */}
-                <div className="max-h-[70vh] overflow-y-auto px-4 py-3 sm:px-6 sm:py-4 space-y-3">
+                <div className="flex-1 max-h-full overflow-y-auto px-4 py-3 sm:px-6 sm:py-4 space-y-3">
                     {isListMode ? (
                         <>
-                            {/* Filters + sort */}
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-[11px] sm:text-xs">
-                                <div className="flex flex-wrap gap-1">
-                                    {STATUS_FILTER_ORDER.map((status) => {
-                                        const isActive =
-                                            listFilterStatus === status;
-                                        const label =
-                                            status === "all"
-                                                ? "All"
-                                                : String(status).replace(
-                                                    /_/g,
-                                                    " ",
-                                                );
+                            {/* Filters (collapsible) */}
+                            <div className="rounded-xl border border-gray-200 bg-gray-50/60">
+                                <button
+                                    type="button"
+                                    className="flex w-full items-center justify-between px-3 py-2.5 sm:px-4"
+                                    onClick={() =>
+                                        setFiltersOpen((open) => !open)
+                                    }
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                                            <Filter className="w-3.5 h-3.5" />
+                                        </span>
+                                        <div className="flex flex-col items-start">
+                                            <span className="text-xs sm:text-sm font-medium text-gray-900">
+                                                Filters
+                                            </span>
+                                            <span className="text-[10px] sm:text-[11px] text-gray-500">
+                                                {activeFilterCount === 0
+                                                    ? "No filters applied"
+                                                    : `${activeFilterCount} filter${activeFilterCount > 1 ? "s" : ""} active`}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {activeFilterCount > 0 && (
+                                            <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
+                                                {activeFilterCount}
+                                            </span>
+                                        )}
+                                        {filtersOpen ? (
+                                            <ChevronUp className="w-4 h-4 text-gray-400" />
+                                        ) : (
+                                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                                        )}
+                                    </div>
+                                </button>
 
-                                        return (
+                                {filtersOpen && (
+                                    <div className="border-t border-gray-200 px-3 py-2.5 sm:px-4 sm:py-3 space-y-2.5">
+                                        {/* Row 1: status filter (full-width, mobile-friendly) */}
+                                        <div
+                                            ref={statusDropdownRef}
+                                            className="relative"
+                                        >
+                                            <div className="text-[11px] sm:text-xs mb-1 text-gray-600">
+                                                Status
+                                            </div>
                                             <button
-                                                key={status}
                                                 type="button"
                                                 onClick={() =>
-                                                    onChangeFilterStatus(
-                                                        status,
+                                                    setStatusDropdownOpen(
+                                                        (open) => !open,
                                                     )
                                                 }
-                                                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 ${
-                                                    isActive
-                                                        ? "bg-indigo-50 border-indigo-200 text-indigo-700"
-                                                        : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                                                }`}
+                                                className="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-xs sm:text-sm text-gray-700 hover:bg-gray-50"
                                             >
-                                                {status !== "all" && (
-                                                    <span
-                                                        className={`h-1.5 w-1.5 rounded-full ${getStatusDotColor(
-                                                            status as RideStatus,
-                                                        )}`}
-                                                    />
-                                                )}
-                                                <span className="capitalize">
-                                                    {label}
+                                                <span className="inline-flex items-center gap-2">
+                                                    <SlidersHorizontal className="w-4 h-4 text-gray-500" />
+                                                    <span className="font-medium">
+                                                        {statusSummary}
+                                                    </span>
                                                 </span>
+                                                <ChevronDown className="w-4 h-4 text-gray-400" />
                                             </button>
-                                        );
-                                    })}
-                                </div>
 
-                                <div className="flex items-center gap-1 text-gray-500">
-                                    <span>Sort:</span>
-                                    <select
-                                        className="rounded-md border border-gray-200 bg-white px-2 py-1 text-[11px] sm:text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                                        value={listSort}
-                                        onChange={(e) =>
-                                            onChangeSort(
-                                                e.target
-                                                    .value as ListSortKey,
-                                            )
-                                        }
-                                    >
-                                        <option value="timeAsc">
-                                            Time ↑
-                                        </option>
-                                        <option value="timeDesc">
-                                            Time ↓
-                                        </option>
-                                        <option value="status">
-                                            Status
-                                        </option>
-                                        <option value="amountDesc">
-                                            Amount ↓
-                                        </option>
-                                    </select>
-                                </div>
+                                            {statusDropdownOpen && (
+                                                <div className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
+                                                    <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
+                                                        <span className="text-[11px] font-medium text-gray-700">
+                                                            Filter by status
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={
+                                                                clearStatusFilters
+                                                            }
+                                                            className="text-[11px] text-indigo-600 hover:text-indigo-700"
+                                                        >
+                                                            Clear
+                                                        </button>
+                                                    </div>
+                                                    <ul className="max-h-64 overflow-y-auto px-2 py-2 text-[11px] sm:text-xs">
+                                                        {STATUS_FILTER_OPTIONS.map(
+                                                            ({
+                                                                 key,
+                                                                 label,
+                                                             }) => {
+                                                                const checked =
+                                                                    selectedStatuses.includes(
+                                                                        key,
+                                                                    );
+                                                                const pillClasses =
+                                                                    getPillStatusColor(
+                                                                        key,
+                                                                    );
+                                                                const dotClasses =
+                                                                    getStatusDotColor(
+                                                                        key,
+                                                                    );
+
+                                                                return (
+                                                                    <li
+                                                                        key={
+                                                                            key
+                                                                        }
+                                                                        className="px-1 py-1"
+                                                                    >
+                                                                        <label className="flex items-center gap-2 cursor-pointer">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                                                                checked={
+                                                                                    checked
+                                                                                }
+                                                                                onChange={() =>
+                                                                                    toggleStatusFilter(
+                                                                                        key,
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                            <span
+                                                                                className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] sm:text-[11px] ${pillClasses}`}
+                                                                            >
+                                                                                <span
+                                                                                    className={`h-1.5 w-1.5 rounded-full ${dotClasses}`}
+                                                                                />
+                                                                                <span className="capitalize">
+                                                                                    {label}
+                                                                                </span>
+                                                                            </span>
+                                                                        </label>
+                                                                    </li>
+                                                                );
+                                                            },
+                                                        )}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Row 2: pending drivers checkbox (full-width row) */}
+                                        <div className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-xs sm:text-sm">
+                                            <label className="flex items-center justify-between gap-3 cursor-pointer">
+                                                <div className="flex items-start gap-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="mt-0.5 h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                                                        checked={pendingOnly}
+                                                        onChange={(e) =>
+                                                            setPendingOnly(
+                                                                e.target.checked,
+                                                            )
+                                                        }
+                                                    />
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium text-gray-900">
+                                                            Pending driver
+                                                        </span>
+                                                        <span className="text-[10px] sm:text-[11px] text-gray-500">
+                                                            Show only rides that have at least one queued driver request
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        </div>
+
+                                        {/* Row 3: sort dropdown (full-width row) */}
+                                        <div
+                                            ref={sortDropdownRef}
+                                            className="relative"
+                                        >
+                                            <div className="text-[11px] sm:text-xs mb-1 text-gray-600">
+                                                Sort by
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setSortDropdownOpen(
+                                                        (open) => !open,
+                                                    )
+                                                }
+                                                className="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-xs sm:text-sm text-gray-700 hover:bg-gray-50"
+                                            >
+                                                <span className="inline-flex items-center gap-2">
+                                                    <ArrowUpDown className="w-4 h-4 text-gray-500" />
+                                                    <span className="font-medium">
+                                                        {getSortLabel(
+                                                            listSort,
+                                                        )}
+                                                    </span>
+                                                </span>
+                                                <ChevronDown className="w-4 h-4 text-gray-400" />
+                                            </button>
+
+                                            {sortDropdownOpen && (
+                                                <div className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
+                                                    <ul className="py-1 text-[11px] sm:text-xs">
+                                                        {(
+                                                            [
+                                                                "timeAsc",
+                                                                "timeDesc",
+                                                                "status",
+                                                                "amountDesc",
+                                                            ] as ListSortKey[]
+                                                        ).map((option) => {
+                                                            const active =
+                                                                option ===
+                                                                listSort;
+                                                            return (
+                                                                <li
+                                                                    key={
+                                                                        option
+                                                                    }
+                                                                >
+                                                                    <button
+                                                                        type="button"
+                                                                        className={`flex w-full items-center px-3 py-1.5 text-left hover:bg-gray-50 ${
+                                                                            active
+                                                                                ? "text-indigo-600 font-medium"
+                                                                                : "text-gray-700"
+                                                                        }`}
+                                                                        onClick={() => {
+                                                                            onChangeSort(
+                                                                                option,
+                                                                            );
+                                                                            setSortDropdownOpen(
+                                                                                false,
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        {getSortLabel(
+                                                                            option,
+                                                                        )}
+                                                                    </button>
+                                                                </li>
+                                                            );
+                                                        })}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* List of rides */}
-                            <div className="mt-1 rounded-lg border border-gray-200 divide-y divide-gray-100">
+                            <div className="mt-2 rounded-lg border border-gray-200 divide-y divide-gray-100">
                                 {visibleRides.length === 0 && (
                                     <div className="px-3 py-6 text-center text-xs sm:text-sm text-gray-500">
                                         No rides match current filters.
@@ -281,23 +546,35 @@ export default function MultiRideModal({
                                         ? money(ride.payment!.amountCents)
                                         : null;
 
+                                    const rideId = String(ride._id);
+
+                                    const pendingCount =
+                                        (ride as any).pendingClaimsCount ??
+                                        ((ride as any).hasPendingClaims
+                                            ? 1
+                                            : 0);
+                                    const hasPending =
+                                        (ride as any).hasPendingClaims ===
+                                        true || pendingCount > 0;
+
                                     const isSelected =
                                         listModalSelectedId &&
-                                        String(ride._id) ===
-                                        listModalSelectedId;
+                                        rideId === listModalSelectedId;
 
                                     return (
                                         <button
                                             key={ride._id}
                                             type="button"
                                             onClick={() =>
-                                                onSelectRide(
-                                                    String(ride._id),
-                                                )
+                                                onSelectRide(rideId)
                                             }
                                             className={`w-full text-left px-3 py-2.5 sm:px-4 sm:py-3 hover:bg-gray-50 ${
                                                 isSelected
                                                     ? "bg-indigo-50/60"
+                                                    : ""
+                                            } ${
+                                                hasPending
+                                                    ? "border-l-4 border-amber-400"
                                                     : ""
                                             }`}
                                         >
@@ -328,7 +605,7 @@ export default function MultiRideModal({
                                                     </div>
                                                 </div>
 
-                                                <div className="shrink-0 inline-flex items-center">
+                                                <div className="shrink-0 inline-flex flex-col items-end gap-1">
                                                     <span
                                                         className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] sm:text-xs font-medium ${getPillStatusColor(
                                                             status,
@@ -340,14 +617,23 @@ export default function MultiRideModal({
                                                             )}`}
                                                         />
                                                         <span className="capitalize">
-                                                            {String(
+                                                            {getStatusLabel(
                                                                 status,
-                                                            ).replace(
-                                                                /_/g,
-                                                                " ",
                                                             )}
                                                         </span>
                                                     </span>
+
+                                                    {hasPending && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] sm:text-xs font-medium text-amber-800">
+                                                            <Users className="w-3.5 h-3.5" />
+                                                            <span>
+                                                                Pending driver
+                                                            </span>
+                                                            <span className="inline-flex items-center justify-center rounded-full bg-amber-400 text-white text-[9px] sm:text-[10px] min-w-[1.1rem] h-4 px-1">
+                                                                {pendingCount}
+                                                            </span>
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </button>
@@ -387,10 +673,7 @@ export default function MultiRideModal({
                                     href={`/rides/${focusedListRide._id}`}
                                     className="w-full sm:w-auto"
                                 >
-                                    <Button
-                                        size="sm"
-                                        className="w-full"
-                                    >
+                                    <Button size="sm" className="w-full">
                                         Open full ride
                                     </Button>
                                 </Link>

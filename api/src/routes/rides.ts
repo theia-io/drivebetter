@@ -89,8 +89,7 @@ function getPaging(req: Request) {
     return { page, limit, skip };
 }
 
-/**
- * @openapi
+/**@openapi
  * /rides:
  *   get:
  *     summary: List rides (filterable, paginated)
@@ -130,50 +129,118 @@ function getPaging(req: Request) {
  *         schema: { type: string, enum: [asc, desc], default: desc }
  *     responses:
  *       200:
- *         description: Paged list
+ *         description: Paged list of rides
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 items:
+ *                   type: array
+ *                   description: List of rides; each item includes standard ride fields plus pending-claims metadata
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       pendingClaimsCount:
+ *                         type: integer
+ *                         description: Number of queued driver claims (pending driver requests) for this ride
+ *                       hasPendingClaims:
+ *                         type: boolean
+ *                         description: True when there is at least one queued driver claim for this ride
+ *                 page:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *                 total:
+ *                   type: integer
+ *                 pages:
+ *                   type: integer
  */
-router.get("/",
+router.get(
+    "/",
     requireAuth,
     requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
-    const user = (req as any).user;
-    const page = Math.max(Number(req.query.page || 1), 1);
-    const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
-    const sortDirParam = String(req.query.sort || "asc").toLowerCase();
-    const sortDir: 1 | -1 = sortDirParam === "asc" ? 1 : -1;
-    const sortByParam = String(req.query.sortBy || "createdAt");
-    const sortField = sortByParam === "datetime" ? "datetime" : "createdAt";
-    const filter: any = {};
+        const user = (req as any).user;
+        const page = Math.max(Number(req.query.page || 1), 1);
+        const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
+        const sortDirParam = String(req.query.sort || "asc").toLowerCase();
+        const sortDir: 1 | -1 = sortDirParam === "asc" ? 1 : -1;
+        const sortByParam = String(req.query.sortBy || "createdAt");
+        const sortField = sortByParam === "datetime" ? "datetime" : "createdAt";
+        const filter: any = {};
 
-    if (req.query.status) filter.status = req.query.status;
-    if (req.query.type) filter.type = req.query.type;
+        if (req.query.status) filter.status = req.query.status;
+        if (req.query.type) filter.type = req.query.type;
 
-    // Date range
-    if (req.query.from || req.query.to) {
-        filter.datetime = {};
-        if (req.query.from) filter.datetime.$gte = new Date(String(req.query.from));
-        if (req.query.to) filter.datetime.$lte = new Date(String(req.query.to));
+        // Date range
+        if (req.query.from || req.query.to) {
+            filter.datetime = {};
+            if (req.query.from) filter.datetime.$gte = new Date(String(req.query.from));
+            if (req.query.to) filter.datetime.$lte = new Date(String(req.query.to));
+        }
+
+        // Driver filter
+        if (req.query.driverId && isObjectId(req.query.driverId)) {
+            const driverId = new Types.ObjectId(String(req.query.driverId));
+            const includeClaimed =
+                String(req.query.includeClaimed || "false").toLowerCase() === "true";
+
+            filter.$or = includeClaimed
+                ? [{ assignedDriverId: driverId }, { queue: driverId }]
+                : [{ assignedDriverId: driverId }];
+        }
+
+        const scopedFilter = { ...filter, ...rideScopeFilter(user) };
+
+        const total = await Ride.countDocuments(scopedFilter);
+
+        const items = await Ride.find(scopedFilter)
+            .sort({ [sortField]: sortDir })
+            .skip((page - 1) * limit)
+            .limit(limit)
+            .populate("creatorId", "name email phone")
+            .lean();
+
+        if (items.length > 0) {
+            const rideIds = items.map((r) => r._id);
+
+            const pendingAgg = await RideClaim.aggregate([
+                {
+                    $match: {
+                        rideId: { $in: rideIds },
+                        status: "queued",
+                    },
+                },
+                {
+                    $group: {
+                        _id: "$rideId",
+                        count: { $sum: 1 },
+                    },
+                },
+            ]);
+
+            const pendingMap = new Map<string, number>();
+            for (const row of pendingAgg) {
+                pendingMap.set(String(row._id), row.count);
+            }
+
+            for (const ride of items as any[]) {
+                const count = pendingMap.get(String(ride._id)) ?? 0;
+                ride.pendingClaimsCount = count;
+                ride.hasPendingClaims = count > 0;
+            }
+        }
+
+        res.json({
+            items,
+            page,
+            limit,
+            total,
+            pages: Math.ceil(total / limit),
+        });
     }
-
-    // Driver filter
-    if (req.query.driverId && isObjectId(req.query.driverId)) {
-        const driverId = new Types.ObjectId(String(req.query.driverId));
-        const includeClaimed = String(req.query.includeClaimed || "false").toLowerCase() === "true";
-        filter.$or = includeClaimed
-            ? [{ assignedDriverId: driverId }, { queue: driverId }]
-            : [{ assignedDriverId: driverId }];
-    }
-    const scopedFilter = { ...filter, ...rideScopeFilter(user) };
-    const total = await Ride.countDocuments(scopedFilter);
-    const items = await Ride.find(scopedFilter)
-        .sort({ [sortField]: sortDir })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .populate("creatorId", "name email phone")
-        .lean();
-
-    res.json({ items, page, limit, total, pages: Math.ceil(total / limit) });
-});
+);
 
 /**
  * @openapi

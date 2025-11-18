@@ -8,13 +8,8 @@ import { useRidesInfinite } from "@/stores/rides";
 import { Ride } from "@/types";
 import { useAuthStore } from "@/stores";
 import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
-import {
-    type RideStatus,
-    getStatusLabel,
-} from "@/types/rideStatus";
-import RidesFilters, {
-    SortKey,
-} from "@/components/ui/ride/RidesFilters";
+import { type RideStatus, getStatusLabel } from "@/types/rideStatus";
+import RidesFilters, { SortKey } from "@/components/ui/ride/RidesFilters";
 
 export default function RidesPage() {
     const { user } = useAuthStore();
@@ -32,6 +27,9 @@ export default function RidesPage() {
     // accordion open/closed
     const [filtersOpen, setFiltersOpen] = useState(false);
 
+    // client-side filter: only rides with pending driver requests
+    const [pendingOnly, setPendingOnly] = useState(false);
+
     // build params for /rides list endpoint
     const params = useMemo(() => {
         const p: any = {};
@@ -44,7 +42,7 @@ export default function RidesPage() {
         if (statusFilter !== "all") {
             p.status = statusFilter;
         }
-        // if you ever want only "my created" for drivers, you can add user filter here
+        // potential driver-specific filter can go here later
         return p;
     }, [dateFrom, dateTo, statusFilter]);
 
@@ -58,7 +56,7 @@ export default function RidesPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dateFrom, dateTo, statusFilter]);
 
-    // client-side sort
+    // client-side sort + pending filter
     const rides: Ride[] = useMemo(() => {
         const list = [...items];
 
@@ -86,8 +84,17 @@ export default function RidesPage() {
             }
         });
 
-        return list;
-    }, [items, sortBy]);
+        if (!pendingOnly) {
+            return list;
+        }
+
+        return list.filter((ride: any) => {
+            const pendingCount =
+                ride.pendingClaimsCount ??
+                (ride.hasPendingClaims ? 1 : 0);
+            return ride.hasPendingClaims === true || pendingCount > 0;
+        });
+    }, [items, sortBy, pendingOnly]);
 
     return (
         <ProtectedLayout>
@@ -123,7 +130,7 @@ export default function RidesPage() {
                         </div>
                     </div>
 
-                    {/* FILTERS (REUSABLE COMPONENT) */}
+                    {/* FILTERS (new design, aligned with MultiRideModal) */}
                     <RidesFilters
                         statusFilter={statusFilter}
                         dateFrom={dateFrom}
@@ -131,11 +138,13 @@ export default function RidesPage() {
                         sortBy={sortBy}
                         filtersOpen={filtersOpen}
                         ridesCount={rides.length}
+                        pendingOnly={pendingOnly}
                         onToggleOpen={() => setFiltersOpen((v) => !v)}
                         onChangeStatusFilter={setStatusFilter}
                         onChangeDateFrom={setDateFrom}
                         onChangeDateTo={setDateTo}
                         onChangeSortBy={setSortBy}
+                        onChangePendingOnly={setPendingOnly}
                     />
 
                     {/* RIDES LIST */}
