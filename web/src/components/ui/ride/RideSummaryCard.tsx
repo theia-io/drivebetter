@@ -213,9 +213,17 @@ export default function RideSummaryCard({
                         setExpanded((v) => !v);
                     }}
                 >
-                    {/* Left icon */}
-                    <div className="w-9 h-9 sm:w-10 sm:h-10 bg-indigo-100 rounded-full flex items-center justify-center shrink-0">
-                        <User className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+                    {/* Left icon with red indicator when pending claims exist */}
+                    <div className="relative shrink-0">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                            <User className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600" />
+                        </div>
+                        {hasQueuedClaims && isPrivileged && (
+                            <span className="flex absolute -top-0.5 -right-0.5 h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                            </span>
+                        )}
                     </div>
 
                     {/* Center summary */}
@@ -234,11 +242,11 @@ export default function RideSummaryCard({
                                         setExpanded(true);
                                     }
                                 }}
-                                className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] sm:text-xs font-medium text-amber-800 hover:bg-amber-100"
+                                className="inline-flex items-center gap-1.5 rounded-full border border-red-300 bg-red-50 px-2 py-0.5 text-[10px] sm:text-xs font-medium text-red-800 hover:bg-red-100"
                             >
                                 <Users className="w-3.5 h-3.5" />
                                 <span>Pending driver requests</span>
-                                <span className="inline-flex items-center justify-center rounded-full bg-amber-600 text-white text-[10px] sm:text-xs min-w-[1.25rem] h-4 sm:h-5 px-1.5">
+                                <span className="inline-flex items-center justify-center rounded-full bg-red-600 text-white text-[10px] sm:text-xs min-w-[1.25rem] h-4 sm:h-5 px-1.5">
                                     {queuedClaims.length}
                                 </span>
                             </button>
@@ -356,7 +364,7 @@ export default function RideSummaryCard({
                                         Pending driver requests
                                     </span>
                                     {hasQueuedClaims && (
-                                        <span className="ml-auto inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+                                        <span className="ml-auto inline-flex items-center rounded-full border border-red-300 bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-800">
                                             {queuedClaims.length} pending
                                         </span>
                                     )}
@@ -379,110 +387,119 @@ export default function RideSummaryCard({
                                     </div>
                                 ) : (
                                     <div className="space-y-1.5">
-                                        {queuedClaims.map((c: any, idx: number) => {
-                                            const d = claimDriversMap[c.driverId];
-                                            const name =
-                                                d?.name ||
-                                                `User ${c.driverId.slice(-6)}`;
-                                            const email = d?.email;
+                                        {queuedClaims.map(
+                                            (c: any, idx: number) => {
+                                                const d =
+                                                    claimDriversMap[
+                                                        c.driverId
+                                                        ];
+                                                const name =
+                                                    d?.name ||
+                                                    `User ${c.driverId.slice(
+                                                        -6,
+                                                    )}`;
+                                                const email = d?.email;
 
-                                            return (
-                                                <div
-                                                    key={c.claimId}
-                                                    className="flex flex-wrap items-center gap-2 justify-between rounded-md border border-gray-200 bg-white p-2"
-                                                >
-                                                    <div className="min-w-0 flex items-start gap-2">
-                                                        {/* queue index */}
-                                                        <span className="mt-0.5 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700">
-                                                            #{idx + 1}
-                                                        </span>
-                                                        <UserIcon className="w-4 h-4 text-gray-500 mt-0.5" />
-                                                        <div className="min-w-0">
-                                                            <div className="text-xs font-medium text-gray-900 truncate">
-                                                                <Link
-                                                                    href={`/users/${c.driverId}`}
-                                                                    className="hover:underline"
-                                                                >
-                                                                    {name}
-                                                                </Link>
-                                                            </div>
-                                                            <div className="text-[11px] text-gray-600 truncate">
-                                                                {email || "—"}
-                                                            </div>
-                                                            {c.createdAt && (
-                                                                <div className="text-xs sm:text-sm text-gray-500 mt-1">
-                                                                    Requested{" "}
-                                                                    {fmtDate(
-                                                                        c.createdAt,
-                                                                    )}{" "}
-                                                                    •{" "}
-                                                                    {fmtTime(
-                                                                        c.createdAt,
-                                                                    )}
+                                                return (
+                                                    <div
+                                                        key={c.claimId}
+                                                        className="flex flex-wrap items-center gap-2 justify-between rounded-md border border-gray-200 bg-white p-2"
+                                                    >
+                                                        <div className="min-w-0 flex items-start gap-2">
+                                                            {/* queue index */}
+                                                            <span className="mt-0.5 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700">
+                                                                #{idx + 1}
+                                                            </span>
+                                                            <UserIcon className="w-4 h-4 text-gray-500 mt-0.5" />
+                                                            <div className="min-w-0">
+                                                                <div className="text-xs font-medium text-gray-900 truncate">
+                                                                    <Link
+                                                                        href={`/users/${c.driverId}`}
+                                                                        className="hover:underline"
+                                                                    >
+                                                                        {name}
+                                                                    </Link>
                                                                 </div>
-                                                            )}
+                                                                <div className="text-[11px] text-gray-600 truncate">
+                                                                    {email ||
+                                                                        "—"}
+                                                                </div>
+                                                                {c.createdAt && (
+                                                                    <div className="text-xs sm:text-sm text-gray-500 mt-1">
+                                                                        Requested{" "}
+                                                                        {fmtDate(
+                                                                            c.createdAt,
+                                                                        )}{" "}
+                                                                        •{" "}
+                                                                        {fmtTime(
+                                                                            c.createdAt,
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="solid"
+                                                                onClick={() =>
+                                                                    handleApproveClaim(
+                                                                        c.claimId,
+                                                                        c.driverId,
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    isApproving
+                                                                }
+                                                                className="text-xs py-1 px-2 bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500"
+                                                                leftIcon={
+                                                                    isApproving ? (
+                                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                    ) : (
+                                                                        <Check className="w-3.5 h-3.5" />
+                                                                    )
+                                                                }
+                                                            >
+                                                                Approve
+                                                            </Button>
+
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                onClick={() =>
+                                                                    handleRejectClaim(
+                                                                        c.claimId,
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    isRejecting
+                                                                }
+                                                                className="text-xs py-1 px-2 border-amber-400 text-amber-700 hover:bg-amber-50 focus:ring-amber-500"
+                                                                leftIcon={
+                                                                    isRejecting ? (
+                                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                    ) : (
+                                                                        <XIcon className="w-3.5 h-3.5" />
+                                                                    )
+                                                                }
+                                                            >
+                                                                Reject
+                                                            </Button>
                                                         </div>
                                                     </div>
-
-                                                    <div className="flex items-center gap-1.5">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="solid"
-                                                            onClick={() =>
-                                                                handleApproveClaim(
-                                                                    c.claimId,
-                                                                    c.driverId,
-                                                                )
-                                                            }
-                                                            disabled={
-                                                                isApproving
-                                                            }
-                                                            className="text-xs py-1 px-2 bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500"
-                                                            leftIcon={
-                                                                isApproving ? (
-                                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                                ) : (
-                                                                    <Check className="w-3.5 h-3.5" />
-                                                                )
-                                                            }
-                                                        >
-                                                            Approve
-                                                        </Button>
-
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() =>
-                                                                handleRejectClaim(
-                                                                    c.claimId,
-                                                                )
-                                                            }
-                                                            disabled={
-                                                                isRejecting
-                                                            }
-                                                            className="text-xs py-1 px-2 border-amber-400 text-amber-700 hover:bg-amber-50 focus:ring-amber-500"
-                                                            leftIcon={
-                                                                isRejecting ? (
-                                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                                ) : (
-                                                                    <XIcon className="w-3.5 h-3.5" />
-                                                                )
-                                                            }
-                                                        >
-                                                            Reject
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                                );
+                                            },
+                                        )}
                                     </div>
                                 )}
 
-                                {claimDriversLoading && queuedClaims.length > 0 && (
-                                    <div className="text-[11px] text-gray-600">
-                                        Loading driver info…
-                                    </div>
-                                )}
+                                {claimDriversLoading &&
+                                    queuedClaims.length > 0 && (
+                                        <div className="text-[11px] text-gray-600">
+                                            Loading driver info…
+                                        </div>
+                                    )}
 
                                 {claimsError && (
                                     <div className="rounded-md border border-red-200 bg-red-50 p-2 text-[11px] text-red-700">

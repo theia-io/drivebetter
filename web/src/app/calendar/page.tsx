@@ -28,7 +28,7 @@ import {
     ChevronRight,
     Loader2,
     X,
-    Layers, ArrowLeft,
+    Layers, ArrowLeft, Users,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -201,6 +201,7 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
     }
 
     // Cluster event
+    // Cluster event
     if (res.kind === "cluster") {
         const rides = res.rides;
         const total = rides.length;
@@ -214,19 +215,34 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
             else inProgress += 1;
         }
 
+        // any ride in this cluster with pending driver request
+        const hasPending = rides.some((r: any) => {
+            const pendingCount =
+                r.pendingClaimsCount ?? (r.hasPendingClaims ? 1 : 0);
+            return r.hasPendingClaims === true || pendingCount > 0;
+        });
+
         return (
             <div className="flex items-start gap-1.5 text-[10px] sm:text-xs leading-snug">
-                <div className="mt-0.5 shrink-0">
+                {/* icon with red ping indicator when cluster has pending drivers */}
+                <div className="relative mt-0.5 shrink-0">
                     <Layers className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500" />
+                    {hasPending && (
+                        <span className="flex absolute -top-0.5 -right-0.5 h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                    </span>
+                    )}
                 </div>
+
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1">
-                        <span className="truncate font-semibold">
-                            {res.timeLabel} • {total} rides
-                        </span>
+                    <span className="truncate font-semibold">
+                        {res.timeLabel} • {total} rides
+                    </span>
                         <span className="shrink-0 rounded-full border border-gray-300 bg-white px-1.5 py-[1px] text-[8px] font-semibold uppercase tracking-wide text-gray-600">
-                            {total >= 4 ? "Show rides" : "Multiple rides"}
-                        </span>
+                        {total >= 4 ? "Show rides" : "Multiple rides"}
+                    </span>
                     </div>
                     <div className="truncate text-[9px] sm:text-[10px] text-gray-700">
                         {unassigned > 0 && `${unassigned} unassigned`}
@@ -249,17 +265,33 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
         const Icon = getStatusIcon(r.status as RideStatus);
         const hasAmount = !!r.payment?.amountCents;
 
+        const pendingCount =
+            (r as any).pendingClaimsCount ??
+            ((r as any).hasPendingClaims ? 1 : 0);
+        const hasPending =
+            (r as any).hasPendingClaims === true || pendingCount > 0;
+
         return (
             <div className="flex items-start gap-1.5 text-[10px] sm:text-xs leading-snug">
-                <div className="mt-0.5 shrink-0">
+                {/* Flowbite-style indicator wrapped around the status icon */}
+                <div className="relative mt-0.5 shrink-0">
                     <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    {hasPending && (
+                        <span className="flex absolute -top-0.5 -right-0.5 h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                    </span>
+                    )}
                 </div>
+
                 <div className="min-w-0 flex-1">
                     <div className="truncate font-semibold">
                         {fmtTime(r.datetime)} · {r.from} → {r.to}
                     </div>
                     <div className="truncate">
-                        {hasAmount ? money(r.payment!.amountCents) : km(r.distance || 0)}{" "}
+                        {hasAmount
+                            ? money(r.payment!.amountCents)
+                            : km(r.distance || 0)}{" "}
                         {mins((r as any).durationMinutes)
                             ? `• ${mins((r as any).durationMinutes)}`
                             : ""}
@@ -844,7 +876,6 @@ export default function CalendarPage() {
             <MultiRideModal
                 listModal={listModal}
                 listModalSelectedId={listModalSelectedId}
-                listFilterStatus={listFilterStatus}
                 listSort={listSort}
                 isListMode={isListMode}
                 focusedListRide={focusedListRide}
@@ -856,7 +887,6 @@ export default function CalendarPage() {
                 }}
                 onSelectRide={(id) => setListModalSelectedId(id)}
                 onBackToList={() => setListModalSelectedId(null)}
-                onChangeFilterStatus={setListFilterStatus}
                 onChangeSort={setListSort}
                 onDriverAssigned={handleDriverAssigned}
                 onRideStatusChanged={handleRideStatusChanged}

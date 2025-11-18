@@ -10,7 +10,6 @@ import {
     Filter,
     Layers,
     SlidersHorizontal,
-    Users,
     X,
 } from "lucide-react";
 
@@ -424,11 +423,12 @@ export default function MultiRideModal({
                                                 <div className="flex items-start gap-2">
                                                     <input
                                                         type="checkbox"
-                                                        className="mt-0.5 h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                                                        className="mt-0.5 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
                                                         checked={pendingOnly}
                                                         onChange={(e) =>
                                                             setPendingOnly(
-                                                                e.target.checked,
+                                                                e.target
+                                                                    .checked,
                                                             )
                                                         }
                                                     />
@@ -572,10 +572,6 @@ export default function MultiRideModal({
                                                 isSelected
                                                     ? "bg-indigo-50/60"
                                                     : ""
-                                            } ${
-                                                hasPending
-                                                    ? "border-l-4 border-amber-400"
-                                                    : ""
                                             }`}
                                         >
                                             <div className="flex items-start justify-between gap-2">
@@ -606,32 +602,37 @@ export default function MultiRideModal({
                                                 </div>
 
                                                 <div className="shrink-0 inline-flex flex-col items-end gap-1">
-                                                    <span
-                                                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] sm:text-xs font-medium ${getPillStatusColor(
-                                                            status,
-                                                        )}`}
-                                                    >
+                                                    {/* Status pill with red ping indicator when pending */}
+                                                    <div className="relative">
                                                         <span
-                                                            className={`h-2 w-2 rounded-full ${getStatusDotColor(
+                                                            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] sm:text-xs font-medium ${getPillStatusColor(
                                                                 status,
                                                             )}`}
-                                                        />
-                                                        <span className="capitalize">
-                                                            {getStatusLabel(
-                                                                status,
-                                                            )}
+                                                        >
+                                                            <span
+                                                                className={`h-2 w-2 rounded-full ${getStatusDotColor(
+                                                                    status,
+                                                                )}`}
+                                                            />
+                                                            <span className="capitalize">
+                                                                {getStatusLabel(
+                                                                    status,
+                                                                )}
+                                                            </span>
                                                         </span>
-                                                    </span>
 
+                                                        {hasPending && (
+                                                            <span className="flex absolute -top-1 -right-1 h-2.5 w-2.5">
+                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                                                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Optional subtle text for clarity */}
                                                     {hasPending && (
-                                                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] sm:text-xs font-medium text-amber-800">
-                                                            <Users className="w-3.5 h-3.5" />
-                                                            <span>
-                                                                Pending driver
-                                                            </span>
-                                                            <span className="inline-flex items-center justify-center rounded-full bg-amber-400 text-white text-[9px] sm:text-[10px] min-w-[1.1rem] h-4 px-1">
-                                                                {pendingCount}
-                                                            </span>
+                                                        <span className="text-[9px] sm:text-[10px] text-red-600">
+                                                            Pending driver
                                                         </span>
                                                     )}
                                                 </div>
