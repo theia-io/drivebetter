@@ -28,7 +28,9 @@ import {
     ChevronRight,
     Loader2,
     X,
-    Layers, ArrowLeft, Users,
+    Layers,
+    ArrowLeft,
+    Users,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -41,7 +43,7 @@ import {
     getStatusColors,
     getStatusDotColor,
     getPillStatusColor,
-    getStatusIcon,
+    getStatusIcon, getStatusLabel, STATUS_FLOW,
 } from "@/types/rideStatus";
 import MultiRideModal from "@/components/ui/calendar/MultiRideModal";
 import RideDetailsModal from "@/components/ui/calendar/RideDetailsModal";
@@ -67,6 +69,7 @@ type DayBuckets = {
     pob: number;
     clear: number;
     completed: number;
+    pendingClaims: number;
 };
 
 type ClusterResource = {
@@ -116,7 +119,9 @@ const TimeGutterHeader = () => (
 );
 
 // Map status → bucket used by clustering
-function bucketForStatus(status: RideStatus): "unassigned" | "inProgress" | "completed" {
+function bucketForStatus(
+    status: RideStatus,
+): "unassigned" | "inProgress" | "completed" {
     if (status === "completed") return "completed";
     if (status === "unassigned") return "unassigned";
     return "inProgress";
@@ -135,14 +140,15 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
         const { buckets, dateKey } = res;
         if (!buckets.total) return null;
 
+        const pendingClaims = buckets.pendingClaims ?? 0;
+        const hasPending = pendingClaims > 0;
+
         const scrollToStatus = (status: RideStatus) => {
             if (typeof document === "undefined") return;
 
-            // 1) try a single ride with exact status
             const selectorExact = `.ride-event.ride-day-${dateKey}.ride-status-${status}`;
             let el = document.querySelector(selectorExact) as HTMLElement | null;
 
-            // 2) if not found (clustered), fallback to bucket (unassigned / inProgress / completed)
             if (!el) {
                 const bucket = bucketForStatus(status);
                 const selectorBucket = `.ride-event.ride-day-${dateKey}.ride-bucket-${bucket}`;
@@ -158,49 +164,68 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
             });
         };
 
-        const renderChip = (status: RideStatus, count: number) => {
-            if (!count) return null;
-            return (
-                <button
-                    key={status}
-                    type="button"
-                    onClick={() => scrollToStatus(status)}
-                    className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] sm:text-[10px] border ${getPillStatusColor(
-                        status,
-                    )} hover:bg-white/70 hover:shadow-sm focus:outline-none focus:ring-1 focus:ring-gray-300`}
-                >
-                    <span
-                        className={`h-2 w-2 rounded-full ${getStatusDotColor(status)}`}
-                    />
-                    <span className="font-medium">
-                        {count}{" "}
-                        <span className="normal-case">
-                            {status.replace(/_/g, " ")}
-                        </span>
-                    </span>
-                </button>
-            );
-        };
+        const statusChips: {
+            status: RideStatus;
+            code: string;
+            count: number;
+        }[] = [
+            { status: "unassigned", code: "U", count: buckets.unassigned },
+            { status: "assigned", code: "A", count: buckets.assigned },
+            { status: "on_my_way", code: "OW", count: buckets.on_my_way },
+            { status: "on_location", code: "OL", count: buckets.on_location },
+            { status: "pob", code: "PoB", count: buckets.pob },
+            { status: "clear", code: "C", count: buckets.clear },
+            { status: "completed", code: "C", count: buckets.completed },
+        ];
 
         return (
             <div className="flex h-full flex-col items-center justify-center py-0.5">
+                {/* total rides */}
                 <span className="text-[9px] sm:text-[10px] font-medium text-gray-600">
-                    {buckets.total} ride{buckets.total > 1 ? "s" : ""}
-                </span>
+                {buckets.total} ride{buckets.total > 1 ? "s" : ""}
+            </span>
+
+                {/* compact per-status chips using real status colors */}
                 <div className="mt-0.5 flex flex-wrap items-center justify-center gap-1.5">
-                    {renderChip("unassigned", buckets.unassigned)}
-                    {renderChip("assigned", buckets.assigned)}
-                    {renderChip("on_my_way", buckets.on_my_way)}
-                    {renderChip("on_location", buckets.on_location)}
-                    {renderChip("pob", buckets.pob)}
-                    {renderChip("clear", buckets.clear)}
-                    {renderChip("completed", buckets.completed)}
+                    {statusChips
+                        .filter((chip) => chip.count > 0)
+                        .map(({ status, code, count }) => (
+                            <button
+                                key={status}
+                                type="button"
+                                onClick={() => scrollToStatus(status)}
+                                className={`inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[9px] sm:text-[10px] font-medium ${getPillStatusColor(
+                                    status,
+                                )}`}
+                            >
+                            <span
+                                className={`h-2 w-2 rounded-full ${getStatusDotColor(
+                                    status,
+                                )}`}
+                            />
+                                <span>{code}</span>
+                                <span>{count}</span>
+                            </button>
+                        ))}
                 </div>
+
+                {/* pending drivers indicator */}
+                {hasPending && (
+                    <div className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-medium text-red-800">
+                    <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                    </span>
+                        <span>Pending</span>
+                        <span className="ml-1 inline-flex items-center justify-center rounded-full bg-red-600 text-white text-[8px] min-w-[1.1rem] h-3.5 px-1">
+                        {pendingClaims}
+                    </span>
+                    </div>
+                )}
             </div>
         );
     }
 
-    // Cluster event
     // Cluster event
     if (res.kind === "cluster") {
         const rides = res.rides;
@@ -229,20 +254,20 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
                     <Layers className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-gray-500" />
                     {hasPending && (
                         <span className="flex absolute -top-0.5 -right-0.5 h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
-                    </span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                        </span>
                     )}
                 </div>
 
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1">
-                    <span className="truncate font-semibold">
-                        {res.timeLabel} • {total} rides
-                    </span>
+                        <span className="truncate font-semibold">
+                            {res.timeLabel} • {total} rides
+                        </span>
                         <span className="shrink-0 rounded-full border border-gray-300 bg-white px-1.5 py-[1px] text-[8px] font-semibold uppercase tracking-wide text-gray-600">
-                        {total >= 4 ? "Show rides" : "Multiple rides"}
-                    </span>
+                            {total >= 4 ? "Show rides" : "Multiple rides"}
+                        </span>
                     </div>
                     <div className="truncate text-[9px] sm:text-[10px] text-gray-700">
                         {unassigned > 0 && `${unassigned} unassigned`}
@@ -278,9 +303,9 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
                     <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     {hasPending && (
                         <span className="flex absolute -top-0.5 -right-0.5 h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
-                    </span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                        </span>
                     )}
                 </div>
 
@@ -313,15 +338,14 @@ export default function CalendarPage() {
 
     // multi-ride modal state
     const [listModal, setListModal] = useState<ListModalState | null>(null);
-    const [listModalSelectedId, setListModalSelectedId] = useState<string | null>(
-        null,
-    );
-    const [listFilterStatus, setListFilterStatus] = useState<RideStatus | "all">("all");
+    const [listModalSelectedId, setListModalSelectedId] =
+        useState<string | null>(null);
+    const [listFilterStatus, setListFilterStatus] =
+        useState<RideStatus | "all">("all");
 
     const [listSort, setListSort] = useState<
         "timeAsc" | "timeDesc" | "status" | "amountDesc"
     >("timeAsc");
-
 
     const { items: allRides, isLoading, mutate } = useRidesInfinite({}, 200);
 
@@ -354,6 +378,7 @@ export default function CalendarPage() {
                     pob: 0,
                     clear: 0,
                     completed: 0,
+                    pendingClaims: 0,
                 };
 
             curr.total += 1;
@@ -382,6 +407,14 @@ export default function CalendarPage() {
                     break;
                 default:
                     break;
+            }
+
+            const anyRide = ride as any;
+            const pendingCount =
+                anyRide.pendingClaimsCount ??
+                (anyRide.hasPendingClaims ? 1 : 0);
+            if (pendingCount) {
+                curr.pendingClaims += pendingCount;
             }
 
             map.set(key, curr);
@@ -507,13 +540,17 @@ export default function CalendarPage() {
                     fontSize: "0.75rem",
                     padding: "2px 4px",
                 },
-                className: `ride-event ride-day-${dateKey} ${bucketClasses.join(" ")}`,
+                className: `ride-event ride-day-${dateKey} ${bucketClasses.join(
+                    " ",
+                )}`,
             };
         }
 
         if (res.kind === "ride") {
             const ride = res.ride;
-            const { bg, border, text } = getStatusColors(ride.status as RideStatus);
+            const { bg, border, text } = getStatusColors(
+                ride.status as RideStatus,
+            );
 
             let bucket: "unassigned" | "inProgress" | "completed";
             if (ride.status === "completed") bucket = "completed";
@@ -631,7 +668,11 @@ export default function CalendarPage() {
     const goToPrevious = () => {
         if (view === "month") {
             onNavigate(
-                new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
+                new Date(
+                    currentDate.getFullYear(),
+                    currentDate.getMonth() - 1,
+                    1,
+                ),
             );
         } else if (view === "week") {
             onNavigate(addDays(currentDate, -7));
@@ -643,7 +684,11 @@ export default function CalendarPage() {
     const goToNext = () => {
         if (view === "month") {
             onNavigate(
-                new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
+                new Date(
+                    currentDate.getFullYear(),
+                    currentDate.getMonth() + 1,
+                    1,
+                ),
             );
         } else if (view === "week") {
             onNavigate(addDays(currentDate, 7));
@@ -665,9 +710,8 @@ export default function CalendarPage() {
     const focusedListRide: Ride | null = useMemo(() => {
         if (!listModal || !listModalSelectedId) return null;
         return (
-            listRides.find(
-                (r) => String(r._id) === listModalSelectedId,
-            ) || null
+            listRides.find((r) => String(r._id) === listModalSelectedId) ||
+            null
         );
     }, [listModal, listModalSelectedId, listRides]);
 
@@ -697,7 +741,8 @@ export default function CalendarPage() {
                                     Calendar
                                 </Typography>
                                 <Typography className="text-xs sm:text-sm text-gray-600">
-                                    Rides schedule with daily stats and quick preview.
+                                    Rides schedule with daily stats and quick
+                                    preview.
                                 </Typography>
                             </div>
                         </div>
@@ -708,7 +753,9 @@ export default function CalendarPage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={goToPrevious}
-                                    leftIcon={<ChevronLeft className="w-4 h-4" />}
+                                    leftIcon={
+                                        <ChevronLeft className="w-4 h-4" />
+                                    }
                                 >
                                     Previous
                                 </Button>
@@ -730,7 +777,9 @@ export default function CalendarPage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={goToNext}
-                                    rightIcon={<ChevronRight className="w-4 h-4" />}
+                                    rightIcon={
+                                        <ChevronRight className="w-4 h-4" />
+                                    }
                                 >
                                     Next
                                 </Button>
@@ -738,7 +787,9 @@ export default function CalendarPage() {
                                 <Button
                                     variant="solid"
                                     size="sm"
-                                    leftIcon={<CalendarIcon className="w-4 h-4" />}
+                                    leftIcon={
+                                        <CalendarIcon className="w-4 h-4" />
+                                    }
                                     onClick={() => onNavigate(new Date())}
                                 >
                                     Today
@@ -808,7 +859,9 @@ export default function CalendarPage() {
                                         if (res.kind === "ride") {
                                             const base = res.ride;
                                             const override =
-                                                rideOverrides[String(base._id)];
+                                                rideOverrides[
+                                                    String(base._id)
+                                                    ];
                                             const ride = override
                                                 ? { ...base, ...override }
                                                 : base;
@@ -829,10 +882,14 @@ export default function CalendarPage() {
                                     }}
                                     onShowMore={(evts, date) => {
                                         const rides: Ride[] = [];
-                                        (evts as CalendarEvent[]).forEach((e) => {
+                                        (
+                                            evts as CalendarEvent[]
+                                        ).forEach((e) => {
                                             if (e.resource.kind === "ride") {
                                                 rides.push(e.resource.ride);
-                                            } else if (e.resource.kind === "cluster") {
+                                            } else if (
+                                                e.resource.kind === "cluster"
+                                            ) {
                                                 rides.push(...e.resource.rides);
                                             }
                                         });
@@ -841,7 +898,9 @@ export default function CalendarPage() {
                                         setListModalSelectedId(null);
                                         setListModal({
                                             date,
-                                            title: `Rides on ${fmtDate(date.toISOString())}`,
+                                            title: `Rides on ${fmtDate(
+                                                date.toISOString(),
+                                            )}`,
                                             rides,
                                         });
                                     }}
@@ -853,20 +912,73 @@ export default function CalendarPage() {
                                 />
                             </div>
 
-                            <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-gray-600">
-                                <div className="inline-flex items-center gap-1">
-                                    <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />{" "}
-                                    Unassigned
-                                </div>
-                                <div className="inline-flex items-center gap-1">
-                                    <span className="h-2.5 w-2.5 rounded-full bg-blue-500" /> In
-                                    progress
-                                </div>
-                                <div className="inline-flex items-center gap-1">
-                                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />{" "}
-                                    Completed
+                            <div className="mt-3 space-y-1 text-[11px] text-gray-600">
+                                {/* Code → meaning */}
+                                <div className="flex flex-wrap gap-3">
+                                    <div className="inline-flex items-center gap-1">
+            <span
+                className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
+                    "unassigned",
+                )}`}
+            />
+                                        <span>U = Unassigned</span>
+                                    </div>
+                                    <div className="inline-flex items-center gap-1">
+            <span
+                className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
+                    "assigned",
+                )}`}
+            />
+                                        <span>A = Assigned</span>
+                                    </div>
+                                    <div className="inline-flex items-center gap-1">
+            <span
+                className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
+                    "on_my_way",
+                )}`}
+            />
+                                        <span>OW = On my way</span>
+                                    </div>
+                                    <div className="inline-flex items-center gap-1">
+            <span
+                className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
+                    "on_location",
+                )}`}
+            />
+                                        <span>OL = On location</span>
+                                    </div>
+                                    <div className="inline-flex items-center gap-1">
+            <span
+                className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
+                    "pob",
+                )}`}
+            />
+                                        <span>PoB = Passenger on board</span>
+                                    </div>
+                                    <div className="inline-flex items-center gap-1">
+                                        {/* show both colors that can use C */}
+                                        <span
+                                            className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
+                                                "clear",
+                                            )}`}
+                                        />
+                                        <span
+                                            className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
+                                                "completed",
+                                            )} ml-1`}
+                                        />
+                                        <span>C = Clear / Completed</span>
+                                    </div>
+                                    <div className="inline-flex items-center gap-1">
+            <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+            </span>
+                                        <span>● = Pending driver requests</span>
+                                    </div>
                                 </div>
                             </div>
+
                         </CardBody>
                     </Card>
                 </div>
@@ -902,7 +1014,6 @@ export default function CalendarPage() {
                 onDriverAssigned={handleDriverAssigned}
                 onRideStatusChanged={handleRideStatusChanged}
             />
-
         </ProtectedLayout>
     );
 }
