@@ -1,4 +1,6 @@
 "use client";
+import { Button } from "@/components/ui";
+import { apiPost } from "@/services/http";
 import { useState, useEffect } from "react";
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -44,19 +46,24 @@ export default function Notifications() {
         setSubscription(sub);
         const serializedSub = JSON.parse(JSON.stringify(sub));
 
-        await subscribeUser(serializedSub);
+        // await subscribeUser(serializedSub);
+        console.log("serializedSub", serializedSub);
+        await apiPost("/notifications/subscribe", { subscription: serializedSub });
     }
 
     async function unsubscribeFromPush() {
+        console.log("unsubscribeFromPush", subscription);
         await subscription?.unsubscribe();
         setSubscription(null);
-        
-        await unsubscribeUser();
+
+        // await unsubscribeUser();
+        await apiPost("/notifications/unsubscribe");
     }
 
     async function sendTestNotification() {
         if (subscription) {
-            await sendNotification(message);
+            // await sendNotification(message);
+            await apiPost("/notifications/send", { message });
             setMessage("");
         }
     }
@@ -67,18 +74,21 @@ export default function Notifications() {
 
     return (
         <div>
-            <h3>Push Notifications</h3>
             {subscription ? (
                 <>
-                    <p>You are subscribed to push notifications.</p>
-                    <button onClick={unsubscribeFromPush}>Unsubscribe</button>
-                    <input
-                        type="text"
-                        placeholder="Enter notification message"
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                    />
-                    <button onClick={sendTestNotification}>Send Test</button>
+                    <div className="flex items-center gap-2">
+                        <p>You are subscribed to push notifications.</p>
+                        <Button onClick={unsubscribeFromPush}>Unsubscribe</Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="text"
+                            placeholder="Enter notification message"
+                            value={message}
+                            onChange={(e) => setMessage(e.target.value)}
+                        />
+                        <Button onClick={sendTestNotification}>Send Test</Button>
+                    </div>
                 </>
             ) : (
                 <>

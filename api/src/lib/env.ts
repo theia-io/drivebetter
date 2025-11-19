@@ -24,7 +24,7 @@ export const env = {
         process.env.GOOGLE_CALLBACK_URL || "http://localhost:3000/api/v1/oauth/google/callback",
 
     // CORS
-    CORS_ORIGIN: process.env.CORS_ORIGIN || "http://localhost:4200,http://localhost:4201",
+    CORS_ORIGIN: process.env.CORS_ORIGIN || "http://localhost:4200,http://localhost:4201,https://localhost:4200,https://localhost:4201",
 
     // API
     API_BASE_URL: process.env.API_BASE_URL || "http://localhost:3000/api/v1",
