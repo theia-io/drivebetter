@@ -12,10 +12,7 @@ initPassport();
  *     summary: Google OAuth login
  *     tags: [OAuth]
  */
-router.get(
-    "/google",
-    passport.authenticate("google", { scope: ["profile", "email"] })
-);
+router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
 /**
  * @openapi
@@ -35,7 +32,10 @@ router.get(
         if (!user) return res.status(401).json({ error: "OAuth failed" });
 
         // Return JWTs to client (could also set cookies here)
-        return res.json({ user: { id: user.id, email: user.email, roles: user.roles }, tokens: user.tokens });
+        return res.json({
+            user: { id: user.id, email: user.email, roles: user.roles },
+            tokens: user.tokens,
+        });
     }
 );
 

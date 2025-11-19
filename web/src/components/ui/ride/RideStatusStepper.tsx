@@ -14,10 +14,7 @@ type RideStatusStepperProps = {
     className?: string;
 };
 
-export default function RideStatusStepper({
-                                              value,
-                                              className,
-                                          }: RideStatusStepperProps) {
+export default function RideStatusStepper({ value, className }: RideStatusStepperProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const activeRef = useRef<HTMLDivElement | null>(null);
 
@@ -34,10 +31,7 @@ export default function RideStatusStepper({
         const activeRect = active.getBoundingClientRect();
 
         const offset =
-            activeRect.left -
-            containerRect.left -
-            containerRect.width / 2 +
-            activeRect.width / 2;
+            activeRect.left - containerRect.left - containerRect.width / 2 + activeRect.width / 2;
 
         container.scrollBy({
             left: offset,
@@ -53,7 +47,8 @@ export default function RideStatusStepper({
                     flex items-center gap-2
                     overflow-x-auto no-scrollbar
                     justify-start sm:justify-between
-                    py-1">
+                    py-1"
+            >
                 {STATUS_FLOW.map((status, idx) => {
                     const isCompleted = currentIndex > idx;
                     const isCurrent = currentIndex === idx;
@@ -78,8 +73,7 @@ export default function RideStatusStepper({
                         circleStyle.borderColor = "#e5e7eb"; // gray-200
                     }
 
-                    const iconColor =
-                        isCurrent || isCompleted ? colors.text : "#9ca3af"; // gray-400
+                    const iconColor = isCurrent || isCompleted ? colors.text : "#9ca3af"; // gray-400
 
                     const lineStyle: CSSProperties = {
                         backgroundColor: isCompleted ? colors.border : "#e5e7eb",

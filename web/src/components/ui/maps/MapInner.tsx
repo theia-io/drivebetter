@@ -9,8 +9,7 @@ import marker2x from "leaflet/dist/images/marker-icon-2x.png";
 import marker from "leaflet/dist/images/marker-icon.png";
 import shadow from "leaflet/dist/images/marker-shadow.png";
 
-export const API_BASE =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api/v1";
+export const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3000/api/v1";
 
 L.Icon.Default.mergeOptions({
     iconRetinaUrl: (marker2x as any).src ?? (marker2x as any),
@@ -21,11 +20,11 @@ L.Icon.Default.mergeOptions({
 export type Pt = [number, number]; // [lon,lat]
 
 function AutoView({
-                      a,
-                      b,
-                      line,
-                      fallback,
-                  }: {
+    a,
+    b,
+    line,
+    fallback,
+}: {
     a?: Pt | null;
     b?: Pt | null;
     line?: Pt[];
@@ -36,7 +35,8 @@ function AutoView({
         const pts: [number, number][] = [];
         if (a) pts.push([a[1], a[0]]);
         if (b) pts.push([b[1], b[0]]);
-        if (line && line.length > 0) pts.push(...line.map(([lon, lat]) => [lat, lon] as [number, number]));
+        if (line && line.length > 0)
+            pts.push(...line.map(([lon, lat]) => [lat, lon] as [number, number]));
 
         if (pts.length >= 2) {
             // @ts-ignore
@@ -53,16 +53,16 @@ function AutoView({
 }
 
 export default function MapInner({
-                                     center = [4.8922, 52.3731] as Pt, // lon,lat fallback
-                                     zoom = 12,
-                                     heightClass = "h-64",
-                                     markerA,
-                                     markerB,
-                                     routeLine = [],
-                                     markerALabel,
-                                     markerBLabel,
-                                     children,
-                                 }: {
+    center = [4.8922, 52.3731] as Pt, // lon,lat fallback
+    zoom = 12,
+    heightClass = "h-64",
+    markerA,
+    markerB,
+    routeLine = [],
+    markerALabel,
+    markerBLabel,
+    children,
+}: {
     center?: Pt;
     zoom?: number;
     heightClass?: string;
@@ -77,7 +77,11 @@ export default function MapInner({
     const tilesUrl = `${API_BASE}/geo/tiles/{z}/{x}/{y}`;
 
     return (
-        <MapContainer center={[clat, clon]} zoom={zoom} className={`${heightClass} w-full rounded-xl border`}>
+        <MapContainer
+            center={[clat, clon]}
+            zoom={zoom}
+            className={`${heightClass} w-full rounded-xl border`}
+        >
             <TileLayer
                 url={tilesUrl}
                 attribution="&copy; MapTiler &copy; OpenStreetMap contributors"

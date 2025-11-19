@@ -9,7 +9,7 @@ import { mutate as globalMutate } from "swr/_internal";
 export type RideClaimStatus = "queued" | "approved" | "rejected" | "withdrawn";
 
 export type RideClaim = {
-    claimId: string;          // Mongo _id
+    claimId: string; // Mongo _id
     status: RideClaimStatus;
     driverId: string;
     shareId: string | null;
@@ -52,8 +52,7 @@ export const queueRideClaim = (shareId: string) =>
     apiPost<QueueClaimResponse>(`/ride-shares/${shareId}/claim`, {});
 
 // Dispatcher/Admin → list claims for a ride
-export const getRideClaims = (rideId: string) =>
-    apiGet<RideClaim[]>(`/rides/${rideId}/claims`);
+export const getRideClaims = (rideId: string) => apiGet<RideClaim[]>(`/rides/${rideId}/claims`);
 
 // Dispatcher/Admin → approve a claim (assigns ride, rejects others, closes shares)
 export const approveRideClaim = (rideId: string, claimId: string) =>
@@ -122,8 +121,13 @@ export function useQueueRideClaim() {
 export function useApproveRideClaim(rideId?: string) {
     const m = useSWRMutation(
         rideId ? `/rides/${rideId}/claims/approve` : null,
-        async (_key, { arg: claimId }: { arg: string }) => approveRideClaim(rideId as string, claimId),
-        { onSuccess: async () => { await revalidateRide(rideId); } }
+        async (_key, { arg: claimId }: { arg: string }) =>
+            approveRideClaim(rideId as string, claimId),
+        {
+            onSuccess: async () => {
+                await revalidateRide(rideId);
+            },
+        }
     );
     return {
         approve: m.trigger, // pass claimId
@@ -137,8 +141,13 @@ export function useApproveRideClaim(rideId?: string) {
 export function useRejectRideClaim(rideId?: string) {
     const m = useSWRMutation(
         rideId ? `/rides/${rideId}/claims/reject` : null,
-        async (_key, { arg: claimId }: { arg: string }) => rejectRideClaim(rideId as string, claimId),
-        { onSuccess: async () => { await revalidateRide(rideId); } }
+        async (_key, { arg: claimId }: { arg: string }) =>
+            rejectRideClaim(rideId as string, claimId),
+        {
+            onSuccess: async () => {
+                await revalidateRide(rideId);
+            },
+        }
     );
     return {
         reject: m.trigger, // pass claimId
@@ -152,8 +161,13 @@ export function useRejectRideClaim(rideId?: string) {
 export function useWithdrawRideClaim(rideId?: string) {
     const m = useSWRMutation(
         rideId ? `/rides/${rideId}/claims/withdraw` : null,
-        async (_key, { arg: claimId }: { arg: string }) => withdrawRideClaim(rideId as string, claimId),
-        { onSuccess: async () => { await revalidateRide(rideId); } }
+        async (_key, { arg: claimId }: { arg: string }) =>
+            withdrawRideClaim(rideId as string, claimId),
+        {
+            onSuccess: async () => {
+                await revalidateRide(rideId);
+            },
+        }
     );
     return {
         withdraw: m.trigger, // pass claimId
@@ -172,4 +186,3 @@ export function useDriverInboxCount(tab?: "available" | "claimed") {
     const key = tab ? `/ride-shares/inbox/count?tab=${tab}` : null;
     return useSWR<InboxCount>(key, () => getDriverInboxCount(tab as "available" | "claimed"));
 }
-

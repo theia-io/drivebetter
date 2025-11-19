@@ -1,6 +1,6 @@
 // src/types/rideStatus.ts
 
-import {Car, Check, MapPin, Navigation, User, Users} from "lucide-react";
+import { Car, Check, MapPin, Navigation, User, Users } from "lucide-react";
 
 export type RideStatus =
     | "unassigned"

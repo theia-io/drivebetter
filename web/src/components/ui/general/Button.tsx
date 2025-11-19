@@ -31,50 +31,38 @@ const colorSchemes: Record<
 > = {
     primary: {
         solid: "bg-blue-600 hover:bg-blue-700 text-white border-blue-600",
-        outline:
-            "border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20",
-        ghost:
-            "text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20",
+        outline: "border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20",
+        ghost: "text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20",
         link: "text-blue-600 hover:text-blue-700 underline",
     },
     secondary: {
         solid: "bg-gray-600 hover:bg-gray-700 text-white border-gray-600",
-        outline:
-            "border-gray-600 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/20",
-        ghost:
-            "text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/20",
+        outline: "border-gray-600 text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/20",
+        ghost: "text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-900/20",
         link: "text-gray-600 hover:text-gray-700 underline",
     },
     success: {
         solid: "bg-green-600 hover:bg-green-700 text-white border-green-600",
-        outline:
-            "border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20",
-        ghost:
-            "text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20",
+        outline: "border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20",
+        ghost: "text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20",
         link: "text-green-600 hover:text-green-700 underline",
     },
     warning: {
         solid: "bg-yellow-600 hover:bg-yellow-700 text-white border-yellow-600",
-        outline:
-            "border-yellow-600 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20",
-        ghost:
-            "text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20",
+        outline: "border-yellow-600 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20",
+        ghost: "text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20",
         link: "text-yellow-600 hover:text-yellow-700 underline",
     },
     error: {
         solid: "bg-red-600 hover:bg-red-700 text-white border-red-600",
-        outline:
-            "border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20",
-        ghost:
-            "text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20",
+        outline: "border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20",
+        ghost: "text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20",
         link: "text-red-600 hover:text-red-700 underline",
     },
     info: {
         solid: "bg-cyan-600 hover:bg-cyan-700 text-white border-cyan-600",
-        outline:
-            "border-cyan-600 text-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/20",
-        ghost:
-            "text-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/20",
+        outline: "border-cyan-600 text-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/20",
+        ghost: "text-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/20",
         link: "text-cyan-600 hover:text-cyan-700 underline",
     },
 };
@@ -89,17 +77,17 @@ const focusRingClasses: Record<ColorScheme, string> = {
 };
 
 export const Button: React.FC<ButtonProps> = ({
-                                                  variant = "solid",
-                                                  colorScheme = "primary",
-                                                  size = "md",
-                                                  loading = false,
-                                                  leftIcon,
-                                                  rightIcon,
-                                                  children,
-                                                  className = "",
-                                                  disabled,
-                                                  ...props
-                                              }) => {
+    variant = "solid",
+    colorScheme = "primary",
+    size = "md",
+    loading = false,
+    leftIcon,
+    rightIcon,
+    children,
+    className = "",
+    disabled,
+    ...props
+}) => {
     const { colorScheme: themeColorScheme } = useThemeStore();
     // In your current code colorScheme always wins; keeping that behaviour.
     const scheme: ColorScheme = colorScheme || themeColorScheme;
@@ -115,17 +103,9 @@ export const Button: React.FC<ButtonProps> = ({
     const classes = `${baseClasses} ${variantClasses} ${sizeClass} ${focusRingClass} ${className}`;
 
     return (
-        <button
-            className={classes}
-            disabled={disabled || loading}
-            {...props}
-        >
+        <button className={classes} disabled={disabled || loading} {...props}>
             {loading && (
-                <svg
-                    className="animate-spin -ml-1 mr-2 h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                >
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
                     <circle
                         className="opacity-25"
                         cx="12"

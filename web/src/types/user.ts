@@ -17,5 +17,3 @@ export interface RideCreatorUser {
     email: string;
     phone?: string;
 }
-
-

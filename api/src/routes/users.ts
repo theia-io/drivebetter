@@ -1,9 +1,9 @@
 import { Router, Request, Response } from "express";
 import User from "../models/user.model";
 import bcrypt from "bcryptjs";
-import {hashPassword} from "../lib/crypto";
-import {Types} from "mongoose";
-import {requireAuth} from "../lib/auth";
+import { hashPassword } from "../lib/crypto";
+import { Types } from "mongoose";
+import { requireAuth } from "../lib/auth";
 import Group from "../models/group.model";
 
 const router = Router();
@@ -67,7 +67,7 @@ router.get("/", async (req: Request, res: Response) => {
     if (role) filter.roles = role;
     if (q) {
         filter.$or = [
-            { name:  { $regex: q, $options: "i" } },
+            { name: { $regex: q, $options: "i" } },
             { email: { $regex: q, $options: "i" } },
             { phone: { $regex: q, $options: "i" } },
         ];
@@ -83,7 +83,6 @@ router.get("/", async (req: Request, res: Response) => {
 
     res.json({ items, page, limit, total, pages: Math.ceil(total / limit) });
 });
-
 
 /**
  * @openapi
@@ -188,7 +187,9 @@ router.post("/", async (req: Request, res: Response) => {
         let passwordHash: string | undefined = undefined;
         if (password != null) {
             if (typeof password !== "string" || password.length < 6) {
-                return res.status(400).json({ error: "password must be a string with at least 6 characters" });
+                return res
+                    .status(400)
+                    .json({ error: "password must be a string with at least 6 characters" });
             }
             passwordHash = await hashPassword(password);
         }
@@ -198,7 +199,7 @@ router.post("/", async (req: Request, res: Response) => {
             email,
             phone,
             roles,
-            passwordHash: passwordHash
+            passwordHash: passwordHash,
         });
 
         const user = userDoc.toObject();
@@ -254,14 +255,16 @@ router.get("/", async (req: Request, res: Response) => {
     if (req.query.q) {
         const q = String(req.query.q).trim();
         filter.$or = [
-            { name:  { $regex: q, $options: "i" } },
+            { name: { $regex: q, $options: "i" } },
             { email: { $regex: q, $options: "i" } },
         ];
     }
 
     const total = await User.countDocuments(filter);
     const items = await User.find(filter)
-        .select("-passwordHash -refreshTokens -otpCode -otpExpires -resetToken -resetExpires -emailVerifyToken -emailVerifyExpires")
+        .select(
+            "-passwordHash -refreshTokens -otpCode -otpExpires -resetToken -resetExpires -emailVerifyToken -emailVerifyExpires"
+        )
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -313,37 +316,35 @@ router.get("/", async (req: Request, res: Response) => {
  *       403:
  *         description: Forbidden (not the same user and lacks admin/dispatcher)
  */
-router.get("/:id([0-9a-fA-F]{24})/groups", requireAuth,
-    async (req: Request, res: Response) => {
-        const targetUserId = req.params.id;
+router.get("/:id([0-9a-fA-F]{24})/groups", requireAuth, async (req: Request, res: Response) => {
+    const targetUserId = req.params.id;
 
-        const me = (req as any).user as { id: string; roles: string[] };
+    const me = (req as any).user as { id: string; roles: string[] };
 
-        const isSelf = me?.id === targetUserId;
-        const isPrivileged = me?.roles?.some((r) => r === "admin" || r === "dispatcher");
-        if (!isSelf && !isPrivileged) {
-            return res.status(403).json({ error: "Forbidden" });
-        }
-
-        const groups = await Group.find({ members: targetUserId })
-            .select({
-                _id: 1,
-                name: 1,
-                description: 1,
-                type: 1,
-                city: 1,
-                location: 1,
-                visibility: 1,
-                isInviteOnly: 1,
-                tags: 1,
-                createdAt: 1,
-                updatedAt: 1,
-            })
-            .lean();
-
-        return res.json(groups);
+    const isSelf = me?.id === targetUserId;
+    const isPrivileged = me?.roles?.some((r) => r === "admin" || r === "dispatcher");
+    if (!isSelf && !isPrivileged) {
+        return res.status(403).json({ error: "Forbidden" });
     }
-);
+
+    const groups = await Group.find({ members: targetUserId })
+        .select({
+            _id: 1,
+            name: 1,
+            description: 1,
+            type: 1,
+            city: 1,
+            location: 1,
+            visibility: 1,
+            isInviteOnly: 1,
+            tags: 1,
+            createdAt: 1,
+            updatedAt: 1,
+        })
+        .lean();
+
+    return res.json(groups);
+});
 
 /**
  * @openapi
@@ -491,9 +492,7 @@ router.post("/drivers/batch", async (req: Request, res: Response) => {
 
         // Map results by id for O(1) lookups, then order as per input (skipping missing)
         const byId = new Map(docs.map((d: any) => [String(d._id), d]));
-        const ordered = ids
-            .filter((id: string) => byId.has(id))
-            .map((id: string) => byId.get(id));
+        const ordered = ids.filter((id: string) => byId.has(id)).map((id: string) => byId.get(id));
 
         res.json(ordered);
     } catch (err: any) {
@@ -501,7 +500,6 @@ router.post("/drivers/batch", async (req: Request, res: Response) => {
         res.status(500).json({ error: "Internal server error" });
     }
 });
-
 
 /**
  * @openapi
@@ -525,7 +523,9 @@ router.post("/drivers/batch", async (req: Request, res: Response) => {
  */
 router.get("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
     const user = await User.findById(req.params.id)
-        .select("-passwordHash -refreshTokens -otpCode -otpExpires -resetToken -resetExpires -emailVerifyToken -emailVerifyExpires")
+        .select(
+            "-passwordHash -refreshTokens -otpCode -otpExpires -resetToken -resetExpires -emailVerifyToken -emailVerifyExpires"
+        )
         .lean();
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);
@@ -608,7 +608,9 @@ router.put("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
         req.params.id,
         { $set: { name, email, phone, roles } },
         { new: true, runValidators: true, overwrite: true }
-    ).select("-passwordHash -refreshTokens").lean();
+    )
+        .select("-passwordHash -refreshTokens")
+        .lean();
     if (!doc) return res.status(404).json({ error: "User not found" });
     res.json(doc);
 });
@@ -649,7 +651,9 @@ router.patch("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
         req.params.id,
         Object.keys($set).length ? { $set } : {},
         { new: true, runValidators: true }
-    ).select("-passwordHash -refreshTokens").lean();
+    )
+        .select("-passwordHash -refreshTokens")
+        .lean();
     if (!doc) return res.status(404).json({ error: "User not found" });
     res.json(doc);
 });

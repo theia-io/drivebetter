@@ -1,4 +1,4 @@
-import mongoose, {Schema, Document, Model, Types, model} from "mongoose";
+import mongoose, { Schema, Document, Model, Types, model } from "mongoose";
 
 export type GroupVisibility = "public" | "private" | "restricted";
 export type GroupType = "fleet" | "coop" | "airport" | "city" | "custom" | "global";
@@ -10,9 +10,9 @@ export interface IGroup extends Document {
     city?: string;
     location?: string;
 
-    visibility: GroupVisibility;   // controls discoverability
-    isInviteOnly: boolean;         // controls who can join
-    tags?: string[];               // free-form labels
+    visibility: GroupVisibility; // controls discoverability
+    isInviteOnly: boolean; // controls who can join
+    tags?: string[]; // free-form labels
 
     members: Types.ObjectId[];
     createdAt: Date;
@@ -23,20 +23,28 @@ const GroupSchema = new Schema<IGroup>(
     {
         name: { type: String, required: true, trim: true },
         description: { type: String, trim: true },
-        type: { type: String, enum: ["fleet", "coop", "airport", "city", "custom", "global"], required: true, default: "custom" },
+        type: {
+            type: String,
+            enum: ["fleet", "coop", "airport", "city", "custom", "global"],
+            required: true,
+            default: "custom",
+        },
         city: { type: String, trim: true },
         location: { type: String, trim: true },
 
         // NEW
-        visibility: { type: String, enum: ["public", "private", "restricted"], required: true, default: "private" },
+        visibility: {
+            type: String,
+            enum: ["public", "private", "restricted"],
+            required: true,
+            default: "private",
+        },
         isInviteOnly: { type: Boolean, required: true, default: false },
         tags: {
             type: [String],
             set: (arr: unknown) =>
                 Array.isArray(arr)
-                    ? arr
-                        .map((s) => (typeof s === "string" ? s.trim() : ""))
-                        .filter(Boolean)
+                    ? arr.map((s) => (typeof s === "string" ? s.trim() : "")).filter(Boolean)
                     : [],
             default: [],
         },
@@ -46,7 +54,13 @@ const GroupSchema = new Schema<IGroup>(
     { timestamps: true }
 );
 
-GroupSchema.index({ name: "text", description: "text", city: "text", location: "text", tags: "text" });
+GroupSchema.index({
+    name: "text",
+    description: "text",
+    city: "text",
+    location: "text",
+    tags: "text",
+});
 GroupSchema.index({ visibility: 1, isInviteOnly: 1, type: 1, city: 1 });
 GroupSchema.index({ members: 1 });
 

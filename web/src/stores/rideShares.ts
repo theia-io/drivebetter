@@ -1,4 +1,4 @@
-import {apiGet, apiPost, apiDelete, apiPatch} from "@/services/http";
+import { apiGet, apiPost, apiDelete, apiPatch } from "@/services/http";
 import useSWR from "swr";
 
 export type RideShareVisibility = "public" | "groups" | "drivers";
@@ -36,8 +36,7 @@ export type UpdateShareRequest = Partial<{
 
 /* -------------------------------- API -------------------------------- */
 
-export const getRideShare = (rideId: string) =>
-    apiGet<RideShare[]>(`/rides/${rideId}/share`);
+export const getRideShare = (rideId: string) => apiGet<RideShare[]>(`/rides/${rideId}/share`);
 
 export const getRevokedRideShares = (rideId: string) =>
     apiGet<RideShare[]>(`/rides/${rideId}/share?status=revoked`);
@@ -45,8 +44,7 @@ export const getRevokedRideShares = (rideId: string) =>
 export const createRideShare = (rideId: string, payload: CreateShareRequest) =>
     apiPost<RideShare>(`/rides/${rideId}/share`, payload);
 
-export const revokeRideShare = (shareId: string) =>
-    apiDelete<void>(`/ride-shares/${shareId}`);
+export const revokeRideShare = (shareId: string) => apiDelete<void>(`/ride-shares/${shareId}`);
 
 export const updateRideShare = (shareId: string, payload: UpdateShareRequest) =>
     apiPatch<RideShare>(`/ride-shares/${shareId}`, payload); // if you prefer PATCH, switch apiPost->apiPatch

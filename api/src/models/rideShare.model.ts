@@ -1,4 +1,4 @@
-import mongoose, {Model, Schema, Types} from "mongoose";
+import mongoose, { Model, Schema, Types } from "mongoose";
 import { customAlphabet } from "nanoid";
 
 export type RideVisibility = "public" | "groups" | "drivers";
@@ -25,17 +25,22 @@ export function hasRideExpired(s: IRideShare) {
 
 export const RideShareSchema = new Schema<IRideShare>(
     {
-        rideId:     { type: Schema.Types.ObjectId, ref: "Ride", required: true, index: true },
+        rideId: { type: Schema.Types.ObjectId, ref: "Ride", required: true, index: true },
         visibility: { type: String, enum: ["public", "groups", "drivers"], required: true },
-        groupIds:   [{ type: Schema.Types.ObjectId, ref: "Group" }],
-        driverIds:  [{ type: Schema.Types.ObjectId, ref: "User" }],
-        expiresAt:  { type: Date, default: null },
-        maxClaims:  { type: Number, min: 1, default: null },
-        claimsCount:{ type: Number, default: 0 },
-        syncQueue:  { type: Boolean, default: true },
-        status:     { type: String, enum: ["active", "revoked", "expired", "closed"], default: "active", index: true },
-        revokedAt:  { type: Date, default: null },
-        createdBy:  { type: Schema.Types.ObjectId, ref: "User", required: true },
+        groupIds: [{ type: Schema.Types.ObjectId, ref: "Group" }],
+        driverIds: [{ type: Schema.Types.ObjectId, ref: "User" }],
+        expiresAt: { type: Date, default: null },
+        maxClaims: { type: Number, min: 1, default: null },
+        claimsCount: { type: Number, default: 0 },
+        syncQueue: { type: Boolean, default: true },
+        status: {
+            type: String,
+            enum: ["active", "revoked", "expired", "closed"],
+            default: "active",
+            index: true,
+        },
+        revokedAt: { type: Date, default: null },
+        createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
     },
     { timestamps: true }
 );
@@ -53,4 +58,3 @@ RideShareSchema.pre("save", function (next) {
 
 export const RideShare: Model<IRideShare> =
     mongoose.models.RideShare || mongoose.model<IRideShare>("RideShare", RideShareSchema);
-

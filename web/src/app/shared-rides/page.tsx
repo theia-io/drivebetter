@@ -4,15 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import {
-    Info,
-    MapPin,
-    Clock,
-    Share2,
-    Check,
-    Loader2,
-    ArrowRight,
-} from "lucide-react";
+import { Info, MapPin, Clock, Share2, Check, Loader2, ArrowRight } from "lucide-react";
 import { useDriverInbox, useQueueRideClaim } from "@/stores/rideClaims";
 
 export default function DriverSharedRidesPage() {
@@ -67,13 +59,13 @@ export default function DriverSharedRidesPage() {
                     <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-900 flex gap-2">
                         <Info className="w-4 h-4 shrink-0 mt-0.5" />
                         <div>
-                            Rides listed here were shared with you (publicly, via your group, or directly).
-                            Click <span className="font-semibold">Request ride</span> to enter the queue.
-                            A dispatcher will review all requests and{" "}
-                            <span className="font-semibold">approve one driver</span>. Until approved,
-                            the ride is not assigned to you. Use the{" "}
-                            <span className="font-semibold">My Assigned</span> tab to see rides that were
-                            approved and assigned to you.
+                            Rides listed here were shared with you (publicly, via your group, or
+                            directly). Click <span className="font-semibold">Request ride</span> to
+                            enter the queue. A dispatcher will review all requests and{" "}
+                            <span className="font-semibold">approve one driver</span>. Until
+                            approved, the ride is not assigned to you. Use the{" "}
+                            <span className="font-semibold">My Assigned</span> tab to see rides that
+                            were approved and assigned to you.
                         </div>
                     </div>
 
@@ -107,7 +99,9 @@ export default function DriverSharedRidesPage() {
                                 </div>
                             ) : items.length === 0 ? (
                                 <div className="text-sm text-gray-600">
-                                    {tab === "available" ? "No new rides at the moment." : "No assigned rides yet."}
+                                    {tab === "available"
+                                        ? "No new rides at the moment."
+                                        : "No assigned rides yet."}
                                 </div>
                             ) : (
                                 <div className="space-y-3">
@@ -126,40 +120,56 @@ export default function DriverSharedRidesPage() {
                                                         <div className="flex items-center gap-2 text-sm text-gray-700">
                                                             <MapPin className="w-4 h-4 text-gray-400" />
                                                             <span className="truncate">
-                                <span className="font-medium">From:</span> {it.ride.from}
-                              </span>
+                                                                <span className="font-medium">
+                                                                    From:
+                                                                </span>{" "}
+                                                                {it.ride.from}
+                                                            </span>
                                                         </div>
                                                         <div className="flex items-center gap-2 text-sm text-gray-700">
                                                             <MapPin className="w-4 h-4 text-gray-400" />
                                                             <span className="truncate">
-                                <span className="font-medium">To:</span> {it.ride.to}
-                              </span>
+                                                                <span className="font-medium">
+                                                                    To:
+                                                                </span>{" "}
+                                                                {it.ride.to}
+                                                            </span>
                                                         </div>
                                                         <div className="flex items-center gap-2 text-sm text-gray-700">
                                                             <Clock className="w-4 h-4 text-gray-400" />
                                                             <span title={dt.toISOString()}>
-                                {dt.toLocaleDateString()} •{" "}
-                                                                {dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                              </span>
+                                                                {dt.toLocaleDateString()} •{" "}
+                                                                {dt.toLocaleTimeString([], {
+                                                                    hour: "2-digit",
+                                                                    minute: "2-digit",
+                                                                })}
+                                                            </span>
                                                         </div>
 
                                                         {/* metadata */}
                                                         <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-gray-600">
                                                             {it.visibility && (
                                                                 <span className="inline-flex items-center rounded-full border px-2 py-0.5 capitalize">
-                                  {it.visibility}
-                                </span>
+                                                                    {it.visibility}
+                                                                </span>
                                                             )}
                                                             {typeof it.maxClaims === "number" && (
-                                                                <span>max claims: {it.maxClaims}</span>
+                                                                <span>
+                                                                    max claims: {it.maxClaims}
+                                                                </span>
                                                             )}
                                                             {it.expiresAt && (
-                                                                <span>expires: {new Date(it.expiresAt).toLocaleString()}</span>
+                                                                <span>
+                                                                    expires:{" "}
+                                                                    {new Date(
+                                                                        it.expiresAt
+                                                                    ).toLocaleString()}
+                                                                </span>
                                                             )}
                                                             {tab === "claimed" && (
                                                                 <span className="inline-flex items-center rounded-full border px-2 py-0.5 bg-green-50 text-green-700 border-green-200">
-                                  Assigned to you
-                                </span>
+                                                                    Assigned to you
+                                                                </span>
                                                             )}
                                                         </div>
                                                     </div>
@@ -169,7 +179,9 @@ export default function DriverSharedRidesPage() {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                rightIcon={<ArrowRight className="w-4 h-4" />}
+                                                                rightIcon={
+                                                                    <ArrowRight className="w-4 h-4" />
+                                                                }
                                                             >
                                                                 Details
                                                             </Button>
@@ -178,15 +190,24 @@ export default function DriverSharedRidesPage() {
                                                         {tab === "available" && (
                                                             <Button
                                                                 size="sm"
-                                                                onClick={() => it.shareId && requestRide(it.shareId)}
-                                                                disabled={alreadyQueued || isQueuing}
+                                                                onClick={() =>
+                                                                    it.shareId &&
+                                                                    requestRide(it.shareId)
+                                                                }
+                                                                disabled={
+                                                                    alreadyQueued || isQueuing
+                                                                }
                                                                 leftIcon={
-                                                                    alreadyQueued ? <Check className="w-4 h-4" /> :
-                                                                        isQueuing ? <Loader2 className="w-4 h-4 animate-spin" /> :
-                                                                            undefined
+                                                                    alreadyQueued ? (
+                                                                        <Check className="w-4 h-4" />
+                                                                    ) : isQueuing ? (
+                                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                                    ) : undefined
                                                                 }
                                                             >
-                                                                {alreadyQueued ? "Requested" : "Request ride"}
+                                                                {alreadyQueued
+                                                                    ? "Requested"
+                                                                    : "Request ride"}
                                                             </Button>
                                                         )}
                                                     </div>

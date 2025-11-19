@@ -8,8 +8,8 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography, Badge } from "@/components/ui";
 import { Users, Plus, Search, Trash2, PencilLine, Eye } from "lucide-react";
 import { apiGet, apiDelete } from "@/services/http";
-import {Group, PageResp} from "@/types";
-import {useGroups} from "@/stores/groups";
+import { Group, PageResp } from "@/types";
+import { useGroups } from "@/stores/groups";
 
 /* ----------------------------- Helpers ----------------------------- */
 const qstring = (params: Record<string, any>) => {
@@ -46,7 +46,7 @@ export default function GroupsPage() {
     const [page, setPage] = useState(Number(searchParams.get("page") || 1));
     const [limit, setLimit] = useState(Number(searchParams.get("limit") || 20));
 
-    const { data, isLoading, mutate } = useGroups({q: q, type: type, page: page, limit: limit});
+    const { data, isLoading, mutate } = useGroups({ q: q, type: type, page: page, limit: limit });
 
     const items = data?.items ?? [];
     const pages = data?.pages ?? 1;
@@ -76,7 +76,10 @@ export default function GroupsPage() {
                                 <Users className="w-5 h-5 text-indigo-600" />
                             </div>
                             <div className="min-w-0">
-                                <Typography variant="h1" className="text-xl sm:text-3xl font-bold text-gray-900">
+                                <Typography
+                                    variant="h1"
+                                    className="text-xl sm:text-3xl font-bold text-gray-900"
+                                >
                                     Groups
                                 </Typography>
                                 <Typography variant="body1" className="text-gray-600 text-sm">
@@ -147,54 +150,71 @@ export default function GroupsPage() {
                         <div className="overflow-hidden rounded-lg border border-gray-200">
                             <table className="min-w-full divide-y divide-gray-200 bg-white">
                                 <thead className="bg-gray-50">
-                                <tr>
-                                    <Th>Name</Th>
-                                    <Th>Type</Th>
-                                    <Th>City</Th>
-                                    <Th>Members</Th>
-                                    <Th>Active</Th>
-                                    <Th className="text-right pr-4">Actions</Th>
-                                </tr>
+                                    <tr>
+                                        <Th>Name</Th>
+                                        <Th>Type</Th>
+                                        <Th>City</Th>
+                                        <Th>Members</Th>
+                                        <Th>Active</Th>
+                                        <Th className="text-right pr-4">Actions</Th>
+                                    </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                {items.map((g) => (
-                                    <tr key={g._id} className="hover:bg-gray-50">
-                                        <Td className="font-medium">{g.name}</Td>
-                                        <Td className="capitalize">{g.type}</Td>
-                                        <Td>{g.city || "—"}</Td>
-                                        <Td>{typeof g.membersCount === "number" ? g.membersCount : g.members?.length ?? 0}</Td>
-                                        <Td>{g.isActive === false ? "No" : "Yes"}</Td>
-                                        <Td className="text-right">
-                                            <div className="flex items-center justify-end gap-2 pr-1">
-                                                <Link href={`/groups/${g._id}`}>
-                                                    <Button variant="outline" size="sm" leftIcon={<Eye className="w-4 h-4" />}>
-                                                        Details
+                                    {items.map((g) => (
+                                        <tr key={g._id} className="hover:bg-gray-50">
+                                            <Td className="font-medium">{g.name}</Td>
+                                            <Td className="capitalize">{g.type}</Td>
+                                            <Td>{g.city || "—"}</Td>
+                                            <Td>
+                                                {typeof g.membersCount === "number"
+                                                    ? g.membersCount
+                                                    : (g.members?.length ?? 0)}
+                                            </Td>
+                                            <Td>{g.isActive === false ? "No" : "Yes"}</Td>
+                                            <Td className="text-right">
+                                                <div className="flex items-center justify-end gap-2 pr-1">
+                                                    <Link href={`/groups/${g._id}`}>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            leftIcon={<Eye className="w-4 h-4" />}
+                                                        >
+                                                            Details
+                                                        </Button>
+                                                    </Link>
+                                                    <Link href={`/groups/${g._id}/edit`}>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            leftIcon={
+                                                                <PencilLine className="w-4 h-4" />
+                                                            }
+                                                        >
+                                                            Edit
+                                                        </Button>
+                                                    </Link>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        leftIcon={<Trash2 className="w-4 h-4" />}
+                                                        onClick={() => onDelete(g._id)}
+                                                    >
+                                                        Delete
                                                     </Button>
-                                                </Link>
-                                                <Link href={`/groups/${g._id}/edit`}>
-                                                    <Button variant="outline" size="sm" leftIcon={<PencilLine className="w-4 h-4" />}>
-                                                        Edit
-                                                    </Button>
-                                                </Link>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    leftIcon={<Trash2 className="w-4 h-4" />}
-                                                    onClick={() => onDelete(g._id)}
-                                                >
-                                                    Delete
-                                                </Button>
-                                            </div>
-                                        </Td>
-                                    </tr>
-                                ))}
-                                {!items.length && (
-                                    <tr>
-                                        <td colSpan={6} className="p-6 text-center text-sm text-gray-600">
-                                            No groups
-                                        </td>
-                                    </tr>
-                                )}
+                                                </div>
+                                            </Td>
+                                        </tr>
+                                    ))}
+                                    {!items.length && (
+                                        <tr>
+                                            <td
+                                                colSpan={6}
+                                                className="p-6 text-center text-sm text-gray-600"
+                                            >
+                                                No groups
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -203,25 +223,44 @@ export default function GroupsPage() {
                     {/* Cards (mobile) */}
                     <div className="grid md:hidden grid-cols-1 gap-3">
                         {items.map((g) => (
-                            <Card key={g._id} variant="elevated" className="hover:shadow-lg transition-shadow">
+                            <Card
+                                key={g._id}
+                                variant="elevated"
+                                className="hover:shadow-lg transition-shadow"
+                            >
                                 <CardBody className="p-4">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0">
-                                            <div className="font-semibold text-gray-900">{g.name}</div>
-                                            <div className="text-sm text-gray-700">{g.city || "—"} • {g.type}</div>
+                                            <div className="font-semibold text-gray-900">
+                                                {g.name}
+                                            </div>
+                                            <div className="text-sm text-gray-700">
+                                                {g.city || "—"} • {g.type}
+                                            </div>
                                             <div className="text-xs text-gray-600 mt-1">
-                                                Members: {typeof g.membersCount === "number" ? g.membersCount : g.members?.length ?? 0} •{" "}
-                                                {g.isActive === false ? "Inactive" : "Active"}
+                                                Members:{" "}
+                                                {typeof g.membersCount === "number"
+                                                    ? g.membersCount
+                                                    : (g.members?.length ?? 0)}{" "}
+                                                • {g.isActive === false ? "Inactive" : "Active"}
                                             </div>
                                         </div>
                                         <div className="flex flex-col gap-2">
                                             <Link href={`/groups/${g._id}`}>
-                                                <Button variant="outline" size="sm" leftIcon={<Eye className="w-4 h-4" />}>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    leftIcon={<Eye className="w-4 h-4" />}
+                                                >
                                                     View
                                                 </Button>
                                             </Link>
                                             <Link href={`/groups/${g._id}/edit`}>
-                                                <Button variant="outline" size="sm" leftIcon={<PencilLine className="w-4 h-4" />}>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    leftIcon={<PencilLine className="w-4 h-4" />}
+                                                >
                                                     Edit
                                                 </Button>
                                             </Link>
@@ -238,7 +277,9 @@ export default function GroupsPage() {
                                 </CardBody>
                             </Card>
                         ))}
-                        {!items.length && <div className="p-6 text-center text-sm text-gray-600">No groups</div>}
+                        {!items.length && (
+                            <div className="p-6 text-center text-sm text-gray-600">No groups</div>
+                        )}
                     </div>
 
                     {/* Pagination */}
@@ -253,7 +294,9 @@ export default function GroupsPage() {
                                 onClick={() => {
                                     const p = Math.max(1, page - 1);
                                     setPage(p);
-                                    router.replace(`/groups${qstring({ q, type, active, page: p, limit })}`);
+                                    router.replace(
+                                        `/groups${qstring({ q, type, active, page: p, limit })}`
+                                    );
                                     mutate();
                                 }}
                                 disabled={page <= 1 || isLoading}
@@ -266,7 +309,9 @@ export default function GroupsPage() {
                                 onClick={() => {
                                     const p = Math.min(pages, page + 1);
                                     setPage(p);
-                                    router.replace(`/groups${qstring({ q, type, active, page: p, limit })}`);
+                                    router.replace(
+                                        `/groups${qstring({ q, type, active, page: p, limit })}`
+                                    );
                                     mutate();
                                 }}
                                 disabled={page >= pages || isLoading}

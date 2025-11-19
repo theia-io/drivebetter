@@ -71,7 +71,7 @@ export function DriverCombobox(props: DriverComboboxProps) {
                 name: d.name,
                 email: d.email,
             })),
-        [drivers],
+        [drivers]
     );
 
     const itemsById = useMemo(() => {
@@ -105,10 +105,8 @@ export function DriverCombobox(props: DriverComboboxProps) {
         selectedCount === 0
             ? placeholder
             : isMulti
-                ? `${selectedCount} driver${selectedCount > 1 ? "s" : ""} selected`
-                : selectedDrivers[0]?.name ||
-                selectedDrivers[0]?.email ||
-                placeholder;
+              ? `${selectedCount} driver${selectedCount > 1 ? "s" : ""} selected`
+              : selectedDrivers[0]?.name || selectedDrivers[0]?.email || placeholder;
 
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
@@ -155,9 +153,7 @@ export function DriverCombobox(props: DriverComboboxProps) {
         if (isMulti) {
             const current = props.values;
             const exists = current.some((d) => d.id === id);
-            const next = exists
-                ? current.filter((d) => d.id !== id)
-                : [...current, driver];
+            const next = exists ? current.filter((d) => d.id !== id) : [...current, driver];
             props.onChange(next);
         } else {
             const already = selectedIds.has(id);
@@ -175,16 +171,9 @@ export function DriverCombobox(props: DriverComboboxProps) {
 
     return (
         <div className={["w-full", className].join(" ")}>
-            {label && (
-                <div className="mb-1 text-xs font-medium text-gray-700">
-                    {label}
-                </div>
-            )}
+            {label && <div className="mb-1 text-xs font-medium text-gray-700">{label}</div>}
 
-            <div
-                ref={rootRef}
-                className="relative inline-block w-full text-left"
-            >
+            <div ref={rootRef} className="relative inline-block w-full text-left">
                 {/* Trigger */}
                 <button
                     type="button"
@@ -204,14 +193,12 @@ export function DriverCombobox(props: DriverComboboxProps) {
                         isDisabled ? "cursor-not-allowed opacity-60" : "",
                     ].join(" ")}
                 >
-          <span className="flex flex-col text-left">
-            <span className="truncate font-medium">
-              {selectedLabel}
-            </span>
-            <span className="truncate text-[11px] text-gray-500">
-              {isLoading ? "Loading drivers…" : "Search by name or email"}
-            </span>
-          </span>
+                    <span className="flex flex-col text-left">
+                        <span className="truncate font-medium">{selectedLabel}</span>
+                        <span className="truncate text-[11px] text-gray-500">
+                            {isLoading ? "Loading drivers…" : "Search by name or email"}
+                        </span>
+                    </span>
                     <ChevronDown className="h-3.5 w-3.5 text-gray-500" />
                 </button>
 
@@ -252,7 +239,9 @@ export function DriverCombobox(props: DriverComboboxProps) {
 
                             {!isLoading &&
                                 filtered.map((d) => {
-                                    const id = toStr((d as any)._id || (d as any).id || (d as any).userId);
+                                    const id = toStr(
+                                        (d as any)._id || (d as any).id || (d as any).userId
+                                    );
                                     const isSelected = selectedIds.has(id);
 
                                     return (
@@ -274,13 +263,13 @@ export function DriverCombobox(props: DriverComboboxProps) {
                                                 className="h-3 w-3 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                             />
                                             <div className="flex flex-col">
-                        <span className="truncate text-gray-900">
-                          {d.name || d.email || `User ${id.slice(-6)}`}
-                        </span>
+                                                <span className="truncate text-gray-900">
+                                                    {d.name || d.email || `User ${id.slice(-6)}`}
+                                                </span>
                                                 {d.email && (
                                                     <span className="text-[11px] text-gray-500">
-                            {d.email}
-                          </span>
+                                                        {d.email}
+                                                    </span>
                                                 )}
                                             </div>
                                         </button>
@@ -307,9 +296,7 @@ export function DriverCombobox(props: DriverComboboxProps) {
                                     {actionLabel || "Apply to selected drivers"}
                                 </Button>
                                 {actionHint && (
-                                    <div className="text-[11px] text-gray-500">
-                                        {actionHint}
-                                    </div>
+                                    <div className="text-[11px] text-gray-500">{actionHint}</div>
                                 )}
                             </div>
                         )}
@@ -325,20 +312,16 @@ export function DriverCombobox(props: DriverComboboxProps) {
                             key={d.id}
                             className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px]"
                         >
-              <UserIcon className="h-3 w-3 text-gray-500" />
-              <span className="truncate max-w-[8rem]">
-                {d.name || d.email || `User ${d.id.slice(-6)}`}
-              </span>
-            </span>
+                            <UserIcon className="h-3 w-3 text-gray-500" />
+                            <span className="truncate max-w-[8rem]">
+                                {d.name || d.email || `User ${d.id.slice(-6)}`}
+                            </span>
+                        </span>
                     ))}
                 </div>
             )}
 
-            {error && (
-                <div className="mt-1 text-[11px] text-red-600">
-                    {error}
-                </div>
-            )}
+            {error && <div className="mt-1 text-[11px] text-red-600">{error}</div>}
         </div>
     );
 }

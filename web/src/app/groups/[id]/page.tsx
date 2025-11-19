@@ -8,7 +8,7 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { ArrowLeft, PencilLine, Trash2, Users, Plus, X, UserIcon } from "lucide-react";
 import { useAuthStore } from "@/stores/auth";
-import {DriverCombobox, type SimpleDriver } from "@/components/ui/ride/DriverCombobox";
+import { DriverCombobox, type SimpleDriver } from "@/components/ui/ride/DriverCombobox";
 import { dt, KV } from "@/components/ui/commmon";
 
 import {
@@ -255,9 +255,7 @@ export default function GroupDetailsPage() {
                                 {/* Members list */}
                                 <div className="flex flex-wrap gap-2">
                                     {membersIds.length === 0 && !driversLoading && (
-                                        <div className="text-sm text-gray-600">
-                                            No members yet.
-                                        </div>
+                                        <div className="text-sm text-gray-600">No members yet.</div>
                                     )}
 
                                     {driversLoading && membersIds.length > 0 && (
@@ -270,7 +268,7 @@ export default function GroupDetailsPage() {
                                         const uid = String(
                                             typeof m === "string"
                                                 ? m
-                                                : m._id || m.userId || m.id || "",
+                                                : m._id || m.userId || m.id || ""
                                         );
                                         const d = driversMap[uid];
                                         const displayName =

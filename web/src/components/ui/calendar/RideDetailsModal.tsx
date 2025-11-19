@@ -5,11 +5,7 @@ import { X } from "lucide-react";
 import { Button, Typography } from "@/components/ui";
 import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
 import { Ride } from "@/types";
-import {
-    type RideStatus,
-    getPillStatusColor,
-    getStatusDotColor,
-} from "@/types/rideStatus";
+import { type RideStatus, getPillStatusColor, getStatusDotColor } from "@/types/rideStatus";
 
 type RideDetailsModalProps = {
     ride: Ride | null;
@@ -19,11 +15,11 @@ type RideDetailsModalProps = {
 };
 
 export default function RideDetailsModal({
-                                             ride,
-                                             onClose,
-                                             onDriverAssigned,
-                                             onRideStatusChanged,
-                                         }: RideDetailsModalProps) {
+    ride,
+    onClose,
+    onDriverAssigned,
+    onRideStatusChanged,
+}: RideDetailsModalProps) {
     if (!ride) return null;
 
     const status = ride.status as RideStatus;
@@ -54,12 +50,12 @@ export default function RideDetailsModal({
                         <div className="mt-1 inline-flex items-center gap-2 text-[11px] sm:text-xs text-gray-500">
                             <span
                                 className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] sm:text-xs font-medium ${getPillStatusColor(
-                                    status,
+                                    status
                                 )}`}
                             >
                                 <span
                                     className={`mr-1 h-2 w-2 rounded-full ${getStatusDotColor(
-                                        status,
+                                        status
                                     )}`}
                                 />
                                 <span className="capitalize">
@@ -92,11 +88,7 @@ export default function RideDetailsModal({
 
                 {/* Footer */}
                 <div className="border-t px-4 py-3 sm:px-6 sm:py-4 flex justify-end">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleCloseClick}
-                    >
+                    <Button variant="ghost" size="sm" onClick={handleCloseClick}>
                         Close
                     </Button>
                 </div>

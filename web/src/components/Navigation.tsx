@@ -92,14 +92,9 @@ const getNavigationForUser = (item: NavItem, userRoles?: string[]): NavItem => {
     return item;
 };
 
-const hasRequiredRole = (
-    userRoles?: string[],
-    requiredRoles?: string[]
-): boolean => {
+const hasRequiredRole = (userRoles?: string[], requiredRoles?: string[]): boolean => {
     if (!requiredRoles || requiredRoles.length === 0) return true;
-    return (
-        Array.isArray(userRoles) && requiredRoles.some((r) => userRoles.includes(r))
-    );
+    return Array.isArray(userRoles) && requiredRoles.some((r) => userRoles.includes(r));
 };
 
 export default function Navigation() {
@@ -108,9 +103,7 @@ export default function Navigation() {
     const userRoles = user?.roles;
     const isDriver = !!userRoles?.includes("driver");
 
-    const { data: inboxCountData } = useDriverInboxCount(
-        isDriver ? "available" : undefined
-    );
+    const { data: inboxCountData } = useDriverInboxCount(isDriver ? "available" : undefined);
     const newRidesCount = inboxCountData?.count ?? 0;
 
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -160,23 +153,15 @@ export default function Navigation() {
 
     const createRideItem = items.find((i) => i.name === "Create Ride") || null;
 
-    const primaryNames: string[] = [
-        "New Rides",
-        "Calendar",
-        "My Assignments",
-        "My Created",
-    ];
+    const primaryNames: string[] = ["New Rides", "Calendar", "My Assignments", "My Created"];
     const primaryItems = items.filter(
         (i) => primaryNames.includes(i.name) && i.name !== "Create Ride"
     );
     const dropdownItems = items.filter(
-        (i) =>
-            i.name !== "Create Ride" &&
-            !primaryNames.includes(i.name)
+        (i) => i.name !== "Create Ride" && !primaryNames.includes(i.name)
     );
 
-    const findByName = (name: string) =>
-        items.find((i) => i.name === name) || null;
+    const findByName = (name: string) => items.find((i) => i.name === name) || null;
 
     const bottomCreate = findByName("Create Ride");
     const bottomNewRides = findByName("New Rides");
@@ -274,9 +259,7 @@ export default function Navigation() {
                                 <div className="relative">
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            setUserMenuOpen((prev) => !prev)
-                                        }
+                                        onClick={() => setUserMenuOpen((prev) => !prev)}
                                         className="inline-flex items-center gap-2 rounded-full bg-gray-50 px-2.5 py-1 border border-gray-200 hover:bg-gray-100"
                                     >
                                         <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
@@ -292,9 +275,7 @@ export default function Navigation() {
                                             <div className="py-1">
                                                 <Link
                                                     href="/account"
-                                                    onClick={() =>
-                                                        setUserMenuOpen(false)
-                                                    }
+                                                    onClick={() => setUserMenuOpen(false)}
                                                     className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 ${
                                                         pathname === "/account"
                                                             ? "bg-indigo-50 text-indigo-700"
@@ -449,9 +430,7 @@ export default function Navigation() {
                                                     className="absolute inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold text-white bg-red-600 border-2 border-white rounded-full -top-2 -right-2"
                                                     aria-label={`${newRidesCount} new rides`}
                                                 >
-                                                    {newRidesCount > 99
-                                                        ? "99+"
-                                                        : newRidesCount}
+                                                    {newRidesCount > 99 ? "99+" : newRidesCount}
                                                 </span>
                                             )}
                                         </span>

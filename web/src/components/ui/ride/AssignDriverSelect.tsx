@@ -1,9 +1,9 @@
 "use client";
 
-import {useEffect, useMemo, useRef, useState} from "react";
-import {ChevronDown, Loader2, Search, User} from "lucide-react";
-import {apiPost} from "@/services/http";
-import type {EligibleDriver, EligibleDriverBody} from "@/types";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, Loader2, Search, User } from "lucide-react";
+import { apiPost } from "@/services/http";
+import type { EligibleDriver, EligibleDriverBody } from "@/types";
 
 type AssignDriverSelectProps = {
     rideId: string;
@@ -22,14 +22,14 @@ type DriverOption = {
 };
 
 export default function AssignDriverSelect({
-                                       rideId,
-                                       currentDriverId,
-                                       filters,
-                                       onAssigned,
-                                       className = "",
-                                       label = "Driver",
-                                       disabled,
-                                   }: AssignDriverSelectProps) {
+    rideId,
+    currentDriverId,
+    filters,
+    onAssigned,
+    className = "",
+    label = "Driver",
+    disabled,
+}: AssignDriverSelectProps) {
     const [drivers, setDrivers] = useState<EligibleDriver[]>([]);
     const [loading, setLoading] = useState(false);
     const [assigning, setAssigning] = useState(false);
@@ -86,8 +86,8 @@ export default function AssignDriverSelect({
                 const list: EligibleDriver[] = Array.isArray(result)
                     ? result
                     : Array.isArray((result as any)?.data)
-                        ? (result as any).data
-                        : [];
+                      ? (result as any).data
+                      : [];
 
                 if (!cancelled) {
                     setDrivers(list);
@@ -138,8 +138,7 @@ export default function AssignDriverSelect({
                 helperParts.push(`★${avg} (${cnt})`);
             }
 
-            const helper =
-                helperParts.length > 0 ? helperParts.join(" • ") : undefined;
+            const helper = helperParts.length > 0 ? helperParts.join(" • ") : undefined;
 
             return {
                 id: (d as any).userId as string,
@@ -176,7 +175,7 @@ export default function AssignDriverSelect({
         setError(null);
 
         try {
-            await apiPost(`/rides/${rideId}/assign`, {driverId: pendingDriverId});
+            await apiPost(`/rides/${rideId}/assign`, { driverId: pendingDriverId });
             setSelectedDriverId(pendingDriverId);
             if (onAssigned) onAssigned(pendingDriverId);
             setOpen(false);
@@ -190,15 +189,16 @@ export default function AssignDriverSelect({
     const isBusy = !!disabled || loading || assigning;
 
     return (
-        <div ref={rootRef} className={["relative z-[1000] flex items-start gap-2", className].join(" ")}>
+        <div
+            ref={rootRef}
+            className={["relative z-[1000] flex items-start gap-2", className].join(" ")}
+        >
             <div className="flex h-10 items-center gap-1">
                 <span className="inline-flex items-center gap-1 text-xs sm:text-sm text-gray-700">
-                    <User className="h-3 w-3 text-gray-500"/>
+                    <User className="h-3 w-3 text-gray-500" />
                     {label}
                 </span>
-                {loading && (
-                    <Loader2 className="h-3 w-3 animate-spin text-gray-400"/>
-                )}
+                {loading && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
             </div>
 
             {/* Trigger button with main + helper text */}
@@ -214,33 +214,27 @@ export default function AssignDriverSelect({
                         isBusy ? "cursor-not-allowed opacity-60" : "cursor-pointer",
                     ].join(" ")}
                 >
-                <span className="flex min-w-0 flex-col text-left">
-                    <span className="truncate">
-                        {selectedOption?.main || "Select driver"}
+                    <span className="flex min-w-0 flex-col text-left">
+                        <span className="truncate">{selectedOption?.main || "Select driver"}</span>
+                        {selectedOption?.helper && (
+                            <span className="truncate text-[11px] text-gray-500">
+                                {selectedOption.helper}
+                            </span>
+                        )}
                     </span>
-                    {selectedOption?.helper && (
-                        <span className="truncate text-[11px] text-gray-500">
-                            {selectedOption.helper}
-                        </span>
-                    )}
-                </span>
-                    <ChevronDown className="h-4 w-4 shrink-0 text-gray-500"/>
+                    <ChevronDown className="h-4 w-4 shrink-0 text-gray-500" />
                 </button>
 
                 {open && (
-                    <div
-                        className="absolute z-[1100] mt-2 w-72 origin-top-right rounded-lg border border-gray-100 bg-white shadow-lg">
+                    <div className="absolute z-[1100] mt-2 w-72 origin-top-right rounded-lg border border-gray-100 bg-white shadow-lg">
                         {/* Search bar */}
                         <div className="border-b border-gray-100 p-3">
-                            <label
-                                htmlFor={`driver-search-${rideId}`}
-                                className="sr-only"
-                            >
+                            <label htmlFor={`driver-search-${rideId}`} className="sr-only">
                                 Search driver
                             </label>
                             <div className="relative">
                                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                    <Search className="h-4 w-4 text-gray-400"/>
+                                    <Search className="h-4 w-4 text-gray-400" />
                                 </div>
                                 <input
                                     id={`driver-search-${rideId}`}
@@ -279,13 +273,13 @@ export default function AssignDriverSelect({
                                         ].join(" ")}
                                     >
                                         <div className="flex min-w-0 flex-col">
-                                        <span className="truncate text-xs sm:text-sm font-medium text-gray-900">
-                                            {opt.main}
-                                        </span>
+                                            <span className="truncate text-xs sm:text-sm font-medium text-gray-900">
+                                                {opt.main}
+                                            </span>
                                             {opt.helper && (
                                                 <span className="truncate text-[11px] text-gray-500">
-                                                {opt.helper}
-                                            </span>
+                                                    {opt.helper}
+                                                </span>
                                             )}
                                         </div>
                                     </button>
@@ -312,20 +306,14 @@ export default function AssignDriverSelect({
                                         : "bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500",
                                 ].join(" ")}
                             >
-                                {assigning && (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin"/>
-                                )}
+                                {assigning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 Assign
                             </button>
                         </div>
                     </div>
                 )}
 
-                {error && (
-                    <div className="mt-1 text-[11px] text-red-600">
-                        {error}
-                    </div>
-                )}
+                {error && <div className="mt-1 text-[11px] text-red-600">{error}</div>}
             </div>
         </div>
     );

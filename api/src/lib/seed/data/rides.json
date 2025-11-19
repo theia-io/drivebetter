@@ -1,32 +1,32 @@
 [
-  {
-    "ref": "ride-RES-1",
-    "creatorId": "6735c8c3a7b1a3d2d1110002",
-    "customer": { "name": "Michael Scott", "phone": "+12025550123" },
-    "from": "Amsterdam Centraal",
-    "to": "Schiphol Airport",
-    "fromLocation": { "type": "Point", "coordinates": [4.9003, 52.378] },
-    "toLocation": { "type": "Point", "coordinates": [4.7634, 52.3105] },
-    "distance": 20000,
-    "datetime": "2025-10-25T08:30:00.000Z",
-    "type": "reservation",
-    "queueDriverEmails": ["admin@example.com", "john.driver@example.com"],
-    "assignedDriverEmail": "admin@example.com",
-    "coveredVisible": true,
-    "status": "assigned",
-    "payment": { "method": "card", "paid": false, "driverPaid": false, "amountCents": 4800 },
-    "notes": "Business traveler, 2 suitcases"
-  },
-  {
-    "ref": "ride-ASAP-1",
-    "from": "RAI Amsterdam",
-    "to": "Hotel De L'Europe",
-    "distance": 6000,
-    "datetime": "2025-10-23T10:00:00.000Z",
-    "type": "asap",
-    "queueDriverEmails": ["john.driver@example.com"],
-    "coveredVisible": true,
-    "status": "unassigned",
-    "payment": { "method": "cash", "paid": false, "driverPaid": false, "amountCents": 1800 }
-  }
+    {
+        "ref": "ride-RES-1",
+        "creatorId": "6735c8c3a7b1a3d2d1110002",
+        "customer": { "name": "Michael Scott", "phone": "+12025550123" },
+        "from": "Amsterdam Centraal",
+        "to": "Schiphol Airport",
+        "fromLocation": { "type": "Point", "coordinates": [4.9003, 52.378] },
+        "toLocation": { "type": "Point", "coordinates": [4.7634, 52.3105] },
+        "distance": 20000,
+        "datetime": "2025-10-25T08:30:00.000Z",
+        "type": "reservation",
+        "queueDriverEmails": ["admin@example.com", "john.driver@example.com"],
+        "assignedDriverEmail": "admin@example.com",
+        "coveredVisible": true,
+        "status": "assigned",
+        "payment": { "method": "card", "paid": false, "driverPaid": false, "amountCents": 4800 },
+        "notes": "Business traveler, 2 suitcases"
+    },
+    {
+        "ref": "ride-ASAP-1",
+        "from": "RAI Amsterdam",
+        "to": "Hotel De L'Europe",
+        "distance": 6000,
+        "datetime": "2025-10-23T10:00:00.000Z",
+        "type": "asap",
+        "queueDriverEmails": ["john.driver@example.com"],
+        "coveredVisible": true,
+        "status": "unassigned",
+        "payment": { "method": "cash", "paid": false, "driverPaid": false, "amountCents": 1800 }
+    }
 ]

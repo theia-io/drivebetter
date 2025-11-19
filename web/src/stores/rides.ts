@@ -1,10 +1,10 @@
 import useSWR from "swr";
 import useSWRInfinite from "swr/infinite";
-import useSWRMutation from 'swr/mutation';
+import useSWRMutation from "swr/mutation";
 import { mutate as globalMutate } from "swr";
 import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from "@/services/http";
-import {CreateRideRequest, RideType, Ride} from "@/types";
-import {RideStatus} from "@/types/rideStatus";
+import { CreateRideRequest, RideType, Ride } from "@/types";
+import { RideStatus } from "@/types/rideStatus";
 
 /* ------------------------------- Types ------------------------------- */
 
@@ -16,7 +16,7 @@ export type RideListQuery = {
     driverId?: string;
     includeClaimed?: boolean;
     from?: string; // ISO
-    to?: string;   // ISO
+    to?: string; // ISO
     page?: number;
     limit?: number;
     sort?: "asc" | "desc";
@@ -41,17 +41,13 @@ const q = (params?: Record<string, any>) => {
     return s ? `?${s}` : "";
 };
 
-export const listMyRides = () =>
-    apiGet<RidePage>(`/rides/my-assigned`);
+export const listMyRides = () => apiGet<RidePage>(`/rides/my-assigned`);
 
-export const listRides = (params?: RideListQuery) =>
-    apiGet<RidePage>(`/rides${q(params)}`);
+export const listRides = (params?: RideListQuery) => apiGet<RidePage>(`/rides${q(params)}`);
 
-export const getRide = (id: string) =>
-    apiGet<Ride>(`/rides/${id}`);
+export const getRide = (id: string) => apiGet<Ride>(`/rides/${id}`);
 
-export const createRide = (payload: CreateRideRequest) =>
-    apiPost<Ride>("/rides", payload);
+export const createRide = (payload: CreateRideRequest) => apiPost<Ride>("/rides", payload);
 
 export const replaceRide = (id: string, payload: CreateRideRequest) =>
     apiPut<Ride>(`/rides/${id}`, payload);
@@ -59,8 +55,7 @@ export const replaceRide = (id: string, payload: CreateRideRequest) =>
 export const updateRide = (id: string, payload: UpdateRideRequest) =>
     apiPatch<Ride>(`/rides/${id}`, payload);
 
-export const deleteRide = (id: string) =>
-    apiDelete<void>(`/rides/${id}`);
+export const deleteRide = (id: string) => apiDelete<void>(`/rides/${id}`);
 
 export const claimRide = (id: string, driverId: string) =>
     apiPost<{ ok: true; queuePosition: number }>(`/rides/${id}/claim`, { driverId });
@@ -161,7 +156,8 @@ export function useClaimRide(id?: string) {
     const key = id ? `/rides/${id}/claim` : null;
     const m = useSWRMutation(
         key,
-        async (_key, { arg }: { arg: { driverId: string } }) => claimRide(id as string, arg.driverId),
+        async (_key, { arg }: { arg: { driverId: string } }) =>
+            claimRide(id as string, arg.driverId),
         {
             onSuccess: async () => {
                 await globalMutate(`/rides/${id}`);
@@ -182,7 +178,8 @@ export function useAssignRide(id?: string) {
     const key = id ? `/rides/${id}/assign` : null;
     const m = useSWRMutation(
         key,
-        async (_key, { arg }: { arg: { driverId: string } }) => assignRide(id as string, arg.driverId),
+        async (_key, { arg }: { arg: { driverId: string } }) =>
+            assignRide(id as string, arg.driverId),
         {
             onSuccess: async () => {
                 await globalMutate(`/rides/${id}`);

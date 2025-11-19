@@ -2,7 +2,7 @@
 import { Router, Request, Response } from "express";
 import { Types } from "mongoose";
 import Ride from "../models/ride.model";
-import {requireAuth} from "../lib/auth";
+import { requireAuth } from "../lib/auth";
 
 const router = Router();
 
@@ -54,7 +54,8 @@ function buildScopeMatch(scope: Scope, targetUserId?: string, allowBroad = false
         else if (allowBroad) $or.push({ assignedDriverId: { $ne: null } });
     }
     if (scope === "created" || scope === "all") {
-        if (targetUserId) $or.push({ creatorId: targetUserId }); // safe if absent in schema
+        if (targetUserId)
+            $or.push({ creatorId: targetUserId }); // safe if absent in schema
         else if (allowBroad) $or.push({ creatorId: { $ne: null } });
     }
     return $or.length ? { $or } : {};
@@ -98,10 +99,10 @@ function sanitizeUserId(id?: string) {
 }
 
 async function runCalendarQuery({
-                                    match,
-                                    limit,
-                                    sortAscending,
-                                }: {
+    match,
+    limit,
+    sortAscending,
+}: {
     match: any;
     limit: number;
     sortAscending: boolean;
@@ -125,14 +126,12 @@ async function runCalendarQuery({
             : undefined,
         payment: r.payment
             ? {
-                method: r.payment.method,
-                paid: !!r.payment.paid,
-                driverPaid: !!r.payment.driverPaid,
-                amountCents:
-                    typeof r.payment.amountCents === "number"
-                        ? r.payment.amountCents
-                        : undefined,
-            }
+                  method: r.payment.method,
+                  paid: !!r.payment.paid,
+                  driverPaid: !!r.payment.driverPaid,
+                  amountCents:
+                      typeof r.payment.amountCents === "number" ? r.payment.amountCents : undefined,
+              }
             : undefined,
     }));
 }

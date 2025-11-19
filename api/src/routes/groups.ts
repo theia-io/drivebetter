@@ -3,7 +3,6 @@ import { Types } from "mongoose";
 import { requireAuth, requireRole } from "../lib/auth";
 import Group from "../models/group.model";
 
-
 function pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Partial<T> {
     const out: Partial<T> = {};
     keys.forEach((k) => {
@@ -101,25 +100,31 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post("/", requireAuth, requireRole(["admin", "dispatcher"]), async (req: Request, res: Response) => {
-    try {
-        const { name, type, description, city, location, visibility, isInviteOnly, tags } = req.body;
-        const group = await Group.create({
-            name,
-            type,
-            description,
-            city,
-            location,
-            visibility,         // optional; defaults in schema
-            isInviteOnly,       // optional; defaults in schema
-            tags,               // optional; normalized by schema setter
-            members: [],
-        });
-        res.status(201).json(group);
-    } catch (err: any) {
-        res.status(400).json({ error: err.message });
+router.post(
+    "/",
+    requireAuth,
+    requireRole(["admin", "dispatcher"]),
+    async (req: Request, res: Response) => {
+        try {
+            const { name, type, description, city, location, visibility, isInviteOnly, tags } =
+                req.body;
+            const group = await Group.create({
+                name,
+                type,
+                description,
+                city,
+                location,
+                visibility, // optional; defaults in schema
+                isInviteOnly, // optional; defaults in schema
+                tags, // optional; normalized by schema setter
+                members: [],
+            });
+            res.status(201).json(group);
+        } catch (err: any) {
+            res.status(400).json({ error: err.message });
+        }
     }
-});
+);
 
 /**
  * @openapi
@@ -165,34 +170,39 @@ router.get("/:id([0-9a-fA-F]{24})", requireAuth, async (req: Request, res: Respo
  *     security:
  *       - bearerAuth: []
  */
-router.patch("/:id([0-9a-fA-F]{24})", requireAuth, requireRole(["admin","dispatcher"]), async (req, res) => {
-    try {
-        const { name, type, description, city, location, visibility, isInviteOnly, tags } = req.body;
+router.patch(
+    "/:id([0-9a-fA-F]{24})",
+    requireAuth,
+    requireRole(["admin", "dispatcher"]),
+    async (req, res) => {
+        try {
+            const { name, type, description, city, location, visibility, isInviteOnly, tags } =
+                req.body;
 
-        const updated = await Group.findByIdAndUpdate(
-            req.params.id,
-            {
-                $set: {
-                    ...(name !== undefined && { name }),
-                    ...(type !== undefined && { type }),
-                    ...(description !== undefined && { description }),
-                    ...(city !== undefined && { city }),
-                    ...(location !== undefined && { location }),
-                    ...(visibility !== undefined && { visibility }),
-                    ...(isInviteOnly !== undefined && { isInviteOnly }),
-                    ...(tags !== undefined && { tags }),
+            const updated = await Group.findByIdAndUpdate(
+                req.params.id,
+                {
+                    $set: {
+                        ...(name !== undefined && { name }),
+                        ...(type !== undefined && { type }),
+                        ...(description !== undefined && { description }),
+                        ...(city !== undefined && { city }),
+                        ...(location !== undefined && { location }),
+                        ...(visibility !== undefined && { visibility }),
+                        ...(isInviteOnly !== undefined && { isInviteOnly }),
+                        ...(tags !== undefined && { tags }),
+                    },
                 },
-            },
-            { new: true, runValidators: true }
-        ).lean();
+                { new: true, runValidators: true }
+            ).lean();
 
-        if (!updated) return res.status(404).json({ error: "Not found" });
-        res.json(updated);
-    } catch (err: any) {
-        res.status(400).json({ error: err.message });
+            if (!updated) return res.status(404).json({ error: "Not found" });
+            res.json(updated);
+        } catch (err: any) {
+            res.status(400).json({ error: err.message });
+        }
     }
-});
-
+);
 
 /**
  * @openapi
@@ -211,11 +221,16 @@ router.patch("/:id([0-9a-fA-F]{24})", requireAuth, requireRole(["admin","dispatc
  *     security:
  *       - bearerAuth: []
  */
-router.delete("/:id([0-9a-fA-F]{24})", requireAuth, requireRole(["admin"]), async (req: Request, res: Response) => {
-    const doc = await Group.findByIdAndDelete(req.params.id).lean();
-    if (!doc) return res.status(404).json({ error: "Not found" });
-    res.json({ ok: true });
-});
+router.delete(
+    "/:id([0-9a-fA-F]{24})",
+    requireAuth,
+    requireRole(["admin"]),
+    async (req: Request, res: Response) => {
+        const doc = await Group.findByIdAndDelete(req.params.id).lean();
+        if (!doc) return res.status(404).json({ error: "Not found" });
+        res.json({ ok: true });
+    }
+);
 
 /**
  * @openapi
@@ -277,30 +292,39 @@ router.get("/:id([0-9a-fA-F]{24})/members", requireAuth, async (req: Request, re
  *     security:
  *       - bearerAuth: []
  */
-router.post("/:id([0-9a-fA-F]{24})/members", requireAuth, requireRole(["admin", "dispatcher"]), async (req: Request, res: Response) => {
-    const { add = [], remove = [] } = req.body as { add?: string[]; remove?: string[] };
+router.post(
+    "/:id([0-9a-fA-F]{24})/members",
+    requireAuth,
+    requireRole(["admin", "dispatcher"]),
+    async (req: Request, res: Response) => {
+        const { add = [], remove = [] } = req.body as { add?: string[]; remove?: string[] };
 
-    // validate ids
-    const toAdd = (Array.isArray(add) ? add : []).filter((x) => Types.ObjectId.isValid(x)).map((x) => new Types.ObjectId(x));
-    const toRemove = (Array.isArray(remove) ? remove : []).filter((x) => Types.ObjectId.isValid(x)).map((x) => new Types.ObjectId(x));
+        // validate ids
+        const toAdd = (Array.isArray(add) ? add : [])
+            .filter((x) => Types.ObjectId.isValid(x))
+            .map((x) => new Types.ObjectId(x));
+        const toRemove = (Array.isArray(remove) ? remove : [])
+            .filter((x) => Types.ObjectId.isValid(x))
+            .map((x) => new Types.ObjectId(x));
 
-    const doc = await Group.findById(req.params.id);
-    if (!doc) return res.status(404).json({ error: "Not found" });
+        const doc = await Group.findById(req.params.id);
+        if (!doc) return res.status(404).json({ error: "Not found" });
 
-    if (toAdd.length) {
-        // ensure uniqueness
-        const current = new Set(doc.members.map((m) => String(m)));
-        toAdd.forEach((id) => {
-            if (!current.has(String(id))) doc.members.push(id);
-        });
+        if (toAdd.length) {
+            // ensure uniqueness
+            const current = new Set(doc.members.map((m) => String(m)));
+            toAdd.forEach((id) => {
+                if (!current.has(String(id))) doc.members.push(id);
+            });
+        }
+        if (toRemove.length) {
+            const removeSet = new Set(toRemove.map(String));
+            doc.members = doc.members.filter((m) => !removeSet.has(String(m)));
+        }
+        await doc.save();
+        res.json({ members: doc.members.map(String) });
     }
-    if (toRemove.length) {
-        const removeSet = new Set(toRemove.map(String));
-        doc.members = doc.members.filter((m) => !removeSet.has(String(m)));
-    }
-    await doc.save();
-    res.json({ members: doc.members.map(String) });
-});
+);
 
 /**
  * @openapi

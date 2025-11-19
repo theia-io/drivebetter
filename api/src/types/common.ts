@@ -2,13 +2,7 @@ export type Role = "driver" | "dispatcher" | "client" | "admin";
 
 export type RideType = "reservation" | "asap";
 
-export type RideStatus =
-    | "unassigned"
-    | "assigned"
-    | "on_my_way"
-    | "on_location"
-    | "pob"
-    | "clear";
+export type RideStatus = "unassigned" | "assigned" | "on_my_way" | "on_location" | "pob" | "clear";
 
 export type PaymentMethod = "cash" | "card" | "qr";
 

@@ -77,7 +77,11 @@ export default function EditUserPage() {
                     <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
                             <Link href={`/users/${id}`}>
-                                <Button variant="outline" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    leftIcon={<ArrowLeft className="w-4 h-4" />}
+                                >
                                     Back
                                 </Button>
                             </Link>
@@ -140,7 +144,10 @@ export default function EditUserPage() {
                                     <FieldLabel>Roles</FieldLabel>
                                     <div className="flex flex-wrap gap-2">
                                         {ALL_ROLES.map((r) => (
-                                            <label key={r} className="inline-flex items-center gap-2 text-sm">
+                                            <label
+                                                key={r}
+                                                className="inline-flex items-center gap-2 text-sm"
+                                            >
                                                 <input
                                                     type="checkbox"
                                                     checked={roleSet.has(r)}
@@ -158,7 +165,12 @@ export default function EditUserPage() {
                                             Cancel
                                         </Button>
                                     </Link>
-                                    <Button type="submit" leftIcon={<Save className="w-4 h-4" />} className="w-full sm:w-auto" disabled={saving}>
+                                    <Button
+                                        type="submit"
+                                        leftIcon={<Save className="w-4 h-4" />}
+                                        className="w-full sm:w-auto"
+                                        disabled={saving}
+                                    >
                                         {saving ? "Saving…" : "Save Changes"}
                                     </Button>
                                 </div>

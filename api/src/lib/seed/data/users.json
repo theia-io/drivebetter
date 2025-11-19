@@ -1,26 +1,26 @@
 [
-  {
-    "_id": "6735c8c3a7b1a3d2d1110001",
-    "name": "Vasyl Grytsak",
-    "email": "admin@example.com",
-    "phone": "+380000000001",
-    "roles": ["admin"],
-    "emailVerified": true
-  },
-  {
-    "_id": "6735c8c3a7b1a3d2d1110002",
-    "name": "Alice Dispatcher",
-    "email": "alice.dispatcher@example.com",
-    "phone": "+310000000002",
-    "roles": ["dispatcher", "driver"],
-    "emailVerified": true
-  },
-  {
-    "_id": "6735c8c3a7b1a3d2d1110003",
-    "name": "John Driver",
-    "email": "john.driver@example.com",
-    "phone": "+310000000003",
-    "roles": ["driver"],
-    "emailVerified": false
-  }
+    {
+        "_id": "6735c8c3a7b1a3d2d1110001",
+        "name": "Vasyl Grytsak",
+        "email": "admin@example.com",
+        "phone": "+380000000001",
+        "roles": ["admin"],
+        "emailVerified": true
+    },
+    {
+        "_id": "6735c8c3a7b1a3d2d1110002",
+        "name": "Alice Dispatcher",
+        "email": "alice.dispatcher@example.com",
+        "phone": "+310000000002",
+        "roles": ["dispatcher", "driver"],
+        "emailVerified": true
+    },
+    {
+        "_id": "6735c8c3a7b1a3d2d1110003",
+        "name": "John Driver",
+        "email": "john.driver@example.com",
+        "phone": "+310000000003",
+        "roles": ["driver"],
+        "emailVerified": false
+    }
 ]

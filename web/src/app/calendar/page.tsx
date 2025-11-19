@@ -1,22 +1,14 @@
 "use client";
 
+import { addDays, addMinutes, format, getDay, parse, startOfDay, startOfWeek } from "date-fns";
+import { enGB } from "date-fns/locale/en-GB";
 import { useCallback, useMemo, useState } from "react";
 import {
-    Calendar as RBCalendar,
     dateFnsLocalizer,
-    View,
+    Calendar as RBCalendar,
     Event as RBCEvent,
+    View,
 } from "react-big-calendar";
-import {
-    format,
-    parse,
-    startOfWeek,
-    getDay,
-    addMinutes,
-    addDays,
-    startOfDay,
-} from "date-fns";
-import { enGB } from "date-fns/locale/en-GB";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
 import ProtectedLayout from "@/components/ProtectedLayout";
@@ -26,27 +18,22 @@ import {
     Calendar as CalendarIcon,
     ChevronLeft,
     ChevronRight,
-    Loader2,
-    X,
     Layers,
-    ArrowLeft,
-    Users,
+    Loader2,
 } from "lucide-react";
-import Link from "next/link";
 
-import { useRidesInfinite } from "@/stores/rides";
-import { Ride } from "@/types";
-import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
-import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
-import {
-    type RideStatus,
-    getStatusColors,
-    getStatusDotColor,
-    getPillStatusColor,
-    getStatusIcon, getStatusLabel, STATUS_FLOW,
-} from "@/types/rideStatus";
 import MultiRideModal from "@/components/ui/calendar/MultiRideModal";
 import RideDetailsModal from "@/components/ui/calendar/RideDetailsModal";
+import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
+import { useRidesInfinite } from "@/stores/rides";
+import { Ride } from "@/types";
+import {
+    type RideStatus,
+    getPillStatusColor,
+    getStatusColors,
+    getStatusDotColor,
+    getStatusIcon,
+} from "@/types/rideStatus";
 
 const locales = { "en-GB": enGB };
 
@@ -113,15 +100,11 @@ function formatRangeLabel(date: Date, view: View): string {
 }
 
 const TimeGutterHeader = () => (
-    <div className="px-1 text-[9px] sm:text-[10px] leading-tight text-gray-500">
-        Daily stats
-    </div>
+    <div className="px-1 text-[9px] sm:text-[10px] leading-tight text-gray-500">Daily stats</div>
 );
 
 // Map status → bucket used by clustering
-function bucketForStatus(
-    status: RideStatus,
-): "unassigned" | "inProgress" | "completed" {
+function bucketForStatus(status: RideStatus): "unassigned" | "inProgress" | "completed" {
     if (status === "completed") return "completed";
     if (status === "unassigned") return "unassigned";
     return "inProgress";
@@ -182,8 +165,8 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
             <div className="flex h-full flex-col items-center justify-center py-0.5">
                 {/* total rides */}
                 <span className="text-[9px] sm:text-[10px] font-medium text-gray-600">
-                {buckets.total} ride{buckets.total > 1 ? "s" : ""}
-            </span>
+                    {buckets.total} ride{buckets.total > 1 ? "s" : ""}
+                </span>
 
                 {/* compact per-status chips using real status colors */}
                 <div className="mt-0.5 flex flex-wrap items-center justify-center gap-1.5">
@@ -195,14 +178,12 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
                                 type="button"
                                 onClick={() => scrollToStatus(status)}
                                 className={`inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[9px] sm:text-[10px] font-medium ${getPillStatusColor(
-                                    status,
+                                    status
                                 )}`}
                             >
-                            <span
-                                className={`h-2 w-2 rounded-full ${getStatusDotColor(
-                                    status,
-                                )}`}
-                            />
+                                <span
+                                    className={`h-2 w-2 rounded-full ${getStatusDotColor(status)}`}
+                                />
                                 <span>{code}</span>
                                 <span>{count}</span>
                             </button>
@@ -212,14 +193,14 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
                 {/* pending drivers indicator */}
                 {hasPending && (
                     <div className="mt-0.5 inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-medium text-red-800">
-                    <span className="relative flex h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
-                    </span>
+                        <span className="relative flex h-2.5 w-2.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                        </span>
                         <span>Pending</span>
                         <span className="ml-1 inline-flex items-center justify-center rounded-full bg-red-600 text-white text-[8px] min-w-[1.1rem] h-3.5 px-1">
-                        {pendingClaims}
-                    </span>
+                            {pendingClaims}
+                        </span>
                     </div>
                 )}
             </div>
@@ -242,8 +223,7 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
 
         // any ride in this cluster with pending driver request
         const hasPending = rides.some((r: any) => {
-            const pendingCount =
-                r.pendingClaimsCount ?? (r.hasPendingClaims ? 1 : 0);
+            const pendingCount = r.pendingClaimsCount ?? (r.hasPendingClaims ? 1 : 0);
             return r.hasPendingClaims === true || pendingCount > 0;
         });
 
@@ -290,11 +270,8 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
         const Icon = getStatusIcon(r.status as RideStatus);
         const hasAmount = !!r.payment?.amountCents;
 
-        const pendingCount =
-            (r as any).pendingClaimsCount ??
-            ((r as any).hasPendingClaims ? 1 : 0);
-        const hasPending =
-            (r as any).hasPendingClaims === true || pendingCount > 0;
+        const pendingCount = (r as any).pendingClaimsCount ?? ((r as any).hasPendingClaims ? 1 : 0);
+        const hasPending = (r as any).hasPendingClaims === true || pendingCount > 0;
 
         return (
             <div className="flex items-start gap-1.5 text-[10px] sm:text-xs leading-snug">
@@ -314,9 +291,7 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
                         {fmtTime(r.datetime)} · {r.from} → {r.to}
                     </div>
                     <div className="truncate">
-                        {hasAmount
-                            ? money(r.payment!.amountCents)
-                            : km(r.distance || 0)}{" "}
+                        {hasAmount ? money(r.payment!.amountCents) : km(r.distance || 0)}{" "}
                         {mins((r as any).durationMinutes)
                             ? `• ${mins((r as any).durationMinutes)}`
                             : ""}
@@ -338,14 +313,12 @@ export default function CalendarPage() {
 
     // multi-ride modal state
     const [listModal, setListModal] = useState<ListModalState | null>(null);
-    const [listModalSelectedId, setListModalSelectedId] =
-        useState<string | null>(null);
-    const [listFilterStatus, setListFilterStatus] =
-        useState<RideStatus | "all">("all");
+    const [listModalSelectedId, setListModalSelectedId] = useState<string | null>(null);
+    const [listFilterStatus, setListFilterStatus] = useState<RideStatus | "all">("all");
 
-    const [listSort, setListSort] = useState<
-        "timeAsc" | "timeDesc" | "status" | "amountDesc"
-    >("timeAsc");
+    const [listSort, setListSort] = useState<"timeAsc" | "timeDesc" | "status" | "amountDesc">(
+        "timeAsc"
+    );
 
     const { items: allRides, isLoading, mutate } = useRidesInfinite({}, 200);
 
@@ -368,18 +341,17 @@ export default function CalendarPage() {
 
         for (const ride of mergedRides) {
             const key = format(new Date(ride.datetime), "yyyy-MM-dd");
-            const curr =
-                map.get(key) || {
-                    total: 0,
-                    unassigned: 0,
-                    assigned: 0,
-                    on_my_way: 0,
-                    on_location: 0,
-                    pob: 0,
-                    clear: 0,
-                    completed: 0,
-                    pendingClaims: 0,
-                };
+            const curr = map.get(key) || {
+                total: 0,
+                unassigned: 0,
+                assigned: 0,
+                on_my_way: 0,
+                on_location: 0,
+                pob: 0,
+                clear: 0,
+                completed: 0,
+                pendingClaims: 0,
+            };
 
             curr.total += 1;
 
@@ -410,9 +382,7 @@ export default function CalendarPage() {
             }
 
             const anyRide = ride as any;
-            const pendingCount =
-                anyRide.pendingClaimsCount ??
-                (anyRide.hasPendingClaims ? 1 : 0);
+            const pendingCount = anyRide.pendingClaimsCount ?? (anyRide.hasPendingClaims ? 1 : 0);
             if (pendingCount) {
                 curr.pendingClaims += pendingCount;
             }
@@ -540,17 +510,13 @@ export default function CalendarPage() {
                     fontSize: "0.75rem",
                     padding: "2px 4px",
                 },
-                className: `ride-event ride-day-${dateKey} ${bucketClasses.join(
-                    " ",
-                )}`,
+                className: `ride-event ride-day-${dateKey} ${bucketClasses.join(" ")}`,
             };
         }
 
         if (res.kind === "ride") {
             const ride = res.ride;
-            const { bg, border, text } = getStatusColors(
-                ride.status as RideStatus,
-            );
+            const { bg, border, text } = getStatusColors(ride.status as RideStatus);
 
             let bucket: "unassigned" | "inProgress" | "completed";
             if (ride.status === "completed") bucket = "completed";
@@ -594,8 +560,7 @@ export default function CalendarPage() {
                 if (!prev) return prev;
                 const updatedRides = prev.rides.map((r) => {
                     if (String(r._id) !== rideId) return r;
-                    const newStatus: RideStatus =
-                        r.status === "unassigned" ? "assigned" : r.status;
+                    const newStatus: RideStatus = r.status === "unassigned" ? "assigned" : r.status;
                     return {
                         ...r,
                         assignedDriverId: driverUserId,
@@ -625,7 +590,7 @@ export default function CalendarPage() {
 
             mutate(); // background revalidate
         },
-        [mutate, mergedRides],
+        [mutate, mergedRides]
     );
 
     // status change from inside RideSummaryCard
@@ -645,21 +610,21 @@ export default function CalendarPage() {
 
             // 2) single selected ride preview modal
             setSelectedRide((prev) =>
-                prev && String(prev._id) === id ? { ...prev, status } : prev,
+                prev && String(prev._id) === id ? { ...prev, status } : prev
             );
 
             // 3) multi-ride modal (list + details)
             setListModal((prev) => {
                 if (!prev) return prev;
                 const updatedRides = prev.rides.map((r) =>
-                    String(r._id) === id ? { ...r, status } : r,
+                    String(r._id) === id ? { ...r, status } : r
                 );
                 return { ...prev, rides: updatedRides };
             });
 
             mutate();
         },
-        [mutate],
+        [mutate]
     );
 
     const onNavigate = (date: Date) => setCurrentDate(date);
@@ -667,13 +632,7 @@ export default function CalendarPage() {
 
     const goToPrevious = () => {
         if (view === "month") {
-            onNavigate(
-                new Date(
-                    currentDate.getFullYear(),
-                    currentDate.getMonth() - 1,
-                    1,
-                ),
-            );
+            onNavigate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
         } else if (view === "week") {
             onNavigate(addDays(currentDate, -7));
         } else {
@@ -683,13 +642,7 @@ export default function CalendarPage() {
 
     const goToNext = () => {
         if (view === "month") {
-            onNavigate(
-                new Date(
-                    currentDate.getFullYear(),
-                    currentDate.getMonth() + 1,
-                    1,
-                ),
-            );
+            onNavigate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
         } else if (view === "week") {
             onNavigate(addDays(currentDate, 7));
         } else {
@@ -709,10 +662,7 @@ export default function CalendarPage() {
 
     const focusedListRide: Ride | null = useMemo(() => {
         if (!listModal || !listModalSelectedId) return null;
-        return (
-            listRides.find((r) => String(r._id) === listModalSelectedId) ||
-            null
-        );
+        return listRides.find((r) => String(r._id) === listModalSelectedId) || null;
     }, [listModal, listModalSelectedId, listRides]);
 
     const isListMode = !!listModal && !listModalSelectedId;
@@ -741,8 +691,7 @@ export default function CalendarPage() {
                                     Calendar
                                 </Typography>
                                 <Typography className="text-xs sm:text-sm text-gray-600">
-                                    Rides schedule with daily stats and quick
-                                    preview.
+                                    Rides schedule with daily stats and quick preview.
                                 </Typography>
                             </div>
                         </div>
@@ -753,18 +702,14 @@ export default function CalendarPage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={goToPrevious}
-                                    leftIcon={
-                                        <ChevronLeft className="w-4 h-4" />
-                                    }
+                                    leftIcon={<ChevronLeft className="w-4 h-4" />}
                                 >
                                     Previous
                                 </Button>
 
                                 <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs sm:text-sm">
                                     <CalendarDays className="w-4 h-4 text-gray-500" />
-                                    <span className="font-medium text-gray-800">
-                                        {rangeLabel}
-                                    </span>
+                                    <span className="font-medium text-gray-800">{rangeLabel}</span>
                                     {isLoading && (
                                         <span className="inline-flex items-center gap-1 text-[11px] text-gray-500">
                                             <Loader2 className="w-3 h-3 animate-spin" />
@@ -777,9 +722,7 @@ export default function CalendarPage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={goToNext}
-                                    rightIcon={
-                                        <ChevronRight className="w-4 h-4" />
-                                    }
+                                    rightIcon={<ChevronRight className="w-4 h-4" />}
                                 >
                                     Next
                                 </Button>
@@ -787,9 +730,7 @@ export default function CalendarPage() {
                                 <Button
                                     variant="solid"
                                     size="sm"
-                                    leftIcon={
-                                        <CalendarIcon className="w-4 h-4" />
-                                    }
+                                    leftIcon={<CalendarIcon className="w-4 h-4" />}
                                     onClick={() => onNavigate(new Date())}
                                 >
                                     Today
@@ -858,13 +799,8 @@ export default function CalendarPage() {
                                         const res = e.resource;
                                         if (res.kind === "ride") {
                                             const base = res.ride;
-                                            const override =
-                                                rideOverrides[
-                                                    String(base._id)
-                                                    ];
-                                            const ride = override
-                                                ? { ...base, ...override }
-                                                : base;
+                                            const override = rideOverrides[String(base._id)];
+                                            const ride = override ? { ...base, ...override } : base;
                                             setSelectedRide(ride);
                                         } else if (res.kind === "cluster") {
                                             const rides = res.rides;
@@ -874,7 +810,7 @@ export default function CalendarPage() {
                                             setListModal({
                                                 date: res.start,
                                                 title: `Rides at ${res.timeLabel} on ${fmtDate(
-                                                    res.start.toISOString(),
+                                                    res.start.toISOString()
                                                 )}`,
                                                 rides,
                                             });
@@ -882,14 +818,10 @@ export default function CalendarPage() {
                                     }}
                                     onShowMore={(evts, date) => {
                                         const rides: Ride[] = [];
-                                        (
-                                            evts as CalendarEvent[]
-                                        ).forEach((e) => {
+                                        (evts as CalendarEvent[]).forEach((e) => {
                                             if (e.resource.kind === "ride") {
                                                 rides.push(e.resource.ride);
-                                            } else if (
-                                                e.resource.kind === "cluster"
-                                            ) {
+                                            } else if (e.resource.kind === "cluster") {
                                                 rides.push(...e.resource.rides);
                                             }
                                         });
@@ -898,9 +830,7 @@ export default function CalendarPage() {
                                         setListModalSelectedId(null);
                                         setListModal({
                                             date,
-                                            title: `Rides on ${fmtDate(
-                                                date.toISOString(),
-                                            )}`,
+                                            title: `Rides on ${fmtDate(date.toISOString())}`,
                                             rides,
                                         });
                                     }}
@@ -916,69 +846,68 @@ export default function CalendarPage() {
                                 {/* Code → meaning */}
                                 <div className="flex flex-wrap gap-3">
                                     <div className="inline-flex items-center gap-1">
-            <span
-                className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
-                    "unassigned",
-                )}`}
-            />
+                                        <span
+                                            className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
+                                                "unassigned"
+                                            )}`}
+                                        />
                                         <span>U = Unassigned</span>
                                     </div>
                                     <div className="inline-flex items-center gap-1">
-            <span
-                className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
-                    "assigned",
-                )}`}
-            />
+                                        <span
+                                            className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
+                                                "assigned"
+                                            )}`}
+                                        />
                                         <span>A = Assigned</span>
                                     </div>
                                     <div className="inline-flex items-center gap-1">
-            <span
-                className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
-                    "on_my_way",
-                )}`}
-            />
+                                        <span
+                                            className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
+                                                "on_my_way"
+                                            )}`}
+                                        />
                                         <span>OW = On my way</span>
                                     </div>
                                     <div className="inline-flex items-center gap-1">
-            <span
-                className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
-                    "on_location",
-                )}`}
-            />
+                                        <span
+                                            className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
+                                                "on_location"
+                                            )}`}
+                                        />
                                         <span>OL = On location</span>
                                     </div>
                                     <div className="inline-flex items-center gap-1">
-            <span
-                className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
-                    "pob",
-                )}`}
-            />
+                                        <span
+                                            className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
+                                                "pob"
+                                            )}`}
+                                        />
                                         <span>PoB = Passenger on board</span>
                                     </div>
                                     <div className="inline-flex items-center gap-1">
                                         {/* show both colors that can use C */}
                                         <span
                                             className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
-                                                "clear",
+                                                "clear"
                                             )}`}
                                         />
                                         <span
                                             className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
-                                                "completed",
+                                                "completed"
                                             )} ml-1`}
                                         />
                                         <span>C = Clear / Completed</span>
                                     </div>
                                     <div className="inline-flex items-center gap-1">
-            <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
-            </span>
+                                        <span className="relative flex h-2.5 w-2.5">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+                                        </span>
                                         <span>● = Pending driver requests</span>
                                     </div>
                                 </div>
                             </div>
-
                         </CardBody>
                     </Card>
                 </div>

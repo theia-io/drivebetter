@@ -1,12 +1,12 @@
-import { Router, Request, Response } from "express";
-import mongoose, {FilterQuery, Types} from "mongoose";
-import {requireAuth, requireRole} from "../lib/auth";
-import {assertCanAccessRide, rideScopeFilter} from "../lib/rideAuthz";
-import Ride from "../models/ride.model";
-import User from "../models/user.model";
-import { RideShare} from "../models/rideShare.model";
+import { Request, Response, Router } from "express";
+import { FilterQuery, Types } from "mongoose";
+import { requireAuth, requireRole } from "../lib/auth";
+import { assertCanAccessRide, rideScopeFilter } from "../lib/rideAuthz";
 import Group from "../models/group.model";
-import {RideClaim} from "../models/rideClaim.model";
+import Ride from "../models/ride.model";
+import { RideClaim } from "../models/rideClaim.model";
+import { RideShare } from "../models/rideShare.model";
+import User from "../models/user.model";
 
 const router = Router();
 const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
@@ -14,9 +14,19 @@ const isObjectId = (v: any) => Types.ObjectId.isValid(String(v));
 
 function sanitizeRideForDriver(ride: any) {
     const {
-        _id, from, to, datetime, type, status,
-        fromLocation, toLocation, customer,
-        payment, assignedDriverId, distance, notes
+        _id,
+        from,
+        to,
+        datetime,
+        type,
+        status,
+        fromLocation,
+        toLocation,
+        customer,
+        payment,
+        assignedDriverId,
+        distance,
+        notes,
     } = ride;
     return {
         _id,
@@ -31,7 +41,11 @@ function sanitizeRideForDriver(ride: any) {
         notes, // keep or drop depending on your policy
         customer: customer ? { name: customer.name || "", phone: customer.phone || "" } : undefined,
         payment: payment
-            ? { method: payment.method || "", amountCents: payment.amountCents ?? null, paid: !!payment.paid }
+            ? {
+                  method: payment.method || "",
+                  amountCents: payment.amountCents ?? null,
+                  paid: !!payment.paid,
+              }
             : undefined,
         assignedDriverId,
     };
@@ -39,12 +53,12 @@ function sanitizeRideForDriver(ride: any) {
 
 function buildRideFilters(req: Request) {
     const {
-        status,          // string | string[]
-        fromDate,        // ISO string
-        toDate,          // ISO string
+        status, // string | string[]
+        fromDate, // ISO string
+        toDate, // ISO string
         dateField = "datetime", // which field to use for date filtering
-        q,               // simple text match against from/to
-        assigned,        // "true" | "false"
+        q, // simple text match against from/to
+        assigned, // "true" | "false"
     } = req.query as Record<string, string | undefined>;
 
     const filters: any = {};
@@ -300,58 +314,68 @@ router.get(
  *       400: { description: Validation error }
  *       404: { description: Driver not found }
  */
-router.post("/",
+router.post(
+    "/",
     requireAuth,
     requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
-    try {
-        const body = req.body || {};
+        try {
+            const body = req.body || {};
 
-        // resolve assignment
-        let assignedDriverId: Types.ObjectId | null = null;
-        if (body.assignedDriverId && isObjectId(body.assignedDriverId)) {
-            assignedDriverId = new Types.ObjectId(body.assignedDriverId);
-        } else if (body.driverEmail) {
-            const driver = await User.findOne({ email: body.driverEmail, roles: "driver" }).select("_id");
-            if (!driver) return res.status(404).json({ error: "driver_not_found" });
-            assignedDriverId = driver._id as Types.ObjectId;
+            // resolve assignment
+            let assignedDriverId: Types.ObjectId | null = null;
+            if (body.assignedDriverId && isObjectId(body.assignedDriverId)) {
+                assignedDriverId = new Types.ObjectId(body.assignedDriverId);
+            } else if (body.driverEmail) {
+                const driver = await User.findOne({
+                    email: body.driverEmail,
+                    roles: "driver",
+                }).select("_id");
+                if (!driver) return res.status(404).json({ error: "driver_not_found" });
+                assignedDriverId = driver._id as Types.ObjectId;
+            }
+
+            const when = new Date(body.datetime);
+            const type = body.type ?? (when.getTime() > Date.now() ? "reservation" : "asap");
+            const status = body.status ?? (assignedDriverId ? "assigned" : "unassigned");
+
+            const doc = await Ride.create({
+                creatorId:
+                    body.creatorId && isObjectId(body.creatorId) ? body.creatorId : undefined,
+                customer: body.customer
+                    ? {
+                          name: String(body.customer.name || "").trim(),
+                          phone: body.customer.phone
+                              ? String(body.customer.phone).trim()
+                              : undefined,
+                      }
+                    : undefined,
+                from: body.from,
+                to: body.to,
+                stops: Array.isArray(body.stops) ? body.stops : [],
+                datetime: when,
+                type,
+                queue: [],
+                assignedDriverId,
+                coveredVisible: body.coveredVisible ?? true,
+                status,
+                notes: body.notes,
+                fromLocation: body.fromLocation,
+                toLocation: body.toLocation,
+                stopLocations: body.stopLocations,
+                fromPlaceId: body.fromPlaceId,
+                toPlaceId: body.toPlaceId,
+                geocodedAt: body.geocodedAt,
+                payment: body.payment,
+                distance: body.distance,
+            });
+
+            res.status(201).json(doc);
+        } catch (err: any) {
+            res.status(400).json({ error: err.message });
         }
-
-        const when = new Date(body.datetime);
-        const type = body.type ?? (when.getTime() > Date.now() ? "reservation" : "asap");
-        const status = body.status ?? (assignedDriverId ? "assigned" : "unassigned");
-
-        const doc = await Ride.create({
-            creatorId: body.creatorId && isObjectId(body.creatorId) ? body.creatorId : undefined,
-            customer: body.customer ? {
-                name: String(body.customer.name || "").trim(),
-                phone: body.customer.phone ? String(body.customer.phone).trim() : undefined,
-            } : undefined,
-            from: body.from,
-            to: body.to,
-            stops: Array.isArray(body.stops) ? body.stops : [],
-            datetime: when,
-            type,
-            queue: [],
-            assignedDriverId,
-            coveredVisible: body.coveredVisible ?? true,
-            status,
-            notes: body.notes,
-            fromLocation: body.fromLocation,
-            toLocation: body.toLocation,
-            stopLocations: body.stopLocations,
-            fromPlaceId: body.fromPlaceId,
-            toPlaceId: body.toPlaceId,
-            geocodedAt: body.geocodedAt,
-            payment: body.payment,
-            distance: body.distance,
-        });
-
-        res.status(201).json(doc);
-    } catch (err: any) {
-        res.status(400).json({ error: err.message });
     }
-});
+);
 
 /**
  * @openapi
@@ -368,22 +392,23 @@ router.post("/",
  *       200: { description: OK }
  *       404: { description: Not found }
  */
-router.get("/:id([0-9a-fA-F]{24})",
+router.get(
+    "/:id([0-9a-fA-F]{24})",
     requireAuth,
     requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
-    const user = (req as any).user;
-    const ride = await Ride.findById(req.params.id)
-            .populate("creatorId", "name email phone");
-    try {
-        assertCanAccessRide(user, ride);
-    } catch (e: any) {
-        return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
-    }
+        const user = (req as any).user;
+        const ride = await Ride.findById(req.params.id).populate("creatorId", "name email phone");
+        try {
+            assertCanAccessRide(user, ride);
+        } catch (e: any) {
+            return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
+        }
 
-    if (!ride) return res.status(404).json({ error: "Ride not found" });
-    res.json(ride);
-});
+        if (!ride) return res.status(404).json({ error: "Ride not found" });
+        res.json(ride);
+    }
+);
 
 /**
  * @openapi
@@ -467,41 +492,58 @@ router.get("/:id([0-9a-fA-F]{24})",
  *       allOf:
  *         - $ref: '#/components/schemas/RidePutBody'
  */
-router.put("/:id([0-9a-fA-F]{24})",
+router.put(
+    "/:id([0-9a-fA-F]{24})",
     requireAuth,
     requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
-    const id = req.params.id;
-    const b = req.body || {};
-    const user = (req as any).user;
+        const id = req.params.id;
+        const b = req.body || {};
+        const user = (req as any).user;
 
-    const set: any = {};
-    // whitelist fields
-    const allow = [
-        "creatorId","clientId","from","to","stops","datetime","type",
-        "assignedDriverId","coveredVisible","status","notes",
-        "fromLocation","toLocation","stopLocations",
-        "fromPlaceId","toPlaceId","geocoder","geoAccuracy","geocodedAt",
-        "payment"
-    ];
-    for (const k of allow) if (k in b) set[k] = b[k];
+        const set: any = {};
+        // whitelist fields
+        const allow = [
+            "creatorId",
+            "clientId",
+            "from",
+            "to",
+            "stops",
+            "datetime",
+            "type",
+            "assignedDriverId",
+            "coveredVisible",
+            "status",
+            "notes",
+            "fromLocation",
+            "toLocation",
+            "stopLocations",
+            "fromPlaceId",
+            "toPlaceId",
+            "geocoder",
+            "geoAccuracy",
+            "geocodedAt",
+            "payment",
+        ];
+        for (const k of allow) if (k in b) set[k] = b[k];
 
-    try {
-        assertCanAccessRide(user, set);
-    } catch (e: any) {
-        return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
+        try {
+            assertCanAccessRide(user, set);
+        } catch (e: any) {
+            return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
+        }
+
+        if (set.creatorId && !isObjectId(set.creatorId)) delete set.creatorId;
+        if (set.clientId && !isObjectId(set.clientId)) delete set.clientId;
+        if (set.assignedDriverId && !isObjectId(set.assignedDriverId)) delete set.assignedDriverId;
+        if (set.datetime) set.datetime = new Date(set.datetime);
+
+        const ride = await Ride.findByIdAndUpdate(id, { $set: set }, { new: true });
+
+        if (!ride) return res.status(404).json({ error: "Ride not found" });
+        res.json(ride);
     }
-
-    if (set.creatorId && !isObjectId(set.creatorId)) delete set.creatorId;
-    if (set.clientId && !isObjectId(set.clientId)) delete set.clientId;
-    if (set.assignedDriverId && !isObjectId(set.assignedDriverId)) delete set.assignedDriverId;
-    if (set.datetime) set.datetime = new Date(set.datetime);
-
-    const ride = await Ride.findByIdAndUpdate(id, { $set: set }, { new: true });
-
-    if (!ride) return res.status(404).json({ error: "Ride not found" });
-    res.json(ride);
-});
+);
 
 /**
  * @openapi
@@ -660,31 +702,42 @@ router.put("/:id([0-9a-fA-F]{24})",
  *                 error:
  *                   type: string
  */
-router.patch("/:id([0-9a-fA-F]{24})",
+router.patch(
+    "/:id([0-9a-fA-F]{24})",
     requireAuth,
     requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
-    const id = req.params.id;
-    const b = req.body || {};
-    const user = (req as any).user;
-    const set: any = {};
-    const allow = [
-        "from","to","stops","datetime","type",
-        "assignedDriverId","coveredVisible","status","notes",
-        "fromLocation","toLocation","stopLocations",
-        "payment"
-    ];
-    for (const k of allow) if (k in b) set[k] = b[k];
-    if (set.datetime) set.datetime = new Date(set.datetime);
-    try {
-        assertCanAccessRide(user, set);
-    } catch (e: any) {
-        return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
+        const id = req.params.id;
+        const b = req.body || {};
+        const user = (req as any).user;
+        const set: any = {};
+        const allow = [
+            "from",
+            "to",
+            "stops",
+            "datetime",
+            "type",
+            "assignedDriverId",
+            "coveredVisible",
+            "status",
+            "notes",
+            "fromLocation",
+            "toLocation",
+            "stopLocations",
+            "payment",
+        ];
+        for (const k of allow) if (k in b) set[k] = b[k];
+        if (set.datetime) set.datetime = new Date(set.datetime);
+        try {
+            assertCanAccessRide(user, set);
+        } catch (e: any) {
+            return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
+        }
+        const ride = await Ride.findByIdAndUpdate(id, { $set: set }, { new: true });
+        if (!ride) return res.status(404).json({ error: "Ride not found" });
+        res.json(ride);
     }
-    const ride = await Ride.findByIdAndUpdate(id, { $set: set }, { new: true });
-    if (!ride) return res.status(404).json({ error: "Ride not found" });
-    res.json(ride);
-});
+);
 
 /**
  * @openapi
@@ -701,21 +754,23 @@ router.patch("/:id([0-9a-fA-F]{24})",
  *       204: { description: Deleted }
  *       404: { description: Not found }
  */
-router.delete("/:id([0-9a-fA-F]{24})",
+router.delete(
+    "/:id([0-9a-fA-F]{24})",
     requireAuth,
     requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
-    const ride = await Ride.findById(req.params.id);
-    const user = (req as any).user;
-    try {
-        assertCanAccessRide(user, ride);
-    } catch (e: any) {
-        return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
+        const ride = await Ride.findById(req.params.id);
+        const user = (req as any).user;
+        try {
+            assertCanAccessRide(user, ride);
+        } catch (e: any) {
+            return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
+        }
+        const deleted = await Ride.findByIdAndDelete(req.params.id);
+        if (!deleted) return res.status(404).json({ error: "Ride not found" });
+        res.status(204).end();
     }
-    const deleted = await Ride.findByIdAndDelete(req.params.id);
-    if (!deleted) return res.status(404).json({ error: "Ride not found" });
-    res.status(204).end();
-});
+);
 
 /* ==================================================================== */
 /* ============= DISPATCHER/ADMIN: list claims for a ride ============= */
@@ -760,7 +815,9 @@ router.get(
     async (req: Request, res: Response) => {
         const { id } = req.params;
 
-        const claims = await (await RideClaim.find({ rideId: id }).sort({ createdAt: 1 }).lean()).map((c) => ({
+        const claims = await (
+            await RideClaim.find({ rideId: id }).sort({ createdAt: 1 }).lean()
+        ).map((c) => ({
             claimId: String(c._id),
             status: c.status,
             driverId: String(c.driverId),
@@ -839,9 +896,7 @@ router.post(
         ).lean();
 
         if (!ride) {
-            return res
-                .status(409)
-                .json({ error: "Ride already assigned or closed" });
+            return res.status(409).json({ error: "Ride already assigned or closed" });
         }
 
         // 3) Mark this claim approved
@@ -857,10 +912,7 @@ router.post(
         );
 
         // 5) Close any active shares for this ride (prevent new requests)
-        await RideShare.updateMany(
-            { rideId, status: "active" },
-            { $set: { status: "closed" } }
-        );
+        await RideShare.updateMany({ rideId, status: "active" }, { $set: { status: "closed" } });
 
         return res.json({
             ok: true,
@@ -918,7 +970,8 @@ router.post(
 
         const claim = await RideClaim.findOne({ _id: claimId, rideId: id });
         if (!claim) return res.status(404).json({ error: "Claim not found" });
-        if (claim.status !== "queued") return res.status(409).json({ error: "Claim is not queued" });
+        if (claim.status !== "queued")
+            return res.status(409).json({ error: "Claim is not queued" });
 
         claim.status = "rejected";
         await claim.save();
@@ -975,7 +1028,8 @@ router.delete(
 
         const claim = await RideClaim.findOne({ _id: claimId, rideId: id, driverId });
         if (!claim) return res.status(404).json({ error: "Claim not found" });
-        if (claim.status !== "queued") return res.status(409).json({ error: "Only queued claims can be withdrawn" });
+        if (claim.status !== "queued")
+            return res.status(409).json({ error: "Only queued claims can be withdrawn" });
 
         claim.status = "withdrawn";
         await claim.save();
@@ -1009,27 +1063,29 @@ router.delete(
  *       400: { description: Driver not found }
  *       404: { description: Ride not found }
  */
-router.post("/:id([0-9a-fA-F]{24})/assign",
+router.post(
+    "/:id([0-9a-fA-F]{24})/assign",
     requireAuth,
     requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
-    const { driverId } = req.body as { driverId: string };
-    if (!isObjectId(driverId)) return res.status(400).json({ error: "invalid_driver_id" });
+        const { driverId } = req.body as { driverId: string };
+        if (!isObjectId(driverId)) return res.status(400).json({ error: "invalid_driver_id" });
 
-    const ride = await Ride.findById(req.params.id);
-    if (!ride) return res.status(404).json({ error: "Ride not found" });
+        const ride = await Ride.findById(req.params.id);
+        if (!ride) return res.status(404).json({ error: "Ride not found" });
 
-    const driver = await User.findById(driverId);
-    if (!driver) return res.status(400).json({ error: "Driver not found" });
+        const driver = await User.findById(driverId);
+        if (!driver) return res.status(400).json({ error: "Driver not found" });
 
-    const oid = new Types.ObjectId(driverId);
-    ride.assignedDriverId = oid;
-    ride.status = "assigned";
-    if (!ride.queue.map(String).includes(String(oid))) ride.queue.push(oid);
+        const oid = new Types.ObjectId(driverId);
+        ride.assignedDriverId = oid;
+        ride.status = "assigned";
+        if (!ride.queue.map(String).includes(String(oid))) ride.queue.push(oid);
 
-    await ride.save();
-    res.json({ ok: true, ride });
-});
+        await ride.save();
+        res.json({ ok: true, ride });
+    }
+);
 
 /**
  * @openapi
@@ -1057,16 +1113,21 @@ router.post("/:id([0-9a-fA-F]{24})/assign",
  *       200: { description: Updated }
  *       404: { description: Not found }
  */
-router.post("/:id([0-9a-fA-F]{24})/status",
+router.post(
+    "/:id([0-9a-fA-F]{24})/status",
     requireAuth,
     requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
-    const { status } = req.body as { status: string };
-    const ride = await Ride.findByIdAndUpdate(req.params.id, { $set: { status } }, { new: true });
-    if (!ride) return res.status(404).json({ error: "Ride not found" });
-    res.json({ ok: true, ride });
-});
-
+        const { status } = req.body as { status: string };
+        const ride = await Ride.findByIdAndUpdate(
+            req.params.id,
+            { $set: { status } },
+            { new: true }
+        );
+        if (!ride) return res.status(404).json({ error: "Ride not found" });
+        res.json({ ok: true, ride });
+    }
+);
 
 /**
  * @openapi
@@ -1122,7 +1183,14 @@ router.post(
     requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
         const { id } = req.params;
-        const { visibility, groupIds, driverIds, expiresAt, maxClaims, syncQueue = true } = req.body || {};
+        const {
+            visibility,
+            groupIds,
+            driverIds,
+            expiresAt,
+            maxClaims,
+            syncQueue = true,
+        } = req.body || {};
         const ride = await Ride.findById(id).lean();
         if (!ride) return res.status(404).json({ error: "Ride not found" });
         if (["completed", "clear"].includes(ride.status)) {
@@ -1143,11 +1211,16 @@ router.post(
         // optional: pre-validate groups/drivers exist
         if (visibility === "groups") {
             const cnt = await Group.countDocuments({ _id: { $in: groupIds } });
-            if (cnt !== groupIds.length) return res.status(400).json({ error: "Some groups not found" });
+            if (cnt !== groupIds.length)
+                return res.status(400).json({ error: "Some groups not found" });
         }
         if (visibility === "drivers") {
-            const cnt = await User.countDocuments({ _id: { $in: driverIds }, roles: { $in: ["driver"] } });
-            if (cnt !== driverIds.length) return res.status(400).json({ error: "Some drivers not found" });
+            const cnt = await User.countDocuments({
+                _id: { $in: driverIds },
+                roles: { $in: ["driver"] },
+            });
+            if (cnt !== driverIds.length)
+                return res.status(400).json({ error: "Some drivers not found" });
         }
 
         const share = await RideShare.create({
@@ -1235,17 +1308,13 @@ router.get(
         try {
             assertCanAccessRide(user, ride);
         } catch (e: any) {
-            return res
-                .status(e.status || 403)
-                .json({ error: e.message || "Forbidden" });
+            return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
         }
 
         const raw = String(req.query.status ?? "active");
         const status = raw === "revoked" ? "revoked" : "active";
 
-        const shares = await RideShare.find({ rideId: id, status })
-            .sort({ createdAt: -1 })
-            .lean();
+        const shares = await RideShare.find({ rideId: id, status }).sort({ createdAt: -1 }).lean();
 
         // No 404 here anymore, just empty array
         return res.json(
@@ -1259,9 +1328,9 @@ router.get(
                 groupIds: s.groupIds,
                 status: s.status,
                 revokedAt: s.revokedAt ?? null,
-            })),
+            }))
         );
-    },
+    }
 );
 
 /**
@@ -1458,7 +1527,10 @@ router.get(
 
         const statusParam = String(req.query.status ?? "").trim();
         const statusList = statusParam
-            ? statusParam.split(",").map((s) => s.trim()).filter(Boolean)
+            ? statusParam
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean)
             : [];
 
         const from = req.query.from ? new Date(String(req.query.from)) : null;

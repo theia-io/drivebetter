@@ -15,10 +15,10 @@ export function rideScopeFilter(user: any) {
     if (!user) return { _id: { $exists: false } }; // deny if somehow no user
     if (isPrivileged(user)) return {};
     return {
-      $or: [
-        { creatorId: new mongoose.Types.ObjectId(user.id) },
-        { assignedDriverId: new mongoose.Types.ObjectId(user.id) },
-      ],
+        $or: [
+            { creatorId: new mongoose.Types.ObjectId(user.id) },
+            { assignedDriverId: new mongoose.Types.ObjectId(user.id) },
+        ],
     };
 }
 
@@ -32,7 +32,9 @@ export function assertCanAccessRide(user: any, ride: any) {
         err.status = 403;
         throw err;
     }
-    const same = String(ride.creatorId._id) === String(user.id) || String(ride.creatorId) === String(user.id);
+    const same =
+        String(ride.creatorId._id) === String(user.id) ||
+        String(ride.creatorId) === String(user.id);
     if (!same && !isPrivileged(user)) {
         const err: any = new Error("Forbidden");
         err.status = 403;

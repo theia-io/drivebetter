@@ -2,8 +2,8 @@
 import useSWR from "swr";
 import useSWRInfinite from "swr/infinite";
 import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from "@/services/http";
-import {DriverDocument, VehicleType} from "@/types/driver-details";
-import {EligibleDriverBody, EligibleDriver} from "@/types";
+import { DriverDocument, VehicleType } from "@/types/driver-details";
+import { EligibleDriverBody, EligibleDriver } from "@/types";
 
 /* ------------------------------- Types ------------------------------- */
 
@@ -12,7 +12,7 @@ export type Day = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 export type Availability = {
     workingDays?: Day[];
     shiftStart?: string | null; // "HH:mm" or null
-    shiftEnd?: string | null;   // "HH:mm" or null
+    shiftEnd?: string | null; // "HH:mm" or null
     breaks?: { start: string; end: string }[];
 };
 
@@ -107,7 +107,10 @@ export type DriverDetails = {
     updatedAt: string;
 };
 
-export type CreateDriverDetailsRequest = Omit<DriverDetails, "_id" | "createdAt" | "updatedAt" | "stats">;
+export type CreateDriverDetailsRequest = Omit<
+    DriverDetails,
+    "_id" | "createdAt" | "updatedAt" | "stats"
+>;
 export type UpdateDriverDetailsRequest = Partial<CreateDriverDetailsRequest>;
 
 export type DriverDetailsQuery = {
@@ -160,8 +163,7 @@ const q = (params?: Record<string, any>) => {
 export const listDriverDetails = (params?: DriverDetailsQuery) =>
     apiGet<DriverDetailsPage>(`/driver-details${q(params)}`);
 
-export const getDriverDetails = (id: string) =>
-    apiGet<DriverDetails>(`/driver-details/${id}`);
+export const getDriverDetails = (id: string) => apiGet<DriverDetails>(`/driver-details/${id}`);
 
 export const getDriverDetailsByUser = (userId: string) =>
     apiGet<DriverDetails>(`/driver-details/by-user/${userId}`);
@@ -178,8 +180,7 @@ export const updateDriverDetailsByUserId = (id: string, payload: UpdateDriverDet
 export const updateDriverDetails = (id: string, payload: UpdateDriverDetailsRequest) =>
     apiPatch<DriverDetails>(`/driver-details/${id}`, payload);
 
-export const deleteDriverDetails = (id: string) =>
-    apiDelete<void>(`/driver-details/${id}`);
+export const deleteDriverDetails = (id: string) => apiDelete<void>(`/driver-details/${id}`);
 
 export const findDriversNear = (params: NearQuery) =>
     apiGet<{ items: DriverDetails[] }>(`/driver-details/near${q(params)}`);
@@ -220,13 +221,18 @@ export function useDriverDetailsByUser(userId?: string) {
     return useSWR<DriverDetails>(key, () => getDriverDetailsByUser(userId as string));
 }
 
-export function useDriverDetailsInfinite(base?: Omit<DriverDetailsQuery, "page" | "limit">, pageSize = 20) {
+export function useDriverDetailsInfinite(
+    base?: Omit<DriverDetailsQuery, "page" | "limit">,
+    pageSize = 20
+) {
     const getKey = (index: number, prev: DriverDetailsPage | null) => {
         if (prev && prev.items.length === 0) return null;
         const params: DriverDetailsQuery = { ...(base || {}), page: index + 1, limit: pageSize };
         return `/driver-details${q(params)}`;
     };
-    const swr = useSWRInfinite<DriverDetailsPage>(getKey, (key: string) => apiGet<DriverDetailsPage>(key));
+    const swr = useSWRInfinite<DriverDetailsPage>(getKey, (key: string) =>
+        apiGet<DriverDetailsPage>(key)
+    );
     const flat: DriverDetails[] = (swr.data || []).flatMap((p) => p.items);
     const totalPages = swr.data?.[0]?.pages ?? 1;
     const reachedEnd = swr.size >= totalPages;

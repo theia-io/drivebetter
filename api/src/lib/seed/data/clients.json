@@ -1,108 +1,108 @@
 [
-  {
-    "name": "Sarah Johnson",
-    "phone": "+1555001001",
-    "email": "sarah.johnson@example.com",
-    "notes": "Frequent airport traveler, prefers card payment",
-    "savedAddresses": [
-      "Downtown Plaza, Los Angeles, CA",
-      "LAX Airport, Los Angeles, CA",
-      "123 Main St, Los Angeles, CA"
-    ],
-    "cardsOnFile": ["card_sarah_001"],
-    "preferences": {
-      "paymentMethod": "card",
-      "vehicleType": "standard",
-      "musicPreference": "classical"
+    {
+        "name": "Sarah Johnson",
+        "phone": "+1555001001",
+        "email": "sarah.johnson@example.com",
+        "notes": "Frequent airport traveler, prefers card payment",
+        "savedAddresses": [
+            "Downtown Plaza, Los Angeles, CA",
+            "LAX Airport, Los Angeles, CA",
+            "123 Main St, Los Angeles, CA"
+        ],
+        "cardsOnFile": ["card_sarah_001"],
+        "preferences": {
+            "paymentMethod": "card",
+            "vehicleType": "standard",
+            "musicPreference": "classical"
+        },
+        "totalRides": 45,
+        "averageRating": 4.9
     },
-    "totalRides": 45,
-    "averageRating": 4.9
-  },
-  {
-    "name": "Mike Chen",
-    "phone": "+1555001002",
-    "email": "mike.chen@example.com",
-    "notes": "Student, often travels to university",
-    "savedAddresses": [
-      "Beverly Hills, Los Angeles, CA",
-      "Santa Monica Pier, Los Angeles, CA",
-      "University of California, Los Angeles, CA"
-    ],
-    "cardsOnFile": ["card_mike_001"],
-    "preferences": {
-      "paymentMethod": "cash",
-      "vehicleType": "standard",
-      "musicPreference": "pop"
+    {
+        "name": "Mike Chen",
+        "phone": "+1555001002",
+        "email": "mike.chen@example.com",
+        "notes": "Student, often travels to university",
+        "savedAddresses": [
+            "Beverly Hills, Los Angeles, CA",
+            "Santa Monica Pier, Los Angeles, CA",
+            "University of California, Los Angeles, CA"
+        ],
+        "cardsOnFile": ["card_mike_001"],
+        "preferences": {
+            "paymentMethod": "cash",
+            "vehicleType": "standard",
+            "musicPreference": "pop"
+        },
+        "totalRides": 23,
+        "averageRating": 4.7
     },
-    "totalRides": 23,
-    "averageRating": 4.7
-  },
-  {
-    "name": "Emma Davis",
-    "phone": "+1555001003",
-    "email": "emma.davis@example.com",
-    "notes": "Prefers scenic routes, medical appointments",
-    "savedAddresses": [
-      "Hollywood Blvd, Los Angeles, CA",
-      "Griffith Observatory, Los Angeles, CA",
-      "Cedars-Sinai Medical Center, Los Angeles, CA"
-    ],
-    "cardsOnFile": ["card_emma_001"],
-    "preferences": {
-      "paymentMethod": "card",
-      "vehicleType": "premium",
-      "musicPreference": "jazz"
+    {
+        "name": "Emma Davis",
+        "phone": "+1555001003",
+        "email": "emma.davis@example.com",
+        "notes": "Prefers scenic routes, medical appointments",
+        "savedAddresses": [
+            "Hollywood Blvd, Los Angeles, CA",
+            "Griffith Observatory, Los Angeles, CA",
+            "Cedars-Sinai Medical Center, Los Angeles, CA"
+        ],
+        "cardsOnFile": ["card_emma_001"],
+        "preferences": {
+            "paymentMethod": "card",
+            "vehicleType": "premium",
+            "musicPreference": "jazz"
+        },
+        "totalRides": 67,
+        "averageRating": 4.8
     },
-    "totalRides": 67,
-    "averageRating": 4.8
-  },
-  {
-    "name": "David Wilson",
-    "phone": "+1555001004",
-    "email": "david.wilson@example.com",
-    "notes": "Business traveler, downtown area",
-    "savedAddresses": [
-      "Venice Beach, Los Angeles, CA",
-      "Downtown LA, Los Angeles, CA",
-      "Financial District, Los Angeles, CA"
-    ],
-    "cardsOnFile": ["card_david_001", "card_david_002"],
-    "preferences": {
-      "paymentMethod": "card",
-      "vehicleType": "premium",
-      "musicPreference": "news"
+    {
+        "name": "David Wilson",
+        "phone": "+1555001004",
+        "email": "david.wilson@example.com",
+        "notes": "Business traveler, downtown area",
+        "savedAddresses": [
+            "Venice Beach, Los Angeles, CA",
+            "Downtown LA, Los Angeles, CA",
+            "Financial District, Los Angeles, CA"
+        ],
+        "cardsOnFile": ["card_david_001", "card_david_002"],
+        "preferences": {
+            "paymentMethod": "card",
+            "vehicleType": "premium",
+            "musicPreference": "news"
+        },
+        "totalRides": 89,
+        "averageRating": 4.6
     },
-    "totalRides": 89,
-    "averageRating": 4.6
-  },
-  {
-    "name": "Evelyn Client",
-    "phone": "+1555000444",
-    "email": "evelyn.client@example.com",
-    "notes": "VIP passenger",
-    "savedAddresses": ["123 Main St, Manhattan, NY"],
-    "cardsOnFile": [],
-    "preferences": {
-      "paymentMethod": "card",
-      "vehicleType": "luxury",
-      "musicPreference": "classical"
+    {
+        "name": "Evelyn Client",
+        "phone": "+1555000444",
+        "email": "evelyn.client@example.com",
+        "notes": "VIP passenger",
+        "savedAddresses": ["123 Main St, Manhattan, NY"],
+        "cardsOnFile": [],
+        "preferences": {
+            "paymentMethod": "card",
+            "vehicleType": "luxury",
+            "musicPreference": "classical"
+        },
+        "totalRides": 156,
+        "averageRating": 4.9
     },
-    "totalRides": 156,
-    "averageRating": 4.9
-  },
-  {
-    "name": "David Business",
-    "phone": "+1555000555",
-    "email": "david.business@example.com",
-    "notes": "Corporate client",
-    "savedAddresses": ["456 Corporate Plaza, NY"],
-    "cardsOnFile": ["card_123456"],
-    "preferences": {
-      "paymentMethod": "card",
-      "vehicleType": "standard",
-      "musicPreference": "none"
-    },
-    "totalRides": 234,
-    "averageRating": 4.5
-  }
+    {
+        "name": "David Business",
+        "phone": "+1555000555",
+        "email": "david.business@example.com",
+        "notes": "Corporate client",
+        "savedAddresses": ["456 Corporate Plaza, NY"],
+        "cardsOnFile": ["card_123456"],
+        "preferences": {
+            "paymentMethod": "card",
+            "vehicleType": "standard",
+            "musicPreference": "none"
+        },
+        "totalRides": 234,
+        "averageRating": 4.5
+    }
 ]

@@ -16,7 +16,8 @@ import {
     Settings,
     FileText,
     Shield,
-    GaugeCircle, CalendarIcon,
+    GaugeCircle,
+    CalendarIcon,
 } from "lucide-react";
 import {
     useDriverDetailsByUser,
@@ -24,7 +25,17 @@ import {
     removeDriverDocument,
     type DriverDetails,
 } from "@/stores/driver-details";
-import {arr, coords, DollarIcon, dt, KV, money, num, Section, bool} from "@/components/ui/commmon";
+import {
+    arr,
+    coords,
+    DollarIcon,
+    dt,
+    KV,
+    money,
+    num,
+    Section,
+    bool,
+} from "@/components/ui/commmon";
 
 export default function DriverDetailsPage() {
     const { id } = useParams<{ id: string }>();
@@ -98,7 +109,11 @@ export default function DriverDetailsPage() {
                         </div>
                         <div className="flex items-center gap-2">
                             <Link href={`/driver-details/by-user/${id}/edit`}>
-                                <Button variant="outline" size="sm" leftIcon={<PencilLine className="w-4 h-4" />}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    leftIcon={<PencilLine className="w-4 h-4" />}
+                                >
                                     Edit
                                 </Button>
                             </Link>
@@ -130,7 +145,10 @@ export default function DriverDetailsPage() {
                                     <KV k="Ins. Expiry" v={dt(dd.vehicle?.insuranceExpiry)} />
                                 </Section>
 
-                                <Section title="Capacity" icon={<GaugeCircle className="w-4 h-4" />}>
+                                <Section
+                                    title="Capacity"
+                                    icon={<GaugeCircle className="w-4 h-4" />}
+                                >
                                     <KV k="Seats" v={num(dd.capacity?.seatsTotal)} />
                                     <KV k="Max Passengers" v={num(dd.capacity?.maxPassengers)} />
                                     <KV k="Luggage" v={num(dd.capacity?.luggageCapacity)} />
@@ -147,7 +165,10 @@ export default function DriverDetailsPage() {
                                     <KV k="Pet Friendly" v={bool(dd.features?.petFriendly)} />
                                     <KV k="Baby Seat" v={bool(dd.features?.babySeat)} />
                                     <KV k="Booster Seat" v={bool(dd.features?.boosterSeat)} />
-                                    <KV k="Wheelchair Accessible" v={bool(dd.features?.wheelchairAccessible)} />
+                                    <KV
+                                        k="Wheelchair Accessible"
+                                        v={bool(dd.features?.wheelchairAccessible)}
+                                    />
                                     <KV k="Smoking Allowed" v={bool(dd.features?.smokingAllowed)} />
                                 </Section>
 
@@ -156,7 +177,10 @@ export default function DriverDetailsPage() {
                                     <KV k="Ski Rack" v={bool(dd.equipment?.skiRack)} />
                                     <KV k="Bike Rack" v={bool(dd.equipment?.bikeRack)} />
                                     <KV k="Large Trunk" v={bool(dd.equipment?.trunkLarge)} />
-                                    <KV k="Climate Zones" v={num(dd.equipment?.climateControlZones)} />
+                                    <KV
+                                        k="Climate Zones"
+                                        v={num(dd.equipment?.climateControlZones)}
+                                    />
                                 </Section>
                             </div>
                         </CardBody>
@@ -166,11 +190,20 @@ export default function DriverDetailsPage() {
                     <Card variant="elevated">
                         <CardBody className="p-4 sm:p-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                                <Section title="Preferences" icon={<Settings className="w-4 h-4" />}>
-                                    <KV k="Airport Permit" v={bool(dd.preferences?.airportPermit)} />
+                                <Section
+                                    title="Preferences"
+                                    icon={<Settings className="w-4 h-4" />}
+                                >
+                                    <KV
+                                        k="Airport Permit"
+                                        v={bool(dd.preferences?.airportPermit)}
+                                    />
                                     <KV k="Night Shifts" v={bool(dd.preferences?.nightShifts)} />
                                     <KV k="Long Distance" v={bool(dd.preferences?.longDistance)} />
-                                    <KV k="Corporate Only" v={bool(dd.preferences?.corporateOnly)} />
+                                    <KV
+                                        k="Corporate Only"
+                                        v={bool(dd.preferences?.corporateOnly)}
+                                    />
                                 </Section>
 
                                 <Section title="Languages" icon={<Languages className="w-4 h-4" />}>
@@ -203,7 +236,9 @@ export default function DriverDetailsPage() {
                                         k="Breaks"
                                         v={
                                             dd.availability?.breaks?.length
-                                                ? dd.availability.breaks.map((b) => `${b.start}–${b.end}`).join(", ")
+                                                ? dd.availability.breaks
+                                                      .map((b) => `${b.start}–${b.end}`)
+                                                      .join(", ")
                                                 : "—"
                                         }
                                     />
@@ -228,7 +263,11 @@ export default function DriverDetailsPage() {
                                     <KV k="License Expiry" v={dt(dd.compliance?.licenseExpiry)} />
                                     <KV
                                         k="Background Check"
-                                        v={dd.compliance?.backgroundCheckCleared ? "Cleared" : "Pending"}
+                                        v={
+                                            dd.compliance?.backgroundCheckCleared
+                                                ? "Cleared"
+                                                : "Pending"
+                                        }
                                     />
                                     <KV k="Checked At" v={dt(dd.compliance?.backgroundCheckedAt)} />
                                 </Section>
@@ -241,7 +280,9 @@ export default function DriverDetailsPage() {
                         <CardBody className="p-4 sm:p-6">
                             <div className="flex items-center gap-2 mb-3">
                                 <FileText className="w-4 h-4 text-gray-500" />
-                                <Typography className="font-semibold text-gray-900">Documents</Typography>
+                                <Typography className="font-semibold text-gray-900">
+                                    Documents
+                                </Typography>
                             </div>
                             <div className="space-y-2">
                                 {(dd.documents || []).length === 0 && (
@@ -257,7 +298,10 @@ export default function DriverDetailsPage() {
                                                 {doc.type} • {doc.url}
                                             </div>
                                             <div className="text-xs text-gray-600">
-                                                Uploaded {dt(doc.uploadedAt)}{doc.expiresAt ? ` • Expires ${dt(doc.expiresAt)}` : ""}
+                                                Uploaded {dt(doc.uploadedAt)}
+                                                {doc.expiresAt
+                                                    ? ` • Expires ${dt(doc.expiresAt)}`
+                                                    : ""}
                                                 {doc.note ? ` • ${doc.note}` : ""}
                                             </div>
                                         </div>
@@ -286,21 +330,26 @@ export default function DriverDetailsPage() {
                                     <KV k="Cancellations" v={num(dd.stats?.cancellations)} />
                                     <KV k="Last Active" v={dt(dd.stats?.lastActiveAt)} />
                                 </Section>
-                                <Section title="Notes / Tags" icon={<CircleUser className="w-4 h-4" />}>
+                                <Section
+                                    title="Notes / Tags"
+                                    icon={<CircleUser className="w-4 h-4" />}
+                                >
                                     <div className="rounded-lg border border-gray-200 p-3 text-sm text-gray-700 bg-white min-h-[44px]">
                                         {dd.notes?.trim() || "—"}
                                     </div>
                                     <div className="mt-2 flex flex-wrap gap-1">
-                                        {(dd.tags || []).length
-                                            ? dd.tags!.map((t) => (
+                                        {(dd.tags || []).length ? (
+                                            dd.tags!.map((t) => (
                                                 <span
                                                     key={t}
                                                     className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-gray-700"
                                                 >
-                            {t}
-                          </span>
+                                                    {t}
+                                                </span>
                                             ))
-                                            : <span className="text-sm text-gray-600">No tags</span>}
+                                        ) : (
+                                            <span className="text-sm text-gray-600">No tags</span>
+                                        )}
                                     </div>
                                 </Section>
                             </div>

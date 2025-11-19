@@ -4,10 +4,10 @@ import DriverDetails from "./driverDetails.model";
 export interface IDriverReview extends Document {
     driverId: Types.ObjectId;
     rideId?: Types.ObjectId | null;
-    reviewerId: Types.ObjectId;              // who left the feedback (dispatcher/admin/customer userId)
-    rating: number;                           // 1..5 (integer)
+    reviewerId: Types.ObjectId; // who left the feedback (dispatcher/admin/customer userId)
+    rating: number; // 1..5 (integer)
     comment?: string;
-    tags?: string[];                          // optional quick tags: "on-time", "clean car", etc.
+    tags?: string[]; // optional quick tags: "on-time", "clean car", etc.
     createdAt: Date;
     updatedAt: Date;
 }
@@ -15,11 +15,11 @@ export interface IDriverReview extends Document {
 const DriverReviewSchema = new Schema<IDriverReview>(
     {
         driverId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-        rideId:   { type: Schema.Types.ObjectId, ref: "Ride", default: null, index: true },
+        rideId: { type: Schema.Types.ObjectId, ref: "Ride", default: null, index: true },
         reviewerId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-        rating:   { type: Number, min: 1, max: 5, required: true },
-        comment:  { type: String, trim: true },
-        tags:     [{ type: String, trim: true }],
+        rating: { type: Number, min: 1, max: 5, required: true },
+        comment: { type: String, trim: true },
+        tags: [{ type: String, trim: true }],
     },
     { timestamps: true }
 );
@@ -53,6 +53,7 @@ export async function recomputeDriverRating(driverId: Types.ObjectId) {
 }
 
 const DriverReview: Model<IDriverReview> =
-    mongoose.models.DriverReview || mongoose.model<IDriverReview>("DriverReview", DriverReviewSchema);
+    mongoose.models.DriverReview ||
+    mongoose.model<IDriverReview>("DriverReview", DriverReviewSchema);
 
 export default DriverReview;

@@ -10,17 +10,17 @@ import { ArrowLeft, Save } from "lucide-react";
 import { useGroup, updateGroup as apiUpdateGroup } from "@/stores/groups";
 import { useAuthStore } from "@/stores/auth";
 import { Field, FieldLabel, FieldError, inputClass } from "@/components/ui/commmon";
-import {GROUP_TYPE_OPTIONS, GROUP_VISIBILITY_OPTIONS, UpdateGroupRequest} from "@/types";
+import { GROUP_TYPE_OPTIONS, GROUP_VISIBILITY_OPTIONS, UpdateGroupRequest } from "@/types";
 
 type GroupForm = {
     name: string;
     description: string;
-    type: string;                // e.g. "fleet" | "coop" | "airport" | "city" | "custom"
+    type: string; // e.g. "fleet" | "coop" | "airport" | "city" | "custom"
     city: string;
     location: string;
     visibility: "public" | "private" | "restricted";
     isInviteOnly: boolean;
-    tagsCsv: string;             // UI-only (comma separated)
+    tagsCsv: string; // UI-only (comma separated)
 };
 
 export default function EditGroupPage() {
@@ -126,7 +126,9 @@ export default function EditGroupPage() {
         return (
             <ProtectedLayout>
                 <Container className="px-3 sm:px-6 lg:px-8">
-                    <div className="py-8 text-sm text-gray-600">You don’t have permission to edit this group.</div>
+                    <div className="py-8 text-sm text-gray-600">
+                        You don’t have permission to edit this group.
+                    </div>
                     <Button variant="outline" size="sm">
                         <Link href={`/groups/${group._id}`}>Back to Group</Link>
                     </Button>
@@ -152,7 +154,11 @@ export default function EditGroupPage() {
                     {/* Toolbar */}
                     <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                            <Button variant="outline" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                leftIcon={<ArrowLeft className="w-4 h-4" />}
+                            >
                                 <Link href={`/groups/${group._id}`}>Back</Link>
                             </Button>
                             <Typography
@@ -179,7 +185,9 @@ export default function EditGroupPage() {
                                         <input
                                             id="name"
                                             value={values.name}
-                                            onChange={(e) => setValues({ ...values, name: e.target.value })}
+                                            onChange={(e) =>
+                                                setValues({ ...values, name: e.target.value })
+                                            }
                                             className={inputClass(errors.name)}
                                             placeholder="e.g., Airport Drivers LA"
                                         />
@@ -191,7 +199,9 @@ export default function EditGroupPage() {
                                         <select
                                             id="type"
                                             value={values.type}
-                                            onChange={(e) => setValues({ ...values, type: e.target.value })}
+                                            onChange={(e) =>
+                                                setValues({ ...values, type: e.target.value })
+                                            }
                                             className={inputClass(errors.type)}
                                         >
                                             {GROUP_TYPE_OPTIONS.map((t) => (
@@ -209,7 +219,11 @@ export default function EditGroupPage() {
                                             id="visibility"
                                             value={values.visibility}
                                             onChange={(e) =>
-                                                setValues({ ...values, visibility: e.target.value as GroupForm["visibility"] })
+                                                setValues({
+                                                    ...values,
+                                                    visibility: e.target
+                                                        .value as GroupForm["visibility"],
+                                                })
                                             }
                                             className={inputClass(errors.visibility)}
                                         >
@@ -229,7 +243,12 @@ export default function EditGroupPage() {
                                                 id="invite"
                                                 type="checkbox"
                                                 checked={values.isInviteOnly}
-                                                onChange={(e) => setValues({ ...values, isInviteOnly: e.target.checked })}
+                                                onChange={(e) =>
+                                                    setValues({
+                                                        ...values,
+                                                        isInviteOnly: e.target.checked,
+                                                    })
+                                                }
                                             />
                                             Only invited members can join
                                         </label>
@@ -240,7 +259,9 @@ export default function EditGroupPage() {
                                         <input
                                             id="city"
                                             value={values.city}
-                                            onChange={(e) => setValues({ ...values, city: e.target.value })}
+                                            onChange={(e) =>
+                                                setValues({ ...values, city: e.target.value })
+                                            }
                                             className={inputClass()}
                                             placeholder="e.g., Los Angeles"
                                         />
@@ -251,7 +272,9 @@ export default function EditGroupPage() {
                                         <input
                                             id="location"
                                             value={values.location}
-                                            onChange={(e) => setValues({ ...values, location: e.target.value })}
+                                            onChange={(e) =>
+                                                setValues({ ...values, location: e.target.value })
+                                            }
                                             className={inputClass()}
                                             placeholder="e.g., LAX"
                                         />
@@ -263,18 +286,27 @@ export default function EditGroupPage() {
                                             id="desc"
                                             rows={4}
                                             value={values.description}
-                                            onChange={(e) => setValues({ ...values, description: e.target.value })}
+                                            onChange={(e) =>
+                                                setValues({
+                                                    ...values,
+                                                    description: e.target.value,
+                                                })
+                                            }
                                             className={inputClass()}
                                             placeholder="What is this group for?"
                                         />
                                     </Field>
 
                                     <Field>
-                                        <FieldLabel htmlFor="tags">Tags (comma-separated)</FieldLabel>
+                                        <FieldLabel htmlFor="tags">
+                                            Tags (comma-separated)
+                                        </FieldLabel>
                                         <input
                                             id="tags"
                                             value={values.tagsCsv}
-                                            onChange={(e) => setValues({ ...values, tagsCsv: e.target.value })}
+                                            onChange={(e) =>
+                                                setValues({ ...values, tagsCsv: e.target.value })
+                                            }
                                             className={inputClass()}
                                             placeholder="airport, night, corporate"
                                         />
@@ -285,7 +317,11 @@ export default function EditGroupPage() {
                                     <Button variant="outline">
                                         <Link href={`/groups/${group._id}`}>Cancel</Link>
                                     </Button>
-                                    <Button type="submit" leftIcon={<Save className="w-4 h-4" />} disabled={saving}>
+                                    <Button
+                                        type="submit"
+                                        leftIcon={<Save className="w-4 h-4" />}
+                                        disabled={saving}
+                                    >
                                         {saving ? "Saving…" : "Save Changes"}
                                     </Button>
                                 </div>

@@ -2,7 +2,7 @@
 import { Router, Request, Response } from "express";
 import mongoose from "mongoose";
 import DriverDetails from "../models/driverDetails.model";
-import {normalizeValidationError} from "../lib/httpErrors";
+import { normalizeValidationError } from "../lib/httpErrors";
 import User from "../models/user.model";
 
 const router = Router();
@@ -196,18 +196,22 @@ router.get("/", async (req: Request, res: Response) => {
     const filter: any = {};
     if (req.query.vehicleType) filter["vehicle.type"] = req.query.vehicleType;
     if (req.query.seatsMin) filter["capacity.seatsTotal"] = { $gte: Number(req.query.seatsMin) };
-    if (req.query.petFriendly !== undefined) filter["features.petFriendly"] = req.query.petFriendly === "true";
-    if (req.query.babySeat !== undefined) filter["features.babySeat"] = req.query.babySeat === "true";
-    if (req.query.wheelchairAccessible !== undefined) filter["features.wheelchairAccessible"] = req.query.wheelchairAccessible === "true";
+    if (req.query.petFriendly !== undefined)
+        filter["features.petFriendly"] = req.query.petFriendly === "true";
+    if (req.query.babySeat !== undefined)
+        filter["features.babySeat"] = req.query.babySeat === "true";
+    if (req.query.wheelchairAccessible !== undefined)
+        filter["features.wheelchairAccessible"] = req.query.wheelchairAccessible === "true";
     if (req.query.language) {
         const lang = String(req.query.language);
         filter.$or = [
             { "languages.primary": lang },
             { "languages.list": lang },
-            ...(filter.$or || [])
+            ...(filter.$or || []),
         ];
     }
-    if (req.query.city) filter["service.homeCity"] = { $regex: String(req.query.city), $options: "i" };
+    if (req.query.city)
+        filter["service.homeCity"] = { $regex: String(req.query.city), $options: "i" };
     if (req.query.day) filter["availability.workingDays"] = req.query.day;
 
     if (req.query.q) {
@@ -219,7 +223,7 @@ router.get("/", async (req: Request, res: Response) => {
             { "vehicle.make": like },
             { "vehicle.model": like },
             { "vehicle.plate": like },
-            ...(filter.$or || [])
+            ...(filter.$or || []),
         ];
     }
 
@@ -402,10 +406,7 @@ router.post("/eligible", async (req: Request, res: Response) => {
 
         // Language can match primary OR in list
         if (language && typeof language === "string") {
-            filter["$or"] = [
-                { "languages.primary": language },
-                { "languages.list": language },
-            ];
+            filter["$or"] = [{ "languages.primary": language }, { "languages.list": language }];
         }
 
         // Query DriverDetails, join basic user info
@@ -436,7 +437,13 @@ router.post("/eligible", async (req: Request, res: Response) => {
             return {
                 userId: String(d.userId),
                 user: u
-                    ? { _id: String(u._id), name: u.name, email: u.email, phone: u.phone, roles: u.roles }
+                    ? {
+                          _id: String(u._id),
+                          name: u.name,
+                          email: u.email,
+                          phone: u.phone,
+                          roles: u.roles,
+                      }
                     : undefined,
                 vehicle: d.vehicle,
                 capacity: d.capacity,
@@ -452,7 +459,6 @@ router.post("/eligible", async (req: Request, res: Response) => {
         res.status(400).json({ error: err?.message || "Invalid payload" });
     }
 });
-
 
 /**
  * @openapi
@@ -488,7 +494,8 @@ router.post("/eligible", async (req: Request, res: Response) => {
 router.get("/near", async (req: Request, res: Response) => {
     const lon = Number(req.query.lon);
     const lat = Number(req.query.lat);
-    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return res.status(400).json({ error: "lon/lat required" });
+    if (!Number.isFinite(lon) || !Number.isFinite(lat))
+        return res.status(400).json({ error: "lon/lat required" });
 
     const radiusKm = Number(req.query.radiusKm || 10);
     const limit = Math.min(100, Math.max(1, Number(req.query.limit || 20)));
@@ -502,9 +509,9 @@ router.get("/near", async (req: Request, res: Response) => {
         "service.homeCoordinates": {
             $near: {
                 $geometry: { type: "Point", coordinates: [lon, lat] },
-                $maxDistance: radiusKm * 1000
-            }
-        }
+                $maxDistance: radiusKm * 1000,
+            },
+        },
     })
         .limit(limit)
         .lean();
@@ -554,10 +561,12 @@ router.get("/by-user/:userId([0-9a-fA-F]{24})", async (req: Request, res: Respon
 router.post("/", async (req: Request, res: Response) => {
     try {
         const { userId } = req.body || {};
-        if (!userId || !mongoose.isValidObjectId(userId)) return res.status(400).json({ error: "userId required" });
+        if (!userId || !mongoose.isValidObjectId(userId))
+            return res.status(400).json({ error: "userId required" });
 
         const exists = await DriverDetails.findOne({ userId }).lean();
-        if (exists) return res.status(409).json({ error: "DriverDetails already exists for this user" });
+        if (exists)
+            return res.status(409).json({ error: "DriverDetails already exists for this user" });
 
         const created = await DriverDetails.create(req.body);
         res.status(201).json(created);
@@ -608,11 +617,11 @@ router.get("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
  *       404: { description: Not found }
  */
 router.put("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
-    const doc = await DriverDetails.findByIdAndUpdate(
-        req.params.id,
-        req.body,
-        { new: true, runValidators: true, overwrite: true }
-    ).lean();
+    const doc = await DriverDetails.findByIdAndUpdate(req.params.id, req.body, {
+        new: true,
+        runValidators: true,
+        overwrite: true,
+    }).lean();
     if (!doc) return res.status(404).json({ error: "Not found" });
     res.json(doc);
 });
@@ -683,7 +692,6 @@ router.patch("/by-user/:userId([0-9a-fA-F]{24})", async (req: Request, res: Resp
         res.status(500).json({ error: "ServerError" });
     }
 });
-
 
 /**
  * @openapi
@@ -762,15 +770,18 @@ router.post("/:id([0-9a-fA-F]{24})/documents", async (req: Request, res: Respons
  *       200: { description: Removed }
  *       404: { description: Not found }
  */
-router.delete("/:id([0-9a-fA-F]{24})/documents/:docId([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
-    const doc = await DriverDetails.findByIdAndUpdate(
-        req.params.id,
-        { $pull: { documents: { _id: req.params.docId } } },
-        { new: true }
-    ).lean();
-    if (!doc) return res.status(404).json({ error: "Not found" });
-    res.json(doc);
-});
+router.delete(
+    "/:id([0-9a-fA-F]{24})/documents/:docId([0-9a-fA-F]{24})",
+    async (req: Request, res: Response) => {
+        const doc = await DriverDetails.findByIdAndUpdate(
+            req.params.id,
+            { $pull: { documents: { _id: req.params.docId } } },
+            { new: true }
+        ).lean();
+        if (!doc) return res.status(404).json({ error: "Not found" });
+        res.json(doc);
+    }
+);
 
 /**
  * @openapi
@@ -789,22 +800,19 @@ router.get("/aggregate/stats", async (_req: Request, res: Response) => {
                 total: [{ $count: "n" }],
                 byVehicle: [
                     { $group: { _id: "$vehicle.type", n: { $sum: 1 } } },
-                    { $sort: { n: -1 } }
+                    { $sort: { n: -1 } },
                 ],
                 wheelchair: [
                     { $match: { "features.wheelchairAccessible": true } },
-                    { $count: "n" }
+                    { $count: "n" },
                 ],
-                petFriendly: [
-                    { $match: { "features.petFriendly": true } },
-                    { $count: "n" }
-                ],
+                petFriendly: [{ $match: { "features.petFriendly": true } }, { $count: "n" }],
                 avgRating: [
                     { $match: { "stats.ratingCount": { $gt: 0 } } },
-                    { $group: { _id: null, avg: { $avg: "$stats.ratingAvg" }, n: { $sum: 1 } } }
-                ]
-            }
-        }
+                    { $group: { _id: null, avg: { $avg: "$stats.ratingAvg" }, n: { $sum: 1 } } },
+                ],
+            },
+        },
     ]);
 
     res.json({
@@ -813,7 +821,7 @@ router.get("/aggregate/stats", async (_req: Request, res: Response) => {
         wheelchair: agg?.wheelchair?.[0]?.n ?? 0,
         petFriendly: agg?.petFriendly?.[0]?.n ?? 0,
         avgRating: agg?.avgRating?.[0]?.avg ?? null,
-        ratedDrivers: agg?.avgRating?.[0]?.n ?? 0
+        ratedDrivers: agg?.avgRating?.[0]?.n ?? 0,
     });
 });
 

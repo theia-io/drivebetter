@@ -50,12 +50,11 @@ const UserSchema = new Schema<IUser>(
         resetToken: { type: String, default: null },
         resetExpires: { type: Date, default: null },
 
-        refreshTokens: { type: [String], default: [] }
+        refreshTokens: { type: [String], default: [] },
     },
     { timestamps: true }
 );
 
-const User: Model<IUser> =
-    mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
+const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>("User", UserSchema);
 
 export default User;

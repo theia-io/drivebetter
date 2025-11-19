@@ -38,8 +38,16 @@ export default function configureGoogleStrategy(passport: PassportStatic) {
                     }
 
                     const tokens = {
-                        accessToken: signAccessToken({ id: user.id, email: user.email, roles: user.roles }),
-                        refreshToken: signRefreshToken({ id: user.id, email: user.email, roles: user.roles }),
+                        accessToken: signAccessToken({
+                            id: user.id,
+                            email: user.email,
+                            roles: user.roles,
+                        }),
+                        refreshToken: signRefreshToken({
+                            id: user.id,
+                            email: user.email,
+                            roles: user.roles,
+                        }),
                     };
 
                     // Attach minimal object to req.user

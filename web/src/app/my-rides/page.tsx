@@ -5,14 +5,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import {
-    Loader2,
-    MapPin,
-    Calendar,
-    Clock,
-    ArrowRight,
-    RefreshCcw,
-} from "lucide-react";
+import { Loader2, MapPin, Calendar, Clock, ArrowRight, RefreshCcw } from "lucide-react";
 import { useMyRides } from "@/stores/rides";
 import type { Ride } from "@/types";
 import { fmtDate, fmtTime } from "@/services/convertors";
@@ -25,14 +18,8 @@ export default function MyRidesPage() {
     const items: Ride[] = data?.items ?? [];
     const total = data?.total ?? 0;
 
-    const activeRides = useMemo(
-        () => items.filter((r) => r.status !== "completed"),
-        [items],
-    );
-    const completedRides = useMemo(
-        () => items.filter((r) => r.status === "completed"),
-        [items],
-    );
+    const activeRides = useMemo(() => items.filter((r) => r.status !== "completed"), [items]);
+    const completedRides = useMemo(() => items.filter((r) => r.status === "completed"), [items]);
 
     const [activeTab, setActiveTab] = useState<TabKey>("active");
 
@@ -91,9 +78,7 @@ export default function MyRidesPage() {
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            setActiveTab("completed")
-                                        }
+                                        onClick={() => setActiveTab("completed")}
                                         className={`px-3 py-1.5 rounded-md font-medium ${
                                             activeTab === "completed"
                                                 ? "bg-white text-gray-900 shadow-sm"
@@ -120,9 +105,7 @@ export default function MyRidesPage() {
                             ) : (
                                 <div className="space-y-3">
                                     {currentList.map((r) => {
-                                        const dt = r.datetime
-                                            ? new Date(r.datetime)
-                                            : null;
+                                        const dt = r.datetime ? new Date(r.datetime) : null;
                                         return (
                                             <div
                                                 key={r._id}
@@ -141,9 +124,7 @@ export default function MyRidesPage() {
                                                     <div className="flex items-center gap-2 text-sm text-gray-700">
                                                         <MapPin className="w-4 h-4 text-gray-400" />
                                                         <span className="truncate">
-                                                            <span className="font-medium">
-                                                                To:
-                                                            </span>{" "}
+                                                            <span className="font-medium">To:</span>{" "}
                                                             {r.to}
                                                         </span>
                                                     </div>
@@ -151,21 +132,15 @@ export default function MyRidesPage() {
                                                         <div className="flex flex-wrap items-center gap-3 text-sm text-gray-700">
                                                             <span className="inline-flex items-center gap-1">
                                                                 <Calendar className="w-4 h-4 text-gray-400" />
-                                                                {fmtDate(
-                                                                    r.datetime,
-                                                                )}
+                                                                {fmtDate(r.datetime)}
                                                             </span>
                                                             <span className="inline-flex items-center gap-1">
                                                                 <Clock className="w-4 h-4 text-gray-400" />
-                                                                {fmtTime(
-                                                                    r.datetime,
-                                                                )}
+                                                                {fmtTime(r.datetime)}
                                                             </span>
                                                             <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs capitalize">
-                                                                {r.status?.replace(
-                                                                    /_/g,
-                                                                    " ",
-                                                                ) || "—"}
+                                                                {r.status?.replace(/_/g, " ") ||
+                                                                    "—"}
                                                             </span>
                                                         </div>
                                                     )}
@@ -192,11 +167,9 @@ export default function MyRidesPage() {
 
                             {!!data && data.pages > 1 && (
                                 <div className="pt-3 text-xs text-gray-600">
-                                    Showing page {data.page} of {data.pages}.{" "}
-                                    (This view uses the default page from
-                                    <code className="mx-1">
-                                        useMyRides()
-                                    </code>
+                                    Showing page {data.page} of {data.pages}. (This view uses the
+                                    default page from
+                                    <code className="mx-1">useMyRides()</code>
                                     .)
                                 </div>
                             )}

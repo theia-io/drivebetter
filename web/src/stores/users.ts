@@ -1,7 +1,7 @@
 // web/ui/src/services/users.ts
 import useSWR from "swr";
 import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from "@/services/http";
-import {Group, User} from "@/types";
+import { Group, User } from "@/types";
 
 /* ------------------------------- Types ------------------------------- */
 
@@ -27,8 +27,8 @@ export type UpdateUserRequest = Partial<ReplaceUserRequest>;
 export type UsersListQuery = {
     role?: string;
     q?: string;
-    page?: number;   // default 1
-    limit?: number;  // default 20, max 100
+    page?: number; // default 1
+    limit?: number; // default 20, max 100
 };
 
 export type UsersPage = {
@@ -62,14 +62,11 @@ const qs = (params?: Record<string, any>) => {
 
 /* -------------------------------- API -------------------------------- */
 
-export const listUsers = (params?: UsersListQuery) =>
-    apiGet<UsersPage>(`/users${qs(params)}`);
+export const listUsers = (params?: UsersListQuery) => apiGet<UsersPage>(`/users${qs(params)}`);
 
-export const createUser = (payload: CreateUserRequest) =>
-    apiPost<User>("/users", payload);
+export const createUser = (payload: CreateUserRequest) => apiPost<User>("/users", payload);
 
-export const getUser = (id: string) =>
-    apiGet<User>(`/users/${id}`);
+export const getUser = (id: string) => apiGet<User>(`/users/${id}`);
 
 export const replaceUser = (id: string, payload: ReplaceUserRequest) =>
     apiPut<User>(`/users/${id}`, payload);
@@ -77,17 +74,13 @@ export const replaceUser = (id: string, payload: ReplaceUserRequest) =>
 export const updateUser = (id: string, payload: UpdateUserRequest) =>
     apiPatch<User>(`/users/${id}`, payload);
 
-export const deleteUser = (id: string) =>
-    apiDelete<void>(`/users/${id}`);
+export const deleteUser = (id: string) => apiDelete<void>(`/users/${id}`);
 
-export const getDriverByIdPublic = (id: string) =>
-    apiGet<DriverPublic>(`/users/drivers/${id}`);
+export const getDriverByIdPublic = (id: string) => apiGet<DriverPublic>(`/users/drivers/${id}`);
 
-export const listAllDriversPublic = () =>
-    apiGet<DriverPublic[]>(`/users/drivers`);
+export const listAllDriversPublic = () => apiGet<DriverPublic[]>(`/users/drivers`);
 
-export const getUserGroups = (id: string) =>
-    apiGet<Group[]>(`/users/${id}/groups`);
+export const getUserGroups = (id: string) => apiGet<Group[]>(`/users/${id}/groups`);
 
 export const listDriversPublicBatch = (ids: string[]) =>
     apiPost<DriverPublic[]>(`/users/drivers/batch`, { ids });
@@ -123,10 +116,7 @@ export function useDriversPublicBatch(ids?: string[]) {
             ? [`/users/drivers/batch`, ...ids] // include ids in the SWR key for caching
             : null;
 
-    return useSWR<DriverPublic[]>(
-        key,
-        () => listDriversPublicBatch(ids as string[])
-    );
+    return useSWR<DriverPublic[]>(key, () => listDriversPublicBatch(ids as string[]));
 }
 
 export function useDriversPublicBatchMap(ids?: string[]) {
@@ -136,5 +126,4 @@ export function useDriversPublicBatchMap(ids?: string[]) {
         return acc;
     }, {});
     return { map, isLoading };
-
 }

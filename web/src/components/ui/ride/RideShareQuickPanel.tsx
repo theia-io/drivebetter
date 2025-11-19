@@ -3,16 +3,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-    Share2,
-    Copy,
-    Link2,
-    Users,
-    UserIcon,
-    ChevronDown,
-    Search,
-    X,
-} from "lucide-react";
+import { Share2, Copy, Link2, Users, UserIcon, ChevronDown, Search, X } from "lucide-react";
 import { Button } from "@/components/ui";
 import {
     useRideShares,
@@ -23,7 +14,7 @@ import {
 } from "@/stores/rideShares";
 import { useGroups } from "@/stores/groups";
 import { useDriversPublicBatchMap } from "@/stores/users";
-import {DriverCombobox, type SimpleDriver } from "@/components/ui/ride/DriverCombobox";
+import { DriverCombobox, type SimpleDriver } from "@/components/ui/ride/DriverCombobox";
 
 type RideShareQuickPanelProps = {
     rideId: string;
@@ -49,19 +40,12 @@ function formatVisibility(v: RideShareVisibility): string {
 }
 
 export default function RideShareQuickPanel({ rideId, className = "" }: RideShareQuickPanelProps) {
-    const {
-        data: shares = [],
-        isLoading: isLoadingShares,
-        mutate,
-    } = useRideShares(rideId);
+    const { data: shares = [], isLoading: isLoadingShares, mutate } = useRideShares(rideId);
 
     const { data: groupsData } = useGroups({});
     const groups = groupsData?.items ?? [];
 
-    const activeShares = useMemo(
-        () => shares.filter((s) => s.status === "active"),
-        [shares],
-    );
+    const activeShares = useMemo(() => shares.filter((s) => s.status === "active"), [shares]);
 
     const primary = useMemo(() => pickPrimary(shares), [shares]);
     const hasPrimary = !!primary;
@@ -70,7 +54,7 @@ export default function RideShareQuickPanel({ rideId, className = "" }: RideShar
 
     const publicShareExists = useMemo(
         () => activeShares.some((s) => s.visibility === "public"),
-        [activeShares],
+        [activeShares]
     );
 
     // Keep public + group counts as "shares"
@@ -98,17 +82,15 @@ export default function RideShareQuickPanel({ rideId, className = "" }: RideShar
     // Drivers: existing driver-shares and “new drivers to share with”
     const driverShares = useMemo(
         () => activeShares.filter((s) => s.visibility === "drivers"),
-        [activeShares],
+        [activeShares]
     );
 
     const driverIdsInShares = useMemo(
         () =>
             Array.from(
-                new Set(
-                    driverShares.flatMap((s) => (s.driverIds || []).map((id) => toStr(id))),
-                ),
+                new Set(driverShares.flatMap((s) => (s.driverIds || []).map((id) => toStr(id))))
             ),
-        [driverShares],
+        [driverShares]
     );
 
     const { map: driversMap } = useDriversPublicBatchMap(driverIdsInShares);
@@ -120,7 +102,7 @@ export default function RideShareQuickPanel({ rideId, className = "" }: RideShar
 
     const groupNameById = useMemo(
         () => new Map(groups.map((g: any) => [toStr(g._id), g.name as string])),
-        [groups],
+        [groups]
     );
 
     const filteredGroups = useMemo(() => {
@@ -139,18 +121,16 @@ export default function RideShareQuickPanel({ rideId, className = "" }: RideShar
             (s) =>
                 s.visibility === "groups" &&
                 s.status === "active" &&
-                (s.groupIds || []).some((gid) => toStr(gid) === groupId),
+                (s.groupIds || []).some((gid) => toStr(gid) === groupId)
         );
     }
 
     function hasActiveDriverShareFor(userId: string): boolean {
-        return driverShares.some((s) =>
-            (s.driverIds || []).some((uid) => toStr(uid) === userId),
-        );
+        return driverShares.some((s) => (s.driverIds || []).some((uid) => toStr(uid) === userId));
     }
 
     const anySelectedGroupWithoutShare = selectedGroupIds.some(
-        (gid) => !hasActiveGroupShareFor(gid),
+        (gid) => !hasActiveGroupShareFor(gid)
     );
 
     async function handleCopy() {
@@ -249,7 +229,7 @@ export default function RideShareQuickPanel({ rideId, className = "" }: RideShar
         setError(null);
         try {
             const affected = driverShares.filter((s) =>
-                (s.driverIds || []).some((uid) => toStr(uid) === userId),
+                (s.driverIds || []).some((uid) => toStr(uid) === userId)
             );
 
             const ops: Promise<any>[] = [];
@@ -263,7 +243,7 @@ export default function RideShareQuickPanel({ rideId, className = "" }: RideShar
                     updateRideShare(s.shareId, {
                         visibility: "drivers",
                         driverIds: remaining,
-                    }),
+                    })
                 );
             }
 
@@ -308,7 +288,8 @@ export default function RideShareQuickPanel({ rideId, className = "" }: RideShar
                         {!isLoadingShares && totalActive > 0 && (
                             <>
                                 <span>
-                                    Public {shareCounts.public} • Groups {shareCounts.groups} • Drivers {driverCount}
+                                    Public {shareCounts.public} • Groups {shareCounts.groups} •
+                                    Drivers {driverCount}
                                 </span>
                                 {hasPrimary && (
                                     <>
@@ -413,8 +394,8 @@ export default function RideShareQuickPanel({ rideId, className = "" }: RideShar
                         {publicShareExists
                             ? "Public share already exists"
                             : creating
-                                ? "Creating public share…"
-                                : "Create public share"}
+                              ? "Creating public share…"
+                              : "Create public share"}
                     </Button>
                     <span className="text-[11px] text-gray-500">
                         Creates a public link anyone with the URL can open.
@@ -482,12 +463,16 @@ export default function RideShareQuickPanel({ rideId, className = "" }: RideShar
                                                     onChange={(e) => {
                                                         const next = e.target.checked
                                                             ? [...selectedGroupIds, id]
-                                                            : selectedGroupIds.filter((x) => x !== id);
+                                                            : selectedGroupIds.filter(
+                                                                  (x) => x !== id
+                                                              );
                                                         setSelectedGroupIds(next);
                                                     }}
                                                 />
                                                 <div className="flex flex-col">
-                                                    <span className="truncate text-gray-900">{g.name}</span>
+                                                    <span className="truncate text-gray-900">
+                                                        {g.name}
+                                                    </span>
                                                     <span className="text-[11px] text-gray-500">
                                                         {alreadyShared
                                                             ? "Already has an active share"
@@ -530,8 +515,8 @@ export default function RideShareQuickPanel({ rideId, className = "" }: RideShar
                         {creating
                             ? "Creating group share…"
                             : anySelectedGroupWithoutShare
-                                ? "Share with selected groups"
-                                : "All selected groups already have shares"}
+                              ? "Share with selected groups"
+                              : "All selected groups already have shares"}
                     </Button>
                     <span className="text-[11px] text-gray-500">
                         Only groups without an active share will receive a new link.

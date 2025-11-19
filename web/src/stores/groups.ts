@@ -2,7 +2,7 @@
 import useSWR from "swr";
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/services/http";
 import type { Group, CreateGroupRequest, UpdateGroupRequest, GroupActivity } from "@/types/group";
-import {PageResp} from "@/types";
+import { PageResp } from "@/types";
 
 /* ------------------------------ Helpers ------------------------------ */
 
@@ -23,39 +23,34 @@ export type GroupsListQuery = {
     q?: string;
     type?: string;
     city?: string;
-    page?: number;   // optional if your API supports paging
-    limit?: number;  // optional
+    page?: number; // optional if your API supports paging
+    limit?: number; // optional
 };
 
 export const listGroups = (params?: GroupsListQuery) =>
     apiGet<PageResp<Group>>(`/groups${qs(params)}`);
 
-export const getGroup = (id: string) =>
-    apiGet<Group>(`/groups/${id}`);
+export const getGroup = (id: string) => apiGet<Group>(`/groups/${id}`);
 
-export const createGroup = (payload: CreateGroupRequest) =>
-    apiPost<Group>(`/groups`, payload);
+export const createGroup = (payload: CreateGroupRequest) => apiPost<Group>(`/groups`, payload);
 
 export const updateGroup = (id: string, payload: UpdateGroupRequest) =>
     apiPatch<Group>(`/groups/${id}`, payload);
 
-export const deleteGroup = (id: string) =>
-    apiDelete<void>(`/groups/${id}`);
+export const deleteGroup = (id: string) => apiDelete<void>(`/groups/${id}`);
 
 /** Add/remove members in one call (POST /groups/:id/members) */
 export const updateGroupMembers = (id: string, add: string[], remove: string[]) =>
     apiPost<Group>(`/groups/${id}/members`, { add, remove });
 
 /** Membership helpers */
-export const joinGroup = (groupId: string) =>
-    apiPost<{ ok: true }>(`/groups/${groupId}/join`, {});
+export const joinGroup = (groupId: string) => apiPost<{ ok: true }>(`/groups/${groupId}/join`, {});
 
 export const leaveGroup = (groupId: string) =>
     apiPost<{ ok: true }>(`/groups/${groupId}/leave`, {});
 
 /** Activity feed (if exposed by your API) */
-export const listGroupActivity = () =>
-    apiGet<GroupActivity[]>(`/groups/activity`);
+export const listGroupActivity = () => apiGet<GroupActivity[]>(`/groups/activity`);
 
 /* -------------------------------- Hooks ------------------------------- */
 

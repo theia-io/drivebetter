@@ -14,12 +14,7 @@ import { getRoute } from "@/stores/routes";
 import { currentHourTimeInput, todayDateInput } from "@/services/datetime";
 import { VehicleType } from "@/types/driver-details";
 import { RideType } from "@/types/ride";
-import {
-    Field,
-    FieldLabel,
-    FieldError,
-    inputClass,
-} from "@/components/ui/commmon";
+import { Field, FieldLabel, FieldError, inputClass } from "@/components/ui/commmon";
 import { useAuthStore } from "@/stores";
 import { RideStatus } from "@/types/rideStatus";
 
@@ -110,9 +105,7 @@ export default function NewRidePage() {
 
         setSubmitting(true);
         try {
-            const iso = new Date(
-                `${values.date}T${values.time}:00`,
-            ).toISOString();
+            const iso = new Date(`${values.date}T${values.time}:00`).toISOString();
 
             const payload: any = {
                 creatorId: user._id,
@@ -127,35 +120,30 @@ export default function NewRidePage() {
                 distance: distanceMeters,
                 fromLocation: pickupHit
                     ? {
-                        type: "Point",
-                        coordinates: [pickupHit.lon, pickupHit.lat],
-                    }
+                          type: "Point",
+                          coordinates: [pickupHit.lon, pickupHit.lat],
+                      }
                     : undefined,
                 toLocation: destHit
                     ? {
-                        type: "Point",
-                        coordinates: [destHit.lon, destHit.lat],
-                    }
+                          type: "Point",
+                          coordinates: [destHit.lon, destHit.lat],
+                      }
                     : undefined,
             };
 
             const created = await createRide(payload);
             if (created?._id) {
                 const sp = new URLSearchParams();
-                if (values.passengers)
-                    sp.set("passengers", String(values.passengers));
-                if (values.luggages)
-                    sp.set("luggages", String(values.luggages));
-                if (values.vehicleType)
-                    sp.set("vehicleType", String(values.vehicleType));
+                if (values.passengers) sp.set("passengers", String(values.passengers));
+                if (values.luggages) sp.set("luggages", String(values.luggages));
+                if (values.vehicleType) sp.set("vehicleType", String(values.vehicleType));
                 if (values.language) sp.set("language", values.language);
                 if (values.airportTrip) sp.set("airportTrip", "1");
                 if (values.longDistance) sp.set("longDistance", "1");
 
                 if (nextStep === "assign") {
-                    router.push(
-                        `/rides/${created._id}/assign?${sp.toString()}`,
-                    );
+                    router.push(`/rides/${created._id}/assign?${sp.toString()}`);
                 } else if (nextStep === "share") {
                     router.push(`/rides/${created._id}/share`);
                 } else {
@@ -182,10 +170,7 @@ export default function NewRidePage() {
                 setDurationMinutes(0);
                 return;
             }
-            const r = await getRoute(
-                [pickupHit.lon, pickupHit.lat],
-                [destHit.lon, destHit.lat],
-            );
+            const r = await getRoute([pickupHit.lon, pickupHit.lat], [destHit.lon, destHit.lat]);
             if (cancelled) return;
             setRouteLine(r.geometry);
             setDistanceMeters(r.distanceMeters);
@@ -213,18 +198,14 @@ export default function NewRidePage() {
                             Back
                         </Button>
                         <div className="min-w-0">
-                            <Typography
-                                variant="h1"
-                                className="text-lg sm:text-3xl font-bold"
-                            >
+                            <Typography variant="h1" className="text-lg sm:text-3xl font-bold">
                                 New ride
                             </Typography>
                             <Typography
                                 variant="body1"
                                 className="text-gray-600 text-xs sm:text-sm mt-0.5 sm:mt-1"
                             >
-                                Stage 1 · Create the ride, assign or share
-                                afterwards
+                                Stage 1 · Create the ride, assign or share afterwards
                             </Typography>
                         </div>
                     </div>
@@ -244,10 +225,7 @@ export default function NewRidePage() {
 
                 {/* Mobile/Tablet help */}
                 {showInfo && (
-                    <aside
-                        id="mobile-help-panel"
-                        className="xl:hidden mb-4 sm:mb-6"
-                    >
+                    <aside id="mobile-help-panel" className="xl:hidden mb-4 sm:mb-6">
                         <Card variant="elevated">
                             <CardBody className="p-3 sm:p-4 space-y-2">
                                 <Typography className="text-sm font-semibold text-gray-900">
@@ -255,40 +233,21 @@ export default function NewRidePage() {
                                 </Typography>
                                 <ol className="list-decimal pl-5 space-y-1.5 text-xs sm:text-sm text-gray-700">
                                     <li>
-                                        Create an{" "}
-                                        <span className="font-medium">
-                                            unassigned
-                                        </span>{" "}
+                                        Create an <span className="font-medium">unassigned</span>{" "}
                                         ride.
                                     </li>
                                     <li>
-                                        Then{" "}
-                                        <span className="font-medium">
-                                            assign a driver
-                                        </span>{" "}
-                                        or{" "}
-                                        <span className="font-medium">
-                                            create a share
-                                        </span>{" "}
-                                        for drivers/groups.
+                                        Then <span className="font-medium">assign a driver</span> or{" "}
+                                        <span className="font-medium">create a share</span> for
+                                        drivers/groups.
                                     </li>
                                     <li>
-                                        Drivers can{" "}
-                                        <span className="font-medium">
-                                            request
-                                        </span>{" "}
-                                        the ride; you{" "}
-                                        <span className="font-medium">
-                                            approve
-                                        </span>{" "}
-                                        one.
+                                        Drivers can <span className="font-medium">request</span> the
+                                        ride; you <span className="font-medium">approve</span> one.
                                     </li>
                                     <li>
                                         Approving assigns the ride and{" "}
-                                        <span className="font-medium">
-                                            disables
-                                        </span>{" "}
-                                        other shares.
+                                        <span className="font-medium">disables</span> other shares.
                                     </li>
                                 </ol>
                             </CardBody>
@@ -301,11 +260,7 @@ export default function NewRidePage() {
                     {/* Left: form */}
                     <Card variant="elevated" className="w-full">
                         <CardBody className="p-4 sm:p-6">
-                            <form
-                                onSubmit={onSubmit}
-                                className="space-y-6"
-                                noValidate
-                            >
+                            <form onSubmit={onSubmit} className="space-y-6" noValidate>
                                 {/* REQUIRED: Ride details */}
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
@@ -321,20 +276,14 @@ export default function NewRidePage() {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <Field>
                                             <FieldLabel htmlFor="pickup">
-                                                Pickup{" "}
-                                                <span className="text-red-500">
-                                                    *
-                                                </span>
+                                                Pickup <span className="text-red-500">*</span>
                                             </FieldLabel>
                                             <PlaceCombobox
                                                 id="pickup"
                                                 value={values.fromLabel}
                                                 onSelectedChange={(hit) => {
                                                     if (hit) {
-                                                        set(
-                                                            "fromLabel",
-                                                            hit.label,
-                                                        );
+                                                        set("fromLabel", hit.label);
                                                         setPickupHit(hit);
                                                     } else {
                                                         setPickupHit(null);
@@ -343,27 +292,19 @@ export default function NewRidePage() {
                                                 }}
                                                 error={errors.fromLabel}
                                             />
-                                            <FieldError
-                                                message={errors.fromLabel}
-                                            />
+                                            <FieldError message={errors.fromLabel} />
                                         </Field>
 
                                         <Field>
                                             <FieldLabel htmlFor="destination">
-                                                Destination{" "}
-                                                <span className="text-red-500">
-                                                    *
-                                                </span>
+                                                Destination <span className="text-red-500">*</span>
                                             </FieldLabel>
                                             <PlaceCombobox
                                                 id="destination"
                                                 value={values.toLabel}
                                                 onSelectedChange={(hit) => {
                                                     if (hit) {
-                                                        set(
-                                                            "toLabel",
-                                                            hit.label,
-                                                        );
+                                                        set("toLabel", hit.label);
                                                         setDestHit(hit);
                                                     } else {
                                                         setDestHit(null);
@@ -372,9 +313,7 @@ export default function NewRidePage() {
                                                 }}
                                                 error={errors.toLabel}
                                             />
-                                            <FieldError
-                                                message={errors.toLabel}
-                                            />
+                                            <FieldError message={errors.toLabel} />
                                         </Field>
                                     </div>
 
@@ -383,30 +322,18 @@ export default function NewRidePage() {
                                         <div className="space-y-2">
                                             <LeafletMap
                                                 heightClass="h-56 sm:h-64"
-                                                markerA={[
-                                                    pickupHit.lon,
-                                                    pickupHit.lat,
-                                                ]}
+                                                markerA={[pickupHit.lon, pickupHit.lat]}
                                                 markerALabel="Pickup"
-                                                markerB={[
-                                                    destHit.lon,
-                                                    destHit.lat,
-                                                ]}
+                                                markerB={[destHit.lon, destHit.lat]}
                                                 markerBLabel="Destination"
                                                 routeLine={routeLine}
                                             />
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm text-gray-700">
                                                 <div>
-                                                    Distance:{" "}
-                                                    {(
-                                                        distanceMeters / 1000
-                                                    ).toFixed(1)}{" "}
+                                                    Distance: {(distanceMeters / 1000).toFixed(1)}{" "}
                                                     km
                                                 </div>
-                                                <div>
-                                                    Estimated duration:{" "}
-                                                    {durationMinutes} min
-                                                </div>
+                                                <div>Estimated duration: {durationMinutes} min</div>
                                             </div>
                                         </div>
                                     )}
@@ -415,47 +342,29 @@ export default function NewRidePage() {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <Field>
                                             <FieldLabel htmlFor="date">
-                                                Pickup date{" "}
-                                                <span className="text-red-500">
-                                                    *
-                                                </span>
+                                                Pickup date <span className="text-red-500">*</span>
                                             </FieldLabel>
                                             <input
                                                 id="date"
                                                 type="date"
                                                 value={values.date}
-                                                onChange={(e) =>
-                                                    set("date", e.target.value)
-                                                }
-                                                className={inputClass(
-                                                    errors.date,
-                                                )}
+                                                onChange={(e) => set("date", e.target.value)}
+                                                className={inputClass(errors.date)}
                                             />
-                                            <FieldError
-                                                message={errors.date}
-                                            />
+                                            <FieldError message={errors.date} />
                                         </Field>
                                         <Field>
                                             <FieldLabel htmlFor="time">
-                                                Pickup time{" "}
-                                                <span className="text-red-500">
-                                                    *
-                                                </span>
+                                                Pickup time <span className="text-red-500">*</span>
                                             </FieldLabel>
                                             <input
                                                 id="time"
                                                 type="time"
                                                 value={values.time}
-                                                onChange={(e) =>
-                                                    set("time", e.target.value)
-                                                }
-                                                className={inputClass(
-                                                    errors.time,
-                                                )}
+                                                onChange={(e) => set("time", e.target.value)}
+                                                className={inputClass(errors.time)}
                                             />
-                                            <FieldError
-                                                message={errors.time}
-                                            />
+                                            <FieldError message={errors.time} />
                                         </Field>
                                     </div>
                                 </div>
@@ -464,9 +373,7 @@ export default function NewRidePage() {
                                 <div className="pt-2 border-t border-gray-100">
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            setClientOpen((v) => !v)
-                                        }
+                                        onClick={() => setClientOpen((v) => !v)}
                                         className="w-full flex items-center justify-between gap-2 py-2"
                                     >
                                         <div className="flex flex-col items-start">
@@ -474,8 +381,7 @@ export default function NewRidePage() {
                                                 Client & preferences
                                             </span>
                                             <span className="text-[11px] text-gray-500">
-                                                Optional information for driver
-                                                matching
+                                                Optional information for driver matching
                                             </span>
                                         </div>
                                         <span
@@ -498,19 +404,14 @@ export default function NewRidePage() {
                                                     <input
                                                         id="customerName"
                                                         type="text"
-                                                        value={
-                                                            values.customer
-                                                                ?.name || ""
-                                                        }
+                                                        value={values.customer?.name || ""}
                                                         onChange={(e) =>
                                                             set("customer", {
-                                                                ...(values.customer ??
-                                                                    {
-                                                                        name: "",
-                                                                        phone: "",
-                                                                    }),
-                                                                name: e.target
-                                                                    .value,
+                                                                ...(values.customer ?? {
+                                                                    name: "",
+                                                                    phone: "",
+                                                                }),
+                                                                name: e.target.value,
                                                             })
                                                         }
                                                         className={inputClass()}
@@ -525,19 +426,14 @@ export default function NewRidePage() {
                                                     <input
                                                         id="customerPhone"
                                                         type="text"
-                                                        value={
-                                                            values.customer
-                                                                ?.phone || ""
-                                                        }
+                                                        value={values.customer?.phone || ""}
                                                         onChange={(e) =>
                                                             set("customer", {
-                                                                ...(values.customer ??
-                                                                    {
-                                                                        name: "",
-                                                                        phone: "",
-                                                                    }),
-                                                                phone: e.target
-                                                                    .value,
+                                                                ...(values.customer ?? {
+                                                                    name: "",
+                                                                    phone: "",
+                                                                }),
+                                                                phone: e.target.value,
                                                             })
                                                         }
                                                         className={inputClass()}
@@ -556,18 +452,11 @@ export default function NewRidePage() {
                                                         id="passengers"
                                                         type="number"
                                                         min={1}
-                                                        value={
-                                                            values.passengers ??
-                                                            1
-                                                        }
+                                                        value={values.passengers ?? 1}
                                                         onChange={(e) =>
                                                             set(
                                                                 "passengers",
-                                                                Number(
-                                                                    e.target
-                                                                        .value ||
-                                                                    1,
-                                                                ),
+                                                                Number(e.target.value || 1)
                                                             )
                                                         }
                                                         className={inputClass()}
@@ -582,18 +471,11 @@ export default function NewRidePage() {
                                                         id="luggages"
                                                         type="number"
                                                         min={0}
-                                                        value={
-                                                            values.luggages ??
-                                                            0
-                                                        }
+                                                        value={values.luggages ?? 0}
                                                         onChange={(e) =>
                                                             set(
                                                                 "luggages",
-                                                                Number(
-                                                                    e.target
-                                                                        .value ||
-                                                                    0,
-                                                                ),
+                                                                Number(e.target.value || 0)
                                                             )
                                                         }
                                                         className={inputClass()}
@@ -606,45 +488,23 @@ export default function NewRidePage() {
                                                     </FieldLabel>
                                                     <select
                                                         id="vehicleType"
-                                                        value={
-                                                            values.vehicleType ||
-                                                            ""
-                                                        }
+                                                        value={values.vehicleType || ""}
                                                         onChange={(e) =>
                                                             set(
                                                                 "vehicleType",
-                                                                e.target
-                                                                    .value as
-                                                                    | VehicleType
-                                                                    | "",
+                                                                e.target.value as VehicleType | ""
                                                             )
                                                         }
                                                         className={inputClass()}
                                                     >
-                                                        <option value="">
-                                                            Any
-                                                        </option>
-                                                        <option value="sedan">
-                                                            Sedan
-                                                        </option>
-                                                        <option value="suv">
-                                                            SUV
-                                                        </option>
-                                                        <option value="van">
-                                                            Van
-                                                        </option>
-                                                        <option value="wagon">
-                                                            Wagon
-                                                        </option>
-                                                        <option value="hatchback">
-                                                            Hatchback
-                                                        </option>
-                                                        <option value="pickup">
-                                                            Pickup
-                                                        </option>
-                                                        <option value="other">
-                                                            Other
-                                                        </option>
+                                                        <option value="">Any</option>
+                                                        <option value="sedan">Sedan</option>
+                                                        <option value="suv">SUV</option>
+                                                        <option value="van">Van</option>
+                                                        <option value="wagon">Wagon</option>
+                                                        <option value="hatchback">Hatchback</option>
+                                                        <option value="pickup">Pickup</option>
+                                                        <option value="other">Other</option>
                                                     </select>
                                                 </Field>
                                             </div>
@@ -657,15 +517,9 @@ export default function NewRidePage() {
                                                     <input
                                                         id="lang"
                                                         type="text"
-                                                        value={
-                                                            values.language ||
-                                                            ""
-                                                        }
+                                                        value={values.language || ""}
                                                         onChange={(e) =>
-                                                            set(
-                                                                "language",
-                                                                e.target.value,
-                                                            )
+                                                            set("language", e.target.value)
                                                         }
                                                         className={inputClass()}
                                                         placeholder='e.g. "en"'
@@ -676,16 +530,9 @@ export default function NewRidePage() {
                                                     <label className="inline-flex items-center gap-2 text-xs sm:text-sm">
                                                         <input
                                                             type="checkbox"
-                                                            checked={
-                                                                values.airportTrip ??
-                                                                false
-                                                            }
+                                                            checked={values.airportTrip ?? false}
                                                             onChange={(e) =>
-                                                                set(
-                                                                    "airportTrip",
-                                                                    e.target
-                                                                        .checked,
-                                                                )
+                                                                set("airportTrip", e.target.checked)
                                                             }
                                                         />
                                                         Airport trip
@@ -693,15 +540,11 @@ export default function NewRidePage() {
                                                     <label className="inline-flex items-center gap-2 text-xs sm:text-sm">
                                                         <input
                                                             type="checkbox"
-                                                            checked={
-                                                                values.longDistance ??
-                                                                false
-                                                            }
+                                                            checked={values.longDistance ?? false}
                                                             onChange={(e) =>
                                                                 set(
                                                                     "longDistance",
-                                                                    e.target
-                                                                        .checked,
+                                                                    e.target.checked
                                                                 )
                                                             }
                                                         />
@@ -725,16 +568,8 @@ export default function NewRidePage() {
                                                         type="radio"
                                                         name="rideType"
                                                         value="reservation"
-                                                        checked={
-                                                            values.type ===
-                                                            "reservation"
-                                                        }
-                                                        onChange={() =>
-                                                            set(
-                                                                "type",
-                                                                "reservation",
-                                                            )
-                                                        }
+                                                        checked={values.type === "reservation"}
+                                                        onChange={() => set("type", "reservation")}
                                                         className="mt-0.5"
                                                     />
                                                     <span>
@@ -742,8 +577,7 @@ export default function NewRidePage() {
                                                             Reservation
                                                         </span>
                                                         <span className="block text-[11px] text-gray-500">
-                                                            Future pickup at
-                                                            scheduled time.
+                                                            Future pickup at scheduled time.
                                                         </span>
                                                     </span>
                                                 </label>
@@ -753,13 +587,8 @@ export default function NewRidePage() {
                                                         type="radio"
                                                         name="rideType"
                                                         value="asap"
-                                                        checked={
-                                                            values.type ===
-                                                            "asap"
-                                                        }
-                                                        onChange={() =>
-                                                            set("type", "asap")
-                                                        }
+                                                        checked={values.type === "asap"}
+                                                        onChange={() => set("type", "asap")}
                                                         className="mt-0.5"
                                                     />
                                                     <span>
@@ -767,8 +596,7 @@ export default function NewRidePage() {
                                                             ASAP
                                                         </span>
                                                         <span className="block text-[11px] text-gray-500">
-                                                            As soon as possible
-                                                            pickup.
+                                                            As soon as possible pickup.
                                                         </span>
                                                     </span>
                                                 </label>
@@ -779,9 +607,7 @@ export default function NewRidePage() {
                                                         name="rideType"
                                                         value=""
                                                         checked={!values.type}
-                                                        onChange={() =>
-                                                            set("type", "")
-                                                        }
+                                                        onChange={() => set("type", "")}
                                                         className="mt-0.5"
                                                     />
                                                     <span>
@@ -789,9 +615,8 @@ export default function NewRidePage() {
                                                             Auto
                                                         </span>
                                                         <span className="block text-[11px] text-gray-500">
-                                                            Let the system
-                                                            decide based on
-                                                            pickup time.
+                                                            Let the system decide based on pickup
+                                                            time.
                                                         </span>
                                                     </span>
                                                 </label>
@@ -800,19 +625,12 @@ export default function NewRidePage() {
 
                                         {/* Notes */}
                                         <Field>
-                                            <FieldLabel htmlFor="notes">
-                                                Internal notes
-                                            </FieldLabel>
+                                            <FieldLabel htmlFor="notes">Internal notes</FieldLabel>
                                             <textarea
                                                 id="notes"
                                                 rows={4}
                                                 value={values.notes}
-                                                onChange={(e) =>
-                                                    set(
-                                                        "notes",
-                                                        e.target.value,
-                                                    )
-                                                }
+                                                onChange={(e) => set("notes", e.target.value)}
                                                 className={inputClass()}
                                                 placeholder="Driver instructions, internal comments…"
                                             />
@@ -826,10 +644,7 @@ export default function NewRidePage() {
                                                 type="checkbox"
                                                 checked={values.coveredVisible}
                                                 onChange={(e) =>
-                                                    set(
-                                                        "coveredVisible",
-                                                        e.target.checked,
-                                                    )
+                                                    set("coveredVisible", e.target.checked)
                                                 }
                                                 className="mt-0.5"
                                             />
@@ -838,9 +653,8 @@ export default function NewRidePage() {
                                                     Include in coverage view
                                                 </span>
                                                 <span className="block text-[11px] text-gray-500">
-                                                    Controls whether this ride
-                                                    is visible in internal
-                                                    coverage / overview views.
+                                                    Controls whether this ride is visible in
+                                                    internal coverage / overview views.
                                                 </span>
                                             </span>
                                         </label>
@@ -859,9 +673,7 @@ export default function NewRidePage() {
                                                 name="nextStep"
                                                 value="skip"
                                                 checked={nextStep === "skip"}
-                                                onChange={() =>
-                                                    setNextStep("skip")
-                                                }
+                                                onChange={() => setNextStep("skip")}
                                                 className="mt-0.5"
                                             />
                                             <span>
@@ -869,8 +681,7 @@ export default function NewRidePage() {
                                                     Open ride details
                                                 </span>
                                                 <span className="block text-[11px] text-gray-500">
-                                                    Create the ride and go to
-                                                    its details page.
+                                                    Create the ride and go to its details page.
                                                 </span>
                                             </span>
                                         </label>
@@ -881,9 +692,7 @@ export default function NewRidePage() {
                                                 name="nextStep"
                                                 value="assign"
                                                 checked={nextStep === "assign"}
-                                                onChange={() =>
-                                                    setNextStep("assign")
-                                                }
+                                                onChange={() => setNextStep("assign")}
                                                 className="mt-0.5"
                                             />
                                             <span>
@@ -891,8 +700,7 @@ export default function NewRidePage() {
                                                     Assign a driver
                                                 </span>
                                                 <span className="block text-[11px] text-gray-500">
-                                                    Go straight to driver
-                                                    assignment after creating
+                                                    Go straight to driver assignment after creating
                                                     the ride.
                                                 </span>
                                             </span>
@@ -904,9 +712,7 @@ export default function NewRidePage() {
                                                 name="nextStep"
                                                 value="share"
                                                 checked={nextStep === "share"}
-                                                onChange={() =>
-                                                    setNextStep("share")
-                                                }
+                                                onChange={() => setNextStep("share")}
                                                 className="mt-0.5"
                                             />
                                             <span>
@@ -914,8 +720,7 @@ export default function NewRidePage() {
                                                     Create a share
                                                 </span>
                                                 <span className="block text-[11px] text-gray-500">
-                                                    Jump to ride sharing
-                                                    (drivers / groups) after
+                                                    Jump to ride sharing (drivers / groups) after
                                                     creating the ride.
                                                 </span>
                                             </span>
@@ -928,9 +733,7 @@ export default function NewRidePage() {
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        leftIcon={
-                                            <ArrowLeft className="w-4 h-4" />
-                                        }
+                                        leftIcon={<ArrowLeft className="w-4 h-4" />}
                                         onClick={() => router.push("/rides")}
                                         className="w-full sm:w-auto"
                                     >
@@ -942,9 +745,7 @@ export default function NewRidePage() {
                                         className="w-full sm:w-auto"
                                         disabled={submitting}
                                     >
-                                        {submitting
-                                            ? "Creating..."
-                                            : "Create ride"}
+                                        {submitting ? "Creating..." : "Create ride"}
                                     </Button>
                                 </div>
                             </form>
@@ -963,47 +764,29 @@ export default function NewRidePage() {
                                     <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-700">
                                         <li>
                                             Create an{" "}
-                                            <span className="font-medium">
-                                                unassigned
-                                            </span>{" "}
-                                            ride.
+                                            <span className="font-medium">unassigned</span> ride.
                                         </li>
                                         <li>
                                             Then{" "}
-                                            <span className="font-medium">
-                                                assign a driver
-                                            </span>{" "}
-                                            or{" "}
-                                            <span className="font-medium">
-                                                create a share
-                                            </span>
-                                            .
+                                            <span className="font-medium">assign a driver</span> or{" "}
+                                            <span className="font-medium">create a share</span>.
                                         </li>
                                         <li>
-                                            Drivers{" "}
-                                            <span className="font-medium">
-                                                request
-                                            </span>{" "}
-                                            the ride; you{" "}
-                                            <span className="font-medium">
-                                                approve
-                                            </span>{" "}
+                                            Drivers <span className="font-medium">request</span> the
+                                            ride; you <span className="font-medium">approve</span>{" "}
                                             one.
                                         </li>
                                         <li>
                                             Approving assigns the ride and{" "}
-                                            <span className="font-medium">
-                                                disables
-                                            </span>{" "}
-                                            other shares.
+                                            <span className="font-medium">disables</span> other
+                                            shares.
                                         </li>
                                     </ol>
 
                                     <div className="rounded-md border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-900">
-                                        Tip: if time is critical, assign a
-                                        driver directly. For general
-                                        availability, create a share and let
-                                        drivers request the ride.
+                                        Tip: if time is critical, assign a driver directly. For
+                                        general availability, create a share and let drivers request
+                                        the ride.
                                     </div>
                                 </CardBody>
                             </Card>

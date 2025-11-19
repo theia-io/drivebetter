@@ -7,9 +7,9 @@ import Link from "next/link";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { ArrowLeft, Save, Users as UsersIcon, Plus, X } from "lucide-react";
-import {DriverCombobox, SimpleDriver} from "@/components/ui/ride/DriverCombobox";
+import { DriverCombobox, SimpleDriver } from "@/components/ui/ride/DriverCombobox";
 import { createGroup as apiCreateGroup } from "@/stores/groups";
-import type {CreateGroupRequest} from "@/types"; // uses your existing store/service
+import type { CreateGroupRequest } from "@/types"; // uses your existing store/service
 
 type Visibility = "public" | "private";
 
@@ -21,7 +21,7 @@ type Form = {
     location: string;
     visibility: Visibility;
     isInviteOnly: boolean;
-    tagsText: string;     // comma-separated
+    tagsText: string; // comma-separated
     members: Array<{ _id: string; name?: string; email?: string }>;
 };
 
@@ -98,7 +98,10 @@ export default function NewGroupPage() {
     }
 
     function onRemoveMember(id: string) {
-        set("members", form.members.filter((m) => m._id !== id));
+        set(
+            "members",
+            form.members.filter((m) => m._id !== id)
+        );
     }
 
     return (
@@ -107,7 +110,11 @@ export default function NewGroupPage() {
                 <div className="space-y-4 sm:space-y-6 max-w-3xl">
                     {/* Toolbar */}
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" leftIcon={<ArrowLeft className="w-4 h-4" />}>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            leftIcon={<ArrowLeft className="w-4 h-4" />}
+                        >
                             <Link href="/groups">Back</Link>
                         </Button>
                         <div className="flex items-center gap-2">
@@ -198,7 +205,9 @@ export default function NewGroupPage() {
                                         <select
                                             id="visibility"
                                             value={form.visibility}
-                                            onChange={(e) => set("visibility", e.target.value as Visibility)}
+                                            onChange={(e) =>
+                                                set("visibility", e.target.value as Visibility)
+                                            }
                                             className={inputClass()}
                                         >
                                             <option value="public">Public</option>
@@ -213,9 +222,13 @@ export default function NewGroupPage() {
                                                 id="invite"
                                                 type="checkbox"
                                                 checked={form.isInviteOnly}
-                                                onChange={(e) => set("isInviteOnly", e.target.checked)}
+                                                onChange={(e) =>
+                                                    set("isInviteOnly", e.target.checked)
+                                                }
                                             />
-                                            <span className="text-sm text-gray-700">Require invitations to join</span>
+                                            <span className="text-sm text-gray-700">
+                                                Require invitations to join
+                                            </span>
                                         </div>
                                     </Field>
                                 </div>
@@ -263,7 +276,11 @@ export default function NewGroupPage() {
                                     <Button variant="outline">
                                         <Link href="/groups">Cancel</Link>
                                     </Button>
-                                    <Button type="submit" leftIcon={<Save className="w-4 h-4" />} disabled={saving}>
+                                    <Button
+                                        type="submit"
+                                        leftIcon={<Save className="w-4 h-4" />}
+                                        disabled={saving}
+                                    >
                                         {saving ? "Creating…" : "Create Group"}
                                     </Button>
                                 </div>
@@ -278,13 +295,7 @@ export default function NewGroupPage() {
 
 /* ----------------------------- UI primitives ---------------------------- */
 
-function Field({
-                   children,
-                   className = "",
-               }: {
-    children: React.ReactNode;
-    className?: string;
-}) {
+function Field({ children, className = "" }: { children: React.ReactNode; className?: string }) {
     return <div className={`space-y-1.5 ${className}`}>{children}</div>;
 }
 

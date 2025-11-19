@@ -18,17 +18,16 @@ type RideStatusDropdownProps = {
 };
 
 export default function RideStatusDropdown({
-                                               value,
-                                               onChange,
-                                               disabled,
-                                               className,
-                                           }: RideStatusDropdownProps) {
+    value,
+    onChange,
+    disabled,
+    className,
+}: RideStatusDropdownProps) {
     const [open, setOpen] = useState(false);
 
     const meta = STATUS_OPTIONS.find((s) => s.value === value);
     const label = meta?.label ?? getStatusLabel(value);
-    const desc =
-        meta?.description ?? "Tap to update the ride status.";
+    const desc = meta?.description ?? "Tap to update the ride status.";
     const colors = getStatusColors(value);
 
     async function handleSelect(next: RideStatus) {
@@ -59,19 +58,15 @@ export default function RideStatusDropdown({
                 ].join(" ")}
             >
                 <div className="flex min-w-0 items-start gap-3">
-          <span
-              className={[
-                  "mt-1 h-2 w-2 rounded-full flex-shrink-0",
-                  getStatusDotColor(value),
-              ].join(" ")}
-          />
+                    <span
+                        className={[
+                            "mt-1 h-2 w-2 rounded-full flex-shrink-0",
+                            getStatusDotColor(value),
+                        ].join(" ")}
+                    />
                     <div className="min-w-0 flex flex-col">
-            <span className="text-sm font-semibold text-gray-900">
-              {label}
-            </span>
-                        <span className="text-xs text-gray-800/80 leading-snug">
-              {desc}
-            </span>
+                        <span className="text-sm font-semibold text-gray-900">{label}</span>
+                        <span className="text-xs text-gray-800/80 leading-snug">{desc}</span>
                     </div>
                 </div>
                 <ChevronDown className="h-4 w-4 shrink-0 text-gray-700" />
@@ -81,9 +76,7 @@ export default function RideStatusDropdown({
             {open && (
                 <div className="absolute right-0 z-[1100] mt-1 w-full rounded-lg border border-gray-100 bg-white shadow-lg">
                     <div className="border-b border-gray-100 px-3 py-2">
-                        <p className="text-xs font-semibold text-gray-900">
-                            Change ride status
-                        </p>
+                        <p className="text-xs font-semibold text-gray-900">Change ride status</p>
                         <p className="text-[11px] text-gray-500">
                             Choose the option that best reflects current progress.
                         </p>
@@ -99,31 +92,29 @@ export default function RideStatusDropdown({
                                         type="button"
                                         onClick={() => handleSelect(opt.value)}
                                         style={
-                                            isActive
-                                                ? { backgroundColor: optColors.bg }
-                                                : undefined
+                                            isActive ? { backgroundColor: optColors.bg } : undefined
                                         }
                                         className={[
                                             "flex w-full items-start gap-3 px-3 py-2.5 text-left hover:bg-gray-50",
                                             isActive ? "bg-gray-50/80" : "",
                                         ].join(" ")}
                                     >
-                    <span
-                        className={[
-                            "mt-1 h-2 w-2 rounded-full flex-shrink-0",
-                            dotClass,
-                        ].join(" ")}
-                    />
+                                        <span
+                                            className={[
+                                                "mt-1 h-2 w-2 rounded-full flex-shrink-0",
+                                                dotClass,
+                                            ].join(" ")}
+                                        />
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold text-gray-900">
-                          {opt.label}
-                        </span>
+                                                <span className="text-sm font-semibold text-gray-900">
+                                                    {opt.label}
+                                                </span>
                                                 {isActive && (
                                                     <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-1.5 py-0.5 text-[10px] font-medium text-gray-900 border border-black/5">
-                            <Check className="h-3 w-3" />
-                            Current
-                          </span>
+                                                        <Check className="h-3 w-3" />
+                                                        Current
+                                                    </span>
                                                 )}
                                             </div>
                                             <p className="mt-0.5 text-xs text-gray-600 leading-snug">

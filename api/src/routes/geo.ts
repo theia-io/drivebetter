@@ -1,5 +1,4 @@
-import { Router, Request, Response } from "express";
-import {logger} from "bs-logger";
+import { Request, Response, Router } from "express";
 
 const router = Router();
 const MAPTILER_API_KEY = process.env.MAPTILER_API_KEY!;
@@ -81,7 +80,9 @@ router.get("/search", async (req: Request, res: Response) => {
         if (req.query.country) url.searchParams.set("country", String(req.query.country)); // optional filter
         if (req.query.language) url.searchParams.set("language", String(req.query.language)); // optional locale
 
-        const r = await fetch(url.toString(), { headers: { Accept: "application/json", Origin: "localhost" } });
+        const r = await fetch(url.toString(), {
+            headers: { Accept: "application/json", Origin: "localhost" },
+        });
         if (!r.ok) return bad(res, 502, "geocode_upstream_failed");
 
         const data = await r.json();
@@ -108,7 +109,6 @@ router.get("/search", async (req: Request, res: Response) => {
         return bad(res, 500, "geocode_proxy_error");
     }
 });
-
 
 /**
  * @openapi
@@ -201,35 +201,44 @@ router.get("/route", async (req: Request, res: Response) => {
             profileIn === "cycling"
                 ? "cycling-regular"
                 : profileIn === "foot"
-                    ? "foot-walking"
-                    : "driving-car";
+                  ? "foot-walking"
+                  : "driving-car";
 
         // avoid features mapping
         const avoidParam = String(req.query.avoid || "").trim();
         const avoidList = avoidParam
-            ? avoidParam.split(",").map(s => s.trim()).filter(Boolean)
+            ? avoidParam
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean)
             : [];
         // ORS avoid_features keywords
         const orsAvoidAllowed = new Set([
-            "highways", "tollways", "ferries", "fords", "steps",
-            "unpavedroads", "tunnels", "tracks"
+            "highways",
+            "tollways",
+            "ferries",
+            "fords",
+            "steps",
+            "unpavedroads",
+            "tunnels",
+            "tracks",
         ]);
         const normalizedAvoid = avoidList
-            .map(a => {
+            .map((a) => {
                 if (a === "toll") return "tollways";
                 if (a === "motorway" || a === "highway") return "highways";
                 if (a === "unpaved") return "unpavedroads";
                 if (a === "ferry") return "ferries";
                 return a;
             })
-            .filter(a => orsAvoidAllowed.has(a));
+            .filter((a) => orsAvoidAllowed.has(a));
 
         const altCount = Math.max(0, Math.min(3, Number(req.query.alternatives ?? 0)));
 
         const body: any = {
             coordinates: [
                 [flon, flat],
-                [tlon, tlat]
+                [tlon, tlat],
             ],
             units: "m",
         };
@@ -238,7 +247,11 @@ router.get("/route", async (req: Request, res: Response) => {
             body.options = { ...(body.options || {}), avoid_features: normalizedAvoid };
         }
         if (altCount > 0) {
-            body.alternative_routes = { target_count: altCount, share_factor: 0.6, weight_factor: 1.4 };
+            body.alternative_routes = {
+                target_count: altCount,
+                share_factor: 0.6,
+                weight_factor: 1.4,
+            };
         }
 
         const url = `https://api.openrouteservice.org/v2/directions/${profile}/geojson`;
@@ -246,9 +259,9 @@ router.get("/route", async (req: Request, res: Response) => {
         const r = await fetch(url, {
             method: "POST",
             headers: {
-                "Authorization": ORS_API_KEY,
-                'Content-Type': 'application/json; charset=utf-8',
-                'Accept': 'application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8',
+                Authorization: ORS_API_KEY,
+                "Content-Type": "application/json; charset=utf-8",
+                Accept: "application/json, application/geo+json, application/gpx+xml, img/png; charset=utf-8",
             },
             body: JSON.stringify(body),
         });
@@ -282,7 +295,6 @@ router.get("/route", async (req: Request, res: Response) => {
         return bad(res, 500, "route_proxy_error");
     }
 });
-
 
 /**
  * @openapi

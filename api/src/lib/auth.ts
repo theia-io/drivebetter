@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 export type Role = "driver" | "dispatcher" | "client" | "admin";
 
 export interface JwtPayload {
-    sub: string;            // user id
+    sub: string; // user id
     email?: string;
     roles?: Role[];
     typ?: "access" | "refresh";

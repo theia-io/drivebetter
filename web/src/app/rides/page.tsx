@@ -46,8 +46,7 @@ export default function RidesPage() {
         return p;
     }, [dateFrom, dateTo, statusFilter]);
 
-    const { items, size, setSize, isLoading, reachedEnd, mutate } =
-        useRidesInfinite(params, 20);
+    const { items, size, setSize, isLoading, reachedEnd, mutate } = useRidesInfinite(params, 20);
 
     // refetch when backend filters change
     useEffect(() => {
@@ -89,9 +88,7 @@ export default function RidesPage() {
         }
 
         return list.filter((ride: any) => {
-            const pendingCount =
-                ride.pendingClaimsCount ??
-                (ride.hasPendingClaims ? 1 : 0);
+            const pendingCount = ride.pendingClaimsCount ?? (ride.hasPendingClaims ? 1 : 0);
             return ride.hasPendingClaims === true || pendingCount > 0;
         });
     }, [items, sortBy, pendingOnly]);
@@ -118,13 +115,8 @@ export default function RidesPage() {
                         </div>
                         <div className="shrink-0">
                             <Link href="/rides/new">
-                                <Button
-                                    size="sm"
-                                    className="inline-flex items-center gap-2"
-                                >
-                                    <span className="text-sm font-semibold">
-                                        + Create ride
-                                    </span>
+                                <Button size="sm" className="inline-flex items-center gap-2">
+                                    <span className="text-sm font-semibold">+ Create ride</span>
                                 </Button>
                             </Link>
                         </div>
@@ -184,8 +176,8 @@ export default function RidesPage() {
                                 {reachedEnd
                                     ? "No More Rides"
                                     : isLoading
-                                        ? "Loading..."
-                                        : "Load More Rides"}
+                                      ? "Loading..."
+                                      : "Load More Rides"}
                             </Button>
                         </div>
                     </div>

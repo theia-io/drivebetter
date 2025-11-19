@@ -1,8 +1,7 @@
 // src/models/driverDetails.model.ts
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
 
-export type Weekday =
-    | "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
 export interface IDriverDetails extends Document {
     userId: Types.ObjectId;
@@ -21,8 +20,8 @@ export interface IDriverDetails extends Document {
     };
 
     capacity?: {
-        seatsTotal?: number;                 // installed seatbelts incl. driver
-        maxPassengers?: number;             // passengers allowed for rides
+        seatsTotal?: number; // installed seatbelts incl. driver
+        maxPassengers?: number; // passengers allowed for rides
         luggageCapacity?: number;
     };
 
@@ -50,8 +49,8 @@ export interface IDriverDetails extends Document {
     };
 
     languages?: {
-        primary?: string;                    // ISO 639-1 (e.g., "en")
-        list?: string[];                     // additional ISO 639-1 codes
+        primary?: string; // ISO 639-1 (e.g., "en")
+        list?: string[]; // additional ISO 639-1 codes
     };
 
     service?: {
@@ -63,8 +62,8 @@ export interface IDriverDetails extends Document {
 
     availability?: {
         workingDays?: Weekday[];
-        shiftStart?: string | null;         // "HH:mm"
-        shiftEnd?: string | null;           // "HH:mm"
+        shiftStart?: string | null; // "HH:mm"
+        shiftEnd?: string | null; // "HH:mm"
         breaks?: Array<{ start: string; end: string }>;
     };
 
@@ -92,7 +91,7 @@ export interface IDriverDetails extends Document {
 
     // denormalized ops
     stats?: {
-        ratingAvg?: number;                  // 1..5
+        ratingAvg?: number; // 1..5
         ratingCount?: number;
         completedRides?: number;
         cancellations?: number;
@@ -111,7 +110,7 @@ const PointSchema = new Schema(
         type: { type: String, enum: ["Point"], required: true },
         coordinates: {
             type: [Number],
-            required: true,                    // [lon, lat]
+            required: true, // [lon, lat]
             validate: {
                 validator: (v: number[]) => Array.isArray(v) && v.length === 2,
                 message: "Point.coordinates must be [lon, lat]",
@@ -123,7 +122,13 @@ const PointSchema = new Schema(
 
 const DriverDetailsSchema = new Schema<IDriverDetails>(
     {
-        userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true, unique: true },
+        userId: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+            index: true,
+            unique: true,
+        },
 
         vehicle: {
             make: String,
@@ -131,7 +136,11 @@ const DriverDetailsSchema = new Schema<IDriverDetails>(
             year: { type: Number, min: 1970, max: 2100 },
             color: String,
             plate: { type: String, index: true, sparse: true },
-            type: { type: String, enum: ["sedan", "suv", "van", "wagon", "hatchback", "pickup", "other"], default: "sedan" },
+            type: {
+                type: String,
+                enum: ["sedan", "suv", "van", "wagon", "hatchback", "pickup", "other"],
+                default: "sedan",
+            },
             vin: { type: String, index: true, sparse: true },
             registrationExpiry: { type: Date, default: null },
             insurancePolicyNumber: String,
@@ -180,9 +189,11 @@ const DriverDetailsSchema = new Schema<IDriverDetails>(
         },
 
         availability: {
-            workingDays: [{ type: String, enum: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] }],
+            workingDays: [
+                { type: String, enum: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] },
+            ],
             shiftStart: { type: String, default: null }, // "HH:mm"
-            shiftEnd: { type: String, default: null },   // "HH:mm"
+            shiftEnd: { type: String, default: null }, // "HH:mm"
             breaks: [{ start: String, end: String }],
         },
 
@@ -234,6 +245,7 @@ DriverDetailsSchema.index({ "vehicle.plate": 1 }, { sparse: true });
 DriverDetailsSchema.index({ "vehicle.vin": 1 }, { sparse: true });
 
 const DriverDetails: Model<IDriverDetails> =
-    mongoose.models.DriverDetails || mongoose.model<IDriverDetails>("DriverDetails", DriverDetailsSchema);
+    mongoose.models.DriverDetails ||
+    mongoose.model<IDriverDetails>("DriverDetails", DriverDetailsSchema);
 
 export default DriverDetails;

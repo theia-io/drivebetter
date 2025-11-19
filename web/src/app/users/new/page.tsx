@@ -4,10 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import {ArrowLeft, Eye, EyeOff, Save} from "lucide-react";
-import {createUser, Role} from "@/stores/users";
+import { ArrowLeft, Eye, EyeOff, Save } from "lucide-react";
+import { createUser, Role } from "@/stores/users";
 import { apiPost } from "@/services/http";
-import {VehicleType} from "@/types/driver-details";
+import { VehicleType } from "@/types/driver-details";
 import { Field, FieldLabel, FieldError, inputClass } from "@/components/ui/commmon";
 
 type NewUserForm = {
@@ -143,7 +143,9 @@ export default function NewUserWithDriverDetailsPage() {
                     },
                     capacity: {
                         seatsTotal: driver.seatsTotal ? Number(driver.seatsTotal) : undefined,
-                        maxPassengers: driver.maxPassengers ? Number(driver.maxPassengers) : undefined,
+                        maxPassengers: driver.maxPassengers
+                            ? Number(driver.maxPassengers)
+                            : undefined,
                     },
                     features: {
                         petFriendly: !!driver.petFriendly,
@@ -153,17 +155,24 @@ export default function NewUserWithDriverDetailsPage() {
                     },
                     service: {
                         homeCity: driver.homeCity || undefined,
-                        serviceRadiusKm: driver.serviceRadiusKm ? Number(driver.serviceRadiusKm) : undefined,
+                        serviceRadiusKm: driver.serviceRadiusKm
+                            ? Number(driver.serviceRadiusKm)
+                            : undefined,
                     },
                     languages: {
                         primary: driver.primaryLanguage || undefined,
                         list: driver.languages
-                            ? driver.languages.split(",").map((s) => s.trim()).filter(Boolean)
+                            ? driver.languages
+                                  .split(",")
+                                  .map((s) => s.trim())
+                                  .filter(Boolean)
                             : undefined,
                     },
                     compliance: {
                         licenseNumber: driver.licenseNumber || undefined,
-                        licenseExpiry: driver.licenseExpiry ? new Date(driver.licenseExpiry) : undefined,
+                        licenseExpiry: driver.licenseExpiry
+                            ? new Date(driver.licenseExpiry)
+                            : undefined,
                     },
                 };
 
@@ -215,7 +224,9 @@ export default function NewUserWithDriverDetailsPage() {
                         <form onSubmit={onSubmit} className="space-y-8" noValidate>
                             {/* User */}
                             <section className="space-y-4">
-                                <Typography className="text-sm font-semibold text-gray-900">User</Typography>
+                                <Typography className="text-sm font-semibold text-gray-900">
+                                    User
+                                </Typography>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field>
                                         <FieldLabel htmlFor="name">Name</FieldLabel>
@@ -264,11 +275,17 @@ export default function NewUserWithDriverDetailsPage() {
                                             />
                                             <button
                                                 type="button"
-                                                onClick={() => setShowPassword(s => !s)}
+                                                onClick={() => setShowPassword((s) => !s)}
                                                 className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors"
-                                                aria-label={showPassword ? "Hide password" : "Show password"}
+                                                aria-label={
+                                                    showPassword ? "Hide password" : "Show password"
+                                                }
                                             >
-                                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                                {showPassword ? (
+                                                    <EyeOff className="w-5 h-5" />
+                                                ) : (
+                                                    <Eye className="w-5 h-5" />
+                                                )}
                                             </button>
                                         </div>
                                         <FieldError message={errors.password} />
@@ -276,16 +293,21 @@ export default function NewUserWithDriverDetailsPage() {
                                     <Field>
                                         <FieldLabel>Roles</FieldLabel>
                                         <div className="flex flex-wrap gap-3">
-                                            {["driver", "dispatcher", "client", "admin"].map((r) => (
-                                                <label key={r} className="inline-flex items-center gap-2 text-sm">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={user.roles.includes(r)}
-                                                        onChange={() => toggleRole(r)}
-                                                    />
-                                                    {r}
-                                                </label>
-                                            ))}
+                                            {["driver", "dispatcher", "client", "admin"].map(
+                                                (r) => (
+                                                    <label
+                                                        key={r}
+                                                        className="inline-flex items-center gap-2 text-sm"
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={user.roles.includes(r)}
+                                                            onChange={() => toggleRole(r)}
+                                                        />
+                                                        {r}
+                                                    </label>
+                                                )
+                                            )}
                                         </div>
                                         <FieldError message={errors.roles} />
                                     </Field>
@@ -293,8 +315,12 @@ export default function NewUserWithDriverDetailsPage() {
                             </section>
 
                             {/* Driver Details */}
-                            <section className={`space-y-4 ${user.roles.includes("driver") ? "" : "opacity-60 pointer-events-none"}`}>
-                                <Typography className="text-sm font-semibold text-gray-900">Driver Details</Typography>
+                            <section
+                                className={`space-y-4 ${user.roles.includes("driver") ? "" : "opacity-60 pointer-events-none"}`}
+                            >
+                                <Typography className="text-sm font-semibold text-gray-900">
+                                    Driver Details
+                                </Typography>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <Field>
@@ -302,11 +328,23 @@ export default function NewUserWithDriverDetailsPage() {
                                         <select
                                             id="vehicleType"
                                             value={driver.vehicleType}
-                                            onChange={(e) => setD("vehicleType", e.target.value as VehicleType)}
+                                            onChange={(e) =>
+                                                setD("vehicleType", e.target.value as VehicleType)
+                                            }
                                             className={inputClass(errors.vehicleType)}
                                         >
-                                            {["sedan","suv","van","wagon","hatchback","pickup","other"].map(v => (
-                                                <option key={v} value={v}>{v}</option>
+                                            {[
+                                                "sedan",
+                                                "suv",
+                                                "van",
+                                                "wagon",
+                                                "hatchback",
+                                                "pickup",
+                                                "other",
+                                            ].map((v) => (
+                                                <option key={v} value={v}>
+                                                    {v}
+                                                </option>
                                             ))}
                                         </select>
                                         <FieldError message={errors.vehicleType} />
@@ -383,7 +421,9 @@ export default function NewUserWithDriverDetailsPage() {
                                         <FieldError message={errors.seatsTotal} />
                                     </Field>
                                     <Field>
-                                        <FieldLabel htmlFor="maxPassengers">Max Passengers</FieldLabel>
+                                        <FieldLabel htmlFor="maxPassengers">
+                                            Max Passengers
+                                        </FieldLabel>
                                         <input
                                             id="maxPassengers"
                                             type="number"
@@ -408,31 +448,41 @@ export default function NewUserWithDriverDetailsPage() {
                                         />
                                     </Field>
                                     <Field>
-                                        <FieldLabel htmlFor="radius">Service Radius (km)</FieldLabel>
+                                        <FieldLabel htmlFor="radius">
+                                            Service Radius (km)
+                                        </FieldLabel>
                                         <input
                                             id="radius"
                                             type="number"
                                             min={0}
                                             step={1}
                                             value={driver.serviceRadiusKm}
-                                            onChange={(e) => setD("serviceRadiusKm", e.target.value)}
+                                            onChange={(e) =>
+                                                setD("serviceRadiusKm", e.target.value)
+                                            }
                                             className={inputClass()}
                                             placeholder="50"
                                         />
                                     </Field>
 
                                     <Field>
-                                        <FieldLabel htmlFor="primaryLang">Primary Language</FieldLabel>
+                                        <FieldLabel htmlFor="primaryLang">
+                                            Primary Language
+                                        </FieldLabel>
                                         <input
                                             id="primaryLang"
                                             value={driver.primaryLanguage}
-                                            onChange={(e) => setD("primaryLanguage", e.target.value)}
+                                            onChange={(e) =>
+                                                setD("primaryLanguage", e.target.value)
+                                            }
                                             className={inputClass()}
                                             placeholder="en"
                                         />
                                     </Field>
                                     <Field>
-                                        <FieldLabel htmlFor="langs">Other Languages (comma-separated)</FieldLabel>
+                                        <FieldLabel htmlFor="langs">
+                                            Other Languages (comma-separated)
+                                        </FieldLabel>
                                         <input
                                             id="langs"
                                             value={driver.languages}
@@ -453,7 +503,9 @@ export default function NewUserWithDriverDetailsPage() {
                                         />
                                     </Field>
                                     <Field>
-                                        <FieldLabel htmlFor="licenseExpiry">License Expiry</FieldLabel>
+                                        <FieldLabel htmlFor="licenseExpiry">
+                                            License Expiry
+                                        </FieldLabel>
                                         <input
                                             id="licenseExpiry"
                                             type="date"
@@ -466,12 +518,16 @@ export default function NewUserWithDriverDetailsPage() {
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="flex flex-col gap-2 rounded-lg border border-gray-200 p-3">
-                                        <span className="text-sm font-medium text-gray-900">Features</span>
+                                        <span className="text-sm font-medium text-gray-900">
+                                            Features
+                                        </span>
                                         <label className="inline-flex items-center gap-2 text-sm">
                                             <input
                                                 type="checkbox"
                                                 checked={driver.petFriendly}
-                                                onChange={(e) => setD("petFriendly", e.target.checked)}
+                                                onChange={(e) =>
+                                                    setD("petFriendly", e.target.checked)
+                                                }
                                             />
                                             Pet friendly
                                         </label>
@@ -487,7 +543,9 @@ export default function NewUserWithDriverDetailsPage() {
                                             <input
                                                 type="checkbox"
                                                 checked={driver.boosterSeat}
-                                                onChange={(e) => setD("boosterSeat", e.target.checked)}
+                                                onChange={(e) =>
+                                                    setD("boosterSeat", e.target.checked)
+                                                }
                                             />
                                             Booster seat
                                         </label>
@@ -495,7 +553,9 @@ export default function NewUserWithDriverDetailsPage() {
                                             <input
                                                 type="checkbox"
                                                 checked={driver.wheelchairAccessible}
-                                                onChange={(e) => setD("wheelchairAccessible", e.target.checked)}
+                                                onChange={(e) =>
+                                                    setD("wheelchairAccessible", e.target.checked)
+                                                }
                                             />
                                             Wheelchair accessible
                                         </label>

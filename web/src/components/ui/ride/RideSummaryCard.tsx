@@ -35,11 +35,7 @@ import {
     type RideStatus,
 } from "@/types/rideStatus";
 import { useSetRideStatus } from "@/stores/rides";
-import {
-    useRideClaims,
-    useApproveRideClaim,
-    useRejectRideClaim,
-} from "@/stores/rideClaims";
+import { useRideClaims, useApproveRideClaim, useRejectRideClaim } from "@/stores/rideClaims";
 import { useDriversPublicBatchMap } from "@/stores/users";
 
 type RideSummaryCardProps = {
@@ -53,14 +49,14 @@ type RideSummaryCardProps = {
 };
 
 export default function RideSummaryCard({
-                                            ride,
-                                            detailsHref,
-                                            hideActions = false,
-                                            onDriverAssigned,
-                                            onStatusChanged,
-                                            variant = "card",
-                                            defaultExpanded = false,
-                                        }: RideSummaryCardProps) {
+    ride,
+    detailsHref,
+    hideActions = false,
+    onDriverAssigned,
+    onStatusChanged,
+    variant = "card",
+    defaultExpanded = false,
+}: RideSummaryCardProps) {
     const { user } = useAuthStore();
     const roles = user?.roles ?? [];
 
@@ -90,7 +86,7 @@ export default function RideSummaryCard({
     const amountText = money(ride.payment?.amountCents);
 
     const [localStatus, setLocalStatus] = useState<RideStatus>(
-        (ride.status as RideStatus) || "unassigned",
+        (ride.status as RideStatus) || "unassigned"
     );
 
     useEffect(() => {
@@ -101,9 +97,7 @@ export default function RideSummaryCard({
     const statusLabel = getStatusLabel(statusValue);
     const showAssign = isPrivileged && statusValue === "unassigned";
 
-    const [expanded, setExpanded] = useState<boolean>(
-        variant === "card" ? true : defaultExpanded,
-    );
+    const [expanded, setExpanded] = useState<boolean>(variant === "card" ? true : defaultExpanded);
 
     useEffect(() => {
         if (variant === "card") setExpanded(true);
@@ -147,30 +141,21 @@ export default function RideSummaryCard({
                 .filter((c) => c.status === "queued")
                 .slice()
                 .sort((a: any, b: any) => {
-                    const ta = a.createdAt
-                        ? new Date(a.createdAt).getTime()
-                        : 0;
-                    const tb = b.createdAt
-                        ? new Date(b.createdAt).getTime()
-                        : 0;
+                    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
                     return ta - tb;
                 }),
-        [claims],
+        [claims]
     );
 
-    const approvedClaim = useMemo(
-        () => claims.find((c) => c.status === "approved"),
-        [claims],
-    );
+    const approvedClaim = useMemo(() => claims.find((c) => c.status === "approved"), [claims]);
 
     const claimDriverIds = useMemo(
         () => Array.from(new Set(claims.map((c) => c.driverId))),
-        [claims],
+        [claims]
     );
-    const {
-        map: claimDriversMap,
-        isLoading: claimDriversLoading,
-    } = useDriversPublicBatchMap(claimDriverIds);
+    const { map: claimDriversMap, isLoading: claimDriversLoading } =
+        useDriversPublicBatchMap(claimDriverIds);
 
     async function handleApproveClaim(claimId: string, driverId: string) {
         try {
@@ -198,9 +183,7 @@ export default function RideSummaryCard({
     return (
         <Card
             variant="elevated"
-            className={`transition-shadow ${
-                isAccordion ? "hover:shadow-md" : "hover:shadow-lg"
-            }`}
+            className={`transition-shadow ${isAccordion ? "hover:shadow-md" : "hover:shadow-lg"}`}
         >
             <CardBody className="p-0">
                 {/* HEADER */}
@@ -268,20 +251,14 @@ export default function RideSummaryCard({
                             <span className="inline-flex items-center gap-1">
                                 <Calendar className="w-3 h-3 text-gray-400" />
                                 <span className="uppercase tracking-wide text-[10px]">
-                                    {ride.type === "reservation"
-                                        ? "RESERVATION"
-                                        : "ASAP"}
+                                    {ride.type === "reservation" ? "RESERVATION" : "ASAP"}
                                 </span>
                             </span>
                         </div>
 
                         <div className="mt-0.5">
                             <RideCreatorBadge
-                                creator={
-                                    ride.creatorId as
-                                        | RideCreatorUser
-                                        | undefined
-                                }
+                                creator={ride.creatorId as RideCreatorUser | undefined}
                             />
                         </div>
                     </div>
@@ -290,12 +267,12 @@ export default function RideSummaryCard({
                     <div className="flex flex-col items-end gap-1 shrink-0 pl-1">
                         <span
                             className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border ${getPillStatusColor(
-                                statusValue,
+                                statusValue
                             )}`}
                         >
                             <span
                                 className={`mr-1 h-2 w-2 rounded-full ${getStatusDotColor(
-                                    statusValue,
+                                    statusValue
                                 )}`}
                             />
                             <span className="capitalize">{statusLabel}</span>
@@ -330,19 +307,13 @@ export default function RideSummaryCard({
                         <div className="pt-3">
                             <RideStatusStepper value={statusValue} />
                             <div className="mt-1 text-[11px] text-gray-600">
-                                Current:{" "}
-                                <span className="font-semibold">
-                                    {statusLabel}
-                                </span>
+                                Current: <span className="font-semibold">{statusLabel}</span>
                             </div>
                         </div>
 
                         {/* Status control */}
                         {canChangeStatus && (
-                            <div
-                                className="mt-1"
-                                onClick={(e) => e.stopPropagation()}
-                            >
+                            <div className="mt-1" onClick={(e) => e.stopPropagation()}>
                                 <RideStatusDropdown
                                     value={statusValue}
                                     disabled={isSettingStatus}
@@ -387,119 +358,96 @@ export default function RideSummaryCard({
                                     </div>
                                 ) : (
                                     <div className="space-y-1.5">
-                                        {queuedClaims.map(
-                                            (c: any, idx: number) => {
-                                                const d =
-                                                    claimDriversMap[
-                                                        c.driverId
-                                                        ];
-                                                const name =
-                                                    d?.name ||
-                                                    `User ${c.driverId.slice(
-                                                        -6,
-                                                    )}`;
-                                                const email = d?.email;
+                                        {queuedClaims.map((c: any, idx: number) => {
+                                            const d = claimDriversMap[c.driverId];
+                                            const name = d?.name || `User ${c.driverId.slice(-6)}`;
+                                            const email = d?.email;
 
-                                                return (
-                                                    <div
-                                                        key={c.claimId}
-                                                        className="flex flex-wrap items-center gap-2 justify-between rounded-md border border-gray-200 bg-white p-2"
-                                                    >
-                                                        <div className="min-w-0 flex items-start gap-2">
-                                                            {/* queue index */}
-                                                            <span className="mt-0.5 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700">
-                                                                #{idx + 1}
-                                                            </span>
-                                                            <UserIcon className="w-4 h-4 text-gray-500 mt-0.5" />
-                                                            <div className="min-w-0">
-                                                                <div className="text-xs font-medium text-gray-900 truncate">
-                                                                    <Link
-                                                                        href={`/users/${c.driverId}`}
-                                                                        className="hover:underline"
-                                                                    >
-                                                                        {name}
-                                                                    </Link>
-                                                                </div>
-                                                                <div className="text-[11px] text-gray-600 truncate">
-                                                                    {email ||
-                                                                        "—"}
-                                                                </div>
-                                                                {c.createdAt && (
-                                                                    <div className="text-xs sm:text-sm text-gray-500 mt-1">
-                                                                        Requested{" "}
-                                                                        {fmtDate(
-                                                                            c.createdAt,
-                                                                        )}{" "}
-                                                                        •{" "}
-                                                                        {fmtTime(
-                                                                            c.createdAt,
-                                                                        )}
-                                                                    </div>
-                                                                )}
+                                            return (
+                                                <div
+                                                    key={c.claimId}
+                                                    className="flex flex-wrap items-center gap-2 justify-between rounded-md border border-gray-200 bg-white p-2"
+                                                >
+                                                    <div className="min-w-0 flex items-start gap-2">
+                                                        {/* queue index */}
+                                                        <span className="mt-0.5 inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-700">
+                                                            #{idx + 1}
+                                                        </span>
+                                                        <UserIcon className="w-4 h-4 text-gray-500 mt-0.5" />
+                                                        <div className="min-w-0">
+                                                            <div className="text-xs font-medium text-gray-900 truncate">
+                                                                <Link
+                                                                    href={`/users/${c.driverId}`}
+                                                                    className="hover:underline"
+                                                                >
+                                                                    {name}
+                                                                </Link>
                                                             </div>
-                                                        </div>
-
-                                                        <div className="flex items-center gap-1.5">
-                                                            <Button
-                                                                size="sm"
-                                                                variant="solid"
-                                                                onClick={() =>
-                                                                    handleApproveClaim(
-                                                                        c.claimId,
-                                                                        c.driverId,
-                                                                    )
-                                                                }
-                                                                disabled={
-                                                                    isApproving
-                                                                }
-                                                                className="text-xs py-1 px-2 bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500"
-                                                                leftIcon={
-                                                                    isApproving ? (
-                                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                                    ) : (
-                                                                        <Check className="w-3.5 h-3.5" />
-                                                                    )
-                                                                }
-                                                            >
-                                                                Approve
-                                                            </Button>
-
-                                                            <Button
-                                                                size="sm"
-                                                                variant="outline"
-                                                                onClick={() =>
-                                                                    handleRejectClaim(
-                                                                        c.claimId,
-                                                                    )
-                                                                }
-                                                                disabled={
-                                                                    isRejecting
-                                                                }
-                                                                className="text-xs py-1 px-2 border-amber-400 text-amber-700 hover:bg-amber-50 focus:ring-amber-500"
-                                                                leftIcon={
-                                                                    isRejecting ? (
-                                                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                                    ) : (
-                                                                        <XIcon className="w-3.5 h-3.5" />
-                                                                    )
-                                                                }
-                                                            >
-                                                                Reject
-                                                            </Button>
+                                                            <div className="text-[11px] text-gray-600 truncate">
+                                                                {email || "—"}
+                                                            </div>
+                                                            {c.createdAt && (
+                                                                <div className="text-xs sm:text-sm text-gray-500 mt-1">
+                                                                    Requested {fmtDate(c.createdAt)}{" "}
+                                                                    • {fmtTime(c.createdAt)}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                );
-                                            },
-                                        )}
+
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="solid"
+                                                            onClick={() =>
+                                                                handleApproveClaim(
+                                                                    c.claimId,
+                                                                    c.driverId
+                                                                )
+                                                            }
+                                                            disabled={isApproving}
+                                                            className="text-xs py-1 px-2 bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500"
+                                                            leftIcon={
+                                                                isApproving ? (
+                                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                ) : (
+                                                                    <Check className="w-3.5 h-3.5" />
+                                                                )
+                                                            }
+                                                        >
+                                                            Approve
+                                                        </Button>
+
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() =>
+                                                                handleRejectClaim(c.claimId)
+                                                            }
+                                                            disabled={isRejecting}
+                                                            className="text-xs py-1 px-2 border-amber-400 text-amber-700 hover:bg-amber-50 focus:ring-amber-500"
+                                                            leftIcon={
+                                                                isRejecting ? (
+                                                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                ) : (
+                                                                    <XIcon className="w-3.5 h-3.5" />
+                                                                )
+                                                            }
+                                                        >
+                                                            Reject
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 )}
 
-                                {claimDriversLoading &&
-                                    queuedClaims.length > 0 && (
-                                        <div className="text-[11px] text-gray-600">
-                                            Loading driver info…
-                                        </div>
-                                    )}
+                                {claimDriversLoading && queuedClaims.length > 0 && (
+                                    <div className="text-[11px] text-gray-600">
+                                        Loading driver info…
+                                    </div>
+                                )}
 
                                 {claimsError && (
                                     <div className="rounded-md border border-red-200 bg-red-50 p-2 text-[11px] text-red-700">
@@ -534,11 +482,7 @@ export default function RideSummaryCard({
                         {/* Assigned driver */}
                         <div className="mt-1 sm:mt-2">
                             <AssignedDriverBadge
-                                userId={
-                                    ride.assignedDriverId as
-                                        | string
-                                        | undefined
-                                }
+                                userId={ride.assignedDriverId as string | undefined}
                             />
                         </div>
 
@@ -552,15 +496,10 @@ export default function RideSummaryCard({
                                     >
                                         <AssignDriverSelect
                                             rideId={ride._id}
-                                            currentDriverId={
-                                                ride.assignedDriverId ||
-                                                undefined
-                                            }
+                                            currentDriverId={ride.assignedDriverId || undefined}
                                             filters={{ limit: 50 }}
                                             onAssigned={(driverUserId) => {
-                                                onDriverAssigned?.(
-                                                    driverUserId,
-                                                );
+                                                onDriverAssigned?.(driverUserId);
                                             }}
                                         />
 
@@ -572,9 +511,7 @@ export default function RideSummaryCard({
                                                 size="sm"
                                                 variant="outline"
                                                 className="w-full sm:w-auto text-xs"
-                                                leftIcon={
-                                                    <Car className="w-3.5 h-3.5" />
-                                                }
+                                                leftIcon={<Car className="w-3.5 h-3.5" />}
                                             >
                                                 Advanced assign
                                             </Button>
@@ -584,10 +521,7 @@ export default function RideSummaryCard({
 
                                 {isPrivileged && (
                                     <div onClick={(e) => e.stopPropagation()}>
-                                        <RideShareQuickPanel
-                                            rideId={ride._id}
-                                            className="w-full"
-                                        />
+                                        <RideShareQuickPanel rideId={ride._id} className="w-full" />
                                     </div>
                                 )}
 

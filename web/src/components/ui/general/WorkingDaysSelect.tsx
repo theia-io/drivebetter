@@ -1,8 +1,11 @@
-import {Field, Label, inputClass} from "@/components/ui/commmon";
+import { Field, Label, inputClass } from "@/components/ui/commmon";
 
 export type Day = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 
-export const DAY_OPTIONS: { value: "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"; label: string }[] = [
+export const DAY_OPTIONS: {
+    value: "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+    label: string;
+}[] = [
     { value: "mon", label: "Monday" },
     { value: "tue", label: "Tuesday" },
     { value: "wed", label: "Wednesday" },
@@ -13,10 +16,10 @@ export const DAY_OPTIONS: { value: "mon" | "tue" | "wed" | "thu" | "fri" | "sat"
 ];
 
 export function WorkingDaysSelect({
-                               value,
-                               onChange,
-                               id = "workingDays",
-                           }: {
+    value,
+    onChange,
+    id = "workingDays",
+}: {
     value: Array<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun">;
     onChange: (days: Array<"mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun">) => void;
     id?: string;

@@ -8,7 +8,7 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { Plus, Search, Users, Trash2, PencilLine, Eye } from "lucide-react";
 import { useUsers, deleteUser } from "@/stores/users";
-import {useAuthStore} from "@/stores";
+import { useAuthStore } from "@/stores";
 
 const qstring = (params: Record<string, any>) => {
     const sp = new URLSearchParams();
@@ -30,10 +30,10 @@ export default function UsersPage() {
 
     // Define the role that should be forced in the query
     // If Admin, forcedRole is null. If Dispatcher, forcedRole is 'driver'.
-    const forcedRole = isAdmin ? null : (isDispatcher ? "driver" : null);
+    const forcedRole = isAdmin ? null : isDispatcher ? "driver" : null;
 
     const [q, setQ] = useState(searchParams.get("q") || "");
-    const [role, setRole] = useState(isAdmin ? (searchParams.get("role") || "") : (forcedRole || ""));
+    const [role, setRole] = useState(isAdmin ? searchParams.get("role") || "" : forcedRole || "");
     const [page, setPage] = useState(Number(searchParams.get("page") || 1));
     const [limit, setLimit] = useState(Number(searchParams.get("limit") || 20));
 
@@ -70,8 +70,11 @@ export default function UsersPage() {
                                 <Users className="w-5 h-5 text-indigo-600" />
                             </div>
                             <div className="min-w-0">
-                                <Typography variant="h1" className="text-xl sm:text-3xl font-bold text-gray-900">
-                                    {isAdmin ? "Users" : (isDispatcher ? "Drivers" : "Users")}
+                                <Typography
+                                    variant="h1"
+                                    className="text-xl sm:text-3xl font-bold text-gray-900"
+                                >
+                                    {isAdmin ? "Users" : isDispatcher ? "Drivers" : "Users"}
                                 </Typography>
                                 <Typography variant="body1" className="text-gray-600 text-sm">
                                     {isLoading ? "Loading…" : `${total} total`}
@@ -120,10 +123,14 @@ export default function UsersPage() {
                                     className="w-full sm:w-32 px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                                 >
                                     {[10, 20, 50, 100].map((n) => (
-                                        <option key={n} value={n}>{n}/page</option>
+                                        <option key={n} value={n}>
+                                            {n}/page
+                                        </option>
                                     ))}
                                 </select>
-                                <Button variant="outline" onClick={applyFilters}>Apply</Button>
+                                <Button variant="outline" onClick={applyFilters}>
+                                    Apply
+                                </Button>
                             </div>
                         </CardBody>
                     </Card>
@@ -133,60 +140,88 @@ export default function UsersPage() {
                         <div className="overflow-hidden rounded-lg border border-gray-200">
                             <table className="min-w-full divide-y divide-gray-200 bg-white">
                                 <thead className="bg-gray-50">
-                                <tr>
-                                    <Th>Name</Th>
-                                    <Th>Email</Th>
-                                    <Th>Phone</Th>
-                                    <Th>Roles</Th>
-                                    <Th>Created</Th>
-                                    <Th className="text-center pr-4">Actions</Th>
-                                </tr>
+                                    <tr>
+                                        <Th>Name</Th>
+                                        <Th>Email</Th>
+                                        <Th>Phone</Th>
+                                        <Th>Roles</Th>
+                                        <Th>Created</Th>
+                                        <Th className="text-center pr-4">Actions</Th>
+                                    </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                {items.map((u) => (
-                                    <tr key={u._id} className="hover:bg-gray-50">
-                                        <Td>{u.name}</Td>
-                                        <Td className="text-gray-700">{u.email}</Td>
-                                        <Td className="text-gray-700">{u.phone || "—"}</Td>
-                                        <Td>
-                                            <div className="flex flex-wrap gap-1">
-                                                {u.roles.map((r) => (
-                                                    <span key={r} className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-gray-700">
-                              {r}
-                            </span>
-                                                ))}
-                                            </div>
-                                        </Td>
-                                        <Td>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}</Td>
-                                        <Td className="text-right">
-                                            <div className="flex items-center justify-end gap-2 pr-1">
-                                                <Link href={`/users/${u._id}`}>
-                                                    <Button variant="outline" size="sm" leftIcon={<Eye className="w-4 h-4" />}>Details</Button>
-                                                </Link>
-                                                {isAdmin && (
-                                                    <>
-                                                        <Link href={`/users/${u._id}/edit`}>
-                                                            <Button variant="outline" size="sm" leftIcon={<PencilLine className="w-4 h-4" />}>Edit</Button>
-                                                        </Link>
+                                    {items.map((u) => (
+                                        <tr key={u._id} className="hover:bg-gray-50">
+                                            <Td>{u.name}</Td>
+                                            <Td className="text-gray-700">{u.email}</Td>
+                                            <Td className="text-gray-700">{u.phone || "—"}</Td>
+                                            <Td>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {u.roles.map((r) => (
+                                                        <span
+                                                            key={r}
+                                                            className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-gray-700"
+                                                        >
+                                                            {r}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </Td>
+                                            <Td>
+                                                {u.createdAt
+                                                    ? new Date(u.createdAt).toLocaleDateString()
+                                                    : "—"}
+                                            </Td>
+                                            <Td className="text-right">
+                                                <div className="flex items-center justify-end gap-2 pr-1">
+                                                    <Link href={`/users/${u._id}`}>
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            leftIcon={<Trash2 className="w-4 h-4" />}
-                                                            onClick={() => onDelete(u._id)}
+                                                            leftIcon={<Eye className="w-4 h-4" />}
                                                         >
-                                                            Delete
+                                                            Details
                                                         </Button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </Td>
-                                    </tr>
-                                ))}
-                                {!items.length && (
-                                    <tr>
-                                        <td colSpan={6} className="p-6 text-center text-sm text-gray-600">No users</td>
-                                    </tr>
-                                )}
+                                                    </Link>
+                                                    {isAdmin && (
+                                                        <>
+                                                            <Link href={`/users/${u._id}/edit`}>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    leftIcon={
+                                                                        <PencilLine className="w-4 h-4" />
+                                                                    }
+                                                                >
+                                                                    Edit
+                                                                </Button>
+                                                            </Link>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                leftIcon={
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                }
+                                                                onClick={() => onDelete(u._id)}
+                                                            >
+                                                                Delete
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </Td>
+                                        </tr>
+                                    ))}
+                                    {!items.length && (
+                                        <tr>
+                                            <td
+                                                colSpan={6}
+                                                className="p-6 text-center text-sm text-gray-600"
+                                            >
+                                                No users
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -195,30 +230,57 @@ export default function UsersPage() {
                     {/* Cards for mobile */}
                     <div className="grid md:hidden grid-cols-1 gap-3">
                         {items.map((u) => (
-                            <Card key={u._id} variant="elevated" className="hover:shadow-lg transition-shadow">
+                            <Card
+                                key={u._id}
+                                variant="elevated"
+                                className="hover:shadow-lg transition-shadow"
+                            >
                                 <CardBody className="p-4">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0">
-                                            <div className="font-semibold text-gray-900">{u.name}</div>
-                                            <div className="text-sm text-gray-700 break-all">{u.email}</div>
-                                            <div className="text-sm text-gray-600">{u.phone || "—"}</div>
+                                            <div className="font-semibold text-gray-900">
+                                                {u.name}
+                                            </div>
+                                            <div className="text-sm text-gray-700 break-all">
+                                                {u.email}
+                                            </div>
+                                            <div className="text-sm text-gray-600">
+                                                {u.phone || "—"}
+                                            </div>
                                             <div className="mt-2 flex flex-wrap gap-1">
                                                 {u.roles.map((r) => (
-                                                    <span key={r} className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-gray-700">
-                            {r}
-                          </span>
+                                                    <span
+                                                        key={r}
+                                                        className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-gray-700"
+                                                    >
+                                                        {r}
+                                                    </span>
                                                 ))}
                                             </div>
                                             <div className="mt-1 text-xs text-gray-500">
-                                                {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"}
+                                                {u.createdAt
+                                                    ? new Date(u.createdAt).toLocaleDateString()
+                                                    : "—"}
                                             </div>
                                         </div>
                                         <div className="flex flex-col gap-2">
                                             <Link href={`/users/${u._id}`}>
-                                                <Button variant="outline" size="sm" leftIcon={<Eye className="w-4 h-4" />}>View</Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    leftIcon={<Eye className="w-4 h-4" />}
+                                                >
+                                                    View
+                                                </Button>
                                             </Link>
                                             <Link href={`/users/${u._id}/edit`}>
-                                                <Button variant="outline" size="sm" leftIcon={<PencilLine className="w-4 h-4" />}>Edit</Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    leftIcon={<PencilLine className="w-4 h-4" />}
+                                                >
+                                                    Edit
+                                                </Button>
                                             </Link>
                                             <Button
                                                 variant="outline"
@@ -250,7 +312,9 @@ export default function UsersPage() {
                                 onClick={() => {
                                     const next = Math.max(1, page - 1);
                                     setPage(next);
-                                    router.replace(`/users${qstring({ q, role, page: next, limit })}`);
+                                    router.replace(
+                                        `/users${qstring({ q, role, page: next, limit })}`
+                                    );
                                     mutate();
                                 }}
                                 disabled={page <= 1 || isLoading}
@@ -263,7 +327,9 @@ export default function UsersPage() {
                                 onClick={() => {
                                     const next = Math.min(pages, page + 1);
                                     setPage(next);
-                                    router.replace(`/users${qstring({ q, role, page: next, limit })}`);
+                                    router.replace(
+                                        `/users${qstring({ q, role, page: next, limit })}`
+                                    );
                                     mutate();
                                 }}
                                 disabled={page >= pages || isLoading}
@@ -281,7 +347,10 @@ export default function UsersPage() {
 /* ----------------------------- Table cells ----------------------------- */
 function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
     return (
-        <th scope="col" className={`px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider ${className}`}>
+        <th
+            scope="col"
+            className={`px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider ${className}`}
+        >
             {children}
         </th>
     );

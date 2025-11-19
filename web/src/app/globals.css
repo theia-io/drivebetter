@@ -1,11 +1,11 @@
-@import '../styles/design-tokens.css';
+@import "../styles/design-tokens.css";
 
 @tailwind base;
 @tailwind components;
-@tailwind utilities; 
+@tailwind utilities;
 
 /* @import "tailwindcss"; */
 
 body {
-  @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors;
+    @apply bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors;
 }

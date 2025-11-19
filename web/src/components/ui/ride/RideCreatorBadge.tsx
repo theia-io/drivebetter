@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import {RideCreatorUser} from "@/types";
+import { RideCreatorUser } from "@/types";
 import clsx from "clsx";
 
 export default function RideCreatorBadge({
-                                             creator,
-                                             className
-                                         }: {
+    creator,
+    className,
+}: {
     creator?: RideCreatorUser | null;
     className?: string;
 }) {
@@ -19,10 +19,11 @@ export default function RideCreatorBadge({
     return (
         <Link
             href={`/users/${creator._id}`}
-            className={clsx("inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold",
-                 "text-slate-800 ring-1 ring-inset ring-slate-300 hover:bg-slate-100 transition-colors truncate",
+            className={clsx(
+                "inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold",
+                "text-slate-800 ring-1 ring-inset ring-slate-300 hover:bg-slate-100 transition-colors truncate",
                 className
-                )}
+            )}
             title={subtitle || label}
         >
             <span className="truncate">{label}</span>

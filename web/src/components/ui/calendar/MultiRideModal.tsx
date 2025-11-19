@@ -17,11 +17,7 @@ import { Button, Typography } from "@/components/ui";
 import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
 import { Ride } from "@/types";
 import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
-import {
-    type RideStatus,
-    getPillStatusColor,
-    getStatusDotColor,
-} from "@/types/rideStatus";
+import { type RideStatus, getPillStatusColor, getStatusDotColor } from "@/types/rideStatus";
 
 type ListModalState = {
     date: Date;
@@ -87,19 +83,19 @@ function getSortLabel(sort: ListSortKey): string {
 }
 
 export default function MultiRideModal({
-                                           listModal,
-                                           listModalSelectedId,
-                                           listSort,
-                                           isListMode,
-                                           focusedListRide,
-                                           listRides,
-                                           onClose,
-                                           onSelectRide,
-                                           onBackToList,
-                                           onChangeSort,
-                                           onDriverAssigned,
-                                           onRideStatusChanged,
-                                       }: MultiRideModalProps) {
+    listModal,
+    listModalSelectedId,
+    listSort,
+    isListMode,
+    focusedListRide,
+    listRides,
+    onClose,
+    onSelectRide,
+    onBackToList,
+    onChangeSort,
+    onDriverAssigned,
+    onRideStatusChanged,
+}: MultiRideModalProps) {
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
     const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
@@ -142,10 +138,8 @@ export default function MultiRideModal({
             const rideStatus = r.status as RideStatus;
 
             const pendingCount =
-                (r as any).pendingClaimsCount ??
-                ((r as any).hasPendingClaims ? 1 : 0);
-            const hasPending =
-                (r as any).hasPendingClaims === true || pendingCount > 0;
+                (r as any).pendingClaimsCount ?? ((r as any).hasPendingClaims ? 1 : 0);
+            const hasPending = (r as any).hasPendingClaims === true || pendingCount > 0;
 
             if (hasStatusFilters && !selectedStatuses.includes(rideStatus)) {
                 return false;
@@ -174,7 +168,7 @@ export default function MultiRideModal({
                 sorted.sort(
                     (a, b) =>
                         (STATUS_SORT_RANK[a.status as RideStatus] ?? 99) -
-                        (STATUS_SORT_RANK[b.status as RideStatus] ?? 99),
+                        (STATUS_SORT_RANK[b.status as RideStatus] ?? 99)
                 );
                 break;
             case "amountDesc":
@@ -191,7 +185,7 @@ export default function MultiRideModal({
 
     const toggleStatusFilter = (key: RideStatus) => {
         setSelectedStatuses((prev) =>
-            prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key],
+            prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]
         );
     };
 
@@ -199,13 +193,10 @@ export default function MultiRideModal({
         setSelectedStatuses([]);
     };
 
-    const activeFilterCount =
-        selectedStatuses.length + (pendingOnly ? 1 : 0);
+    const activeFilterCount = selectedStatuses.length + (pendingOnly ? 1 : 0);
 
     const statusSummary =
-        selectedStatuses.length === 0
-            ? "All statuses"
-            : `${selectedStatuses.length} selected`;
+        selectedStatuses.length === 0 ? "All statuses" : `${selectedStatuses.length} selected`;
 
     const handleBackdropClick = async () => {
         await onClose();
@@ -252,12 +243,10 @@ export default function MultiRideModal({
                                 {isListMode
                                     ? `Showing ${ridesCount} ride${ridesCount === 1 ? "" : "s"}`
                                     : focusedListRide
-                                        ? `${fmtDate(
-                                            focusedListRide.datetime,
-                                        )} • ${fmtTime(
-                                            focusedListRide.datetime,
+                                      ? `${fmtDate(focusedListRide.datetime)} • ${fmtTime(
+                                            focusedListRide.datetime
                                         )}`
-                                        : ""}
+                                      : ""}
                             </Typography>
                         </div>
                     </div>
@@ -281,9 +270,7 @@ export default function MultiRideModal({
                                 <button
                                     type="button"
                                     className="flex w-full items-center justify-between px-3 py-2.5 sm:px-4"
-                                    onClick={() =>
-                                        setFiltersOpen((open) => !open)
-                                    }
+                                    onClick={() => setFiltersOpen((open) => !open)}
                                 >
                                     <div className="flex items-center gap-2">
                                         <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
@@ -317,19 +304,14 @@ export default function MultiRideModal({
                                 {filtersOpen && (
                                     <div className="border-t border-gray-200 px-3 py-2.5 sm:px-4 sm:py-3 space-y-2.5">
                                         {/* Row 1: status filter (full-width, mobile-friendly) */}
-                                        <div
-                                            ref={statusDropdownRef}
-                                            className="relative"
-                                        >
+                                        <div ref={statusDropdownRef} className="relative">
                                             <div className="text-[11px] sm:text-xs mb-1 text-gray-600">
                                                 Status
                                             </div>
                                             <button
                                                 type="button"
                                                 onClick={() =>
-                                                    setStatusDropdownOpen(
-                                                        (open) => !open,
-                                                    )
+                                                    setStatusDropdownOpen((open) => !open)
                                                 }
                                                 className="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-xs sm:text-sm text-gray-700 hover:bg-gray-50"
                                             >
@@ -350,9 +332,7 @@ export default function MultiRideModal({
                                                         </span>
                                                         <button
                                                             type="button"
-                                                            onClick={
-                                                                clearStatusFilters
-                                                            }
+                                                            onClick={clearStatusFilters}
                                                             className="text-[11px] text-indigo-600 hover:text-indigo-700"
                                                         >
                                                             Clear
@@ -360,40 +340,27 @@ export default function MultiRideModal({
                                                     </div>
                                                     <ul className="max-h-64 overflow-y-auto px-2 py-2 text-[11px] sm:text-xs">
                                                         {STATUS_FILTER_OPTIONS.map(
-                                                            ({
-                                                                 key,
-                                                                 label,
-                                                             }) => {
+                                                            ({ key, label }) => {
                                                                 const checked =
-                                                                    selectedStatuses.includes(
-                                                                        key,
-                                                                    );
+                                                                    selectedStatuses.includes(key);
                                                                 const pillClasses =
-                                                                    getPillStatusColor(
-                                                                        key,
-                                                                    );
+                                                                    getPillStatusColor(key);
                                                                 const dotClasses =
-                                                                    getStatusDotColor(
-                                                                        key,
-                                                                    );
+                                                                    getStatusDotColor(key);
 
                                                                 return (
                                                                     <li
-                                                                        key={
-                                                                            key
-                                                                        }
+                                                                        key={key}
                                                                         className="px-1 py-1"
                                                                     >
                                                                         <label className="flex items-center gap-2 cursor-pointer">
                                                                             <input
                                                                                 type="checkbox"
                                                                                 className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                                                                checked={
-                                                                                    checked
-                                                                                }
+                                                                                checked={checked}
                                                                                 onChange={() =>
                                                                                     toggleStatusFilter(
-                                                                                        key,
+                                                                                        key
                                                                                     )
                                                                                 }
                                                                             />
@@ -410,7 +377,7 @@ export default function MultiRideModal({
                                                                         </label>
                                                                     </li>
                                                                 );
-                                                            },
+                                                            }
                                                         )}
                                                     </ul>
                                                 </div>
@@ -426,10 +393,7 @@ export default function MultiRideModal({
                                                         className="mt-0.5 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
                                                         checked={pendingOnly}
                                                         onChange={(e) =>
-                                                            setPendingOnly(
-                                                                e.target
-                                                                    .checked,
-                                                            )
+                                                            setPendingOnly(e.target.checked)
                                                         }
                                                     />
                                                     <div className="flex flex-col">
@@ -437,7 +401,8 @@ export default function MultiRideModal({
                                                             Pending driver
                                                         </span>
                                                         <span className="text-[10px] sm:text-[11px] text-gray-500">
-                                                            Show only rides that have at least one queued driver request
+                                                            Show only rides that have at least one
+                                                            queued driver request
                                                         </span>
                                                     </div>
                                                 </div>
@@ -445,28 +410,19 @@ export default function MultiRideModal({
                                         </div>
 
                                         {/* Row 3: sort dropdown (full-width row) */}
-                                        <div
-                                            ref={sortDropdownRef}
-                                            className="relative"
-                                        >
+                                        <div ref={sortDropdownRef} className="relative">
                                             <div className="text-[11px] sm:text-xs mb-1 text-gray-600">
                                                 Sort by
                                             </div>
                                             <button
                                                 type="button"
-                                                onClick={() =>
-                                                    setSortDropdownOpen(
-                                                        (open) => !open,
-                                                    )
-                                                }
+                                                onClick={() => setSortDropdownOpen((open) => !open)}
                                                 className="flex w-full items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-xs sm:text-sm text-gray-700 hover:bg-gray-50"
                                             >
                                                 <span className="inline-flex items-center gap-2">
                                                     <ArrowUpDown className="w-4 h-4 text-gray-500" />
                                                     <span className="font-medium">
-                                                        {getSortLabel(
-                                                            listSort,
-                                                        )}
+                                                        {getSortLabel(listSort)}
                                                     </span>
                                                 </span>
                                                 <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -483,15 +439,9 @@ export default function MultiRideModal({
                                                                 "amountDesc",
                                                             ] as ListSortKey[]
                                                         ).map((option) => {
-                                                            const active =
-                                                                option ===
-                                                                listSort;
+                                                            const active = option === listSort;
                                                             return (
-                                                                <li
-                                                                    key={
-                                                                        option
-                                                                    }
-                                                                >
+                                                                <li key={option}>
                                                                     <button
                                                                         type="button"
                                                                         className={`flex w-full items-center px-3 py-1.5 text-left hover:bg-gray-50 ${
@@ -500,17 +450,13 @@ export default function MultiRideModal({
                                                                                 : "text-gray-700"
                                                                         }`}
                                                                         onClick={() => {
-                                                                            onChangeSort(
-                                                                                option,
-                                                                            );
+                                                                            onChangeSort(option);
                                                                             setSortDropdownOpen(
-                                                                                false,
+                                                                                false
                                                                             );
                                                                         }}
                                                                     >
-                                                                        {getSortLabel(
-                                                                            option,
-                                                                        )}
+                                                                        {getSortLabel(option)}
                                                                     </button>
                                                                 </li>
                                                             );
@@ -532,16 +478,11 @@ export default function MultiRideModal({
                                 )}
 
                                 {visibleRides.map((ride) => {
-                                    const status =
-                                        ride.status as RideStatus;
-                                    const hasAmount =
-                                        !!ride.payment?.amountCents;
+                                    const status = ride.status as RideStatus;
+                                    const hasAmount = !!ride.payment?.amountCents;
                                     const distance = km(ride.distance || 0);
-                                    const duration =
-                                        (ride as any).durationMinutes;
-                                    const durationText = mins(
-                                        duration || 0,
-                                    );
+                                    const duration = (ride as any).durationMinutes;
+                                    const durationText = mins(duration || 0);
                                     const amountText = hasAmount
                                         ? money(ride.payment!.amountCents)
                                         : null;
@@ -550,54 +491,37 @@ export default function MultiRideModal({
 
                                     const pendingCount =
                                         (ride as any).pendingClaimsCount ??
-                                        ((ride as any).hasPendingClaims
-                                            ? 1
-                                            : 0);
+                                        ((ride as any).hasPendingClaims ? 1 : 0);
                                     const hasPending =
-                                        (ride as any).hasPendingClaims ===
-                                        true || pendingCount > 0;
+                                        (ride as any).hasPendingClaims === true || pendingCount > 0;
 
                                     const isSelected =
-                                        listModalSelectedId &&
-                                        rideId === listModalSelectedId;
+                                        listModalSelectedId && rideId === listModalSelectedId;
 
                                     return (
                                         <button
                                             key={ride._id}
                                             type="button"
-                                            onClick={() =>
-                                                onSelectRide(rideId)
-                                            }
+                                            onClick={() => onSelectRide(rideId)}
                                             className={`w-full text-left px-3 py-2.5 sm:px-4 sm:py-3 hover:bg-gray-50 ${
-                                                isSelected
-                                                    ? "bg-indigo-50/60"
-                                                    : ""
+                                                isSelected ? "bg-indigo-50/60" : ""
                                             }`}
                                         >
                                             <div className="flex items-start justify-between gap-2">
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex items-center gap-1 text-[11px] sm:text-xs text-gray-500">
-                                                        <span>
-                                                            {fmtTime(
-                                                                ride.datetime,
-                                                            )}
-                                                        </span>
+                                                        <span>{fmtTime(ride.datetime)}</span>
                                                         <span>·</span>
                                                         <span className="truncate">
-                                                            {fmtDate(
-                                                                ride.datetime,
-                                                            )}
+                                                            {fmtDate(ride.datetime)}
                                                         </span>
                                                     </div>
                                                     <div className="mt-0.5 text-xs sm:text-sm font-medium text-gray-900 truncate">
-                                                        {ride.from} →{" "}
-                                                        {ride.to}
+                                                        {ride.from} → {ride.to}
                                                     </div>
                                                     <div className="mt-0.5 text-[11px] sm:text-xs text-gray-500 truncate">
-                                                        {amountText ||
-                                                            distance}
-                                                        {durationText &&
-                                                            ` • ${durationText}`}
+                                                        {amountText || distance}
+                                                        {durationText && ` • ${durationText}`}
                                                     </div>
                                                 </div>
 
@@ -606,18 +530,16 @@ export default function MultiRideModal({
                                                     <div className="relative">
                                                         <span
                                                             className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] sm:text-xs font-medium ${getPillStatusColor(
-                                                                status,
+                                                                status
                                                             )}`}
                                                         >
                                                             <span
                                                                 className={`h-2 w-2 rounded-full ${getStatusDotColor(
-                                                                    status,
+                                                                    status
                                                                 )}`}
                                                             />
                                                             <span className="capitalize">
-                                                                {getStatusLabel(
-                                                                    status,
-                                                                )}
+                                                                {getStatusLabel(status)}
                                                             </span>
                                                         </span>
 
@@ -647,10 +569,7 @@ export default function MultiRideModal({
                             <RideSummaryCard
                                 ride={focusedListRide}
                                 onDriverAssigned={(driverUserId) =>
-                                    onDriverAssigned(
-                                        String(focusedListRide._id),
-                                        driverUserId,
-                                    )
+                                    onDriverAssigned(String(focusedListRide._id), driverUserId)
                                 }
                                 onStatusChanged={onRideStatusChanged}
                             />

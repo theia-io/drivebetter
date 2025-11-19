@@ -15,12 +15,22 @@ export interface JwtPayload {
 }
 
 export function signAccessToken(user: { id: string; email?: string; roles?: Roles }) {
-    const payload: JwtPayload = { sub: user.id, email: user.email, roles: user.roles, typ: "access" };
+    const payload: JwtPayload = {
+        sub: user.id,
+        email: user.email,
+        roles: user.roles,
+        typ: "access",
+    };
     return jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_TTL });
 }
 
 export function signRefreshToken(user: { id: string; email?: string; roles?: Roles }) {
-    const payload: JwtPayload = { sub: user.id, email: user.email, roles: user.roles, typ: "refresh" };
+    const payload: JwtPayload = {
+        sub: user.id,
+        email: user.email,
+        roles: user.roles,
+        typ: "refresh",
+    };
     return jwt.sign(payload, JWT_SECRET, { expiresIn: REFRESH_TTL });
 }
 

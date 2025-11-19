@@ -75,52 +75,60 @@ const PointSchema = new Schema<GeoPoint>(
 
 const RideSchema = new Schema<IRide>(
     {
-        creatorId:        { type: Schema.Types.ObjectId, ref: "User", default: null },
+        creatorId: { type: Schema.Types.ObjectId, ref: "User", default: null },
         customer: {
-            name:  { type: String, trim: true, required: false },
+            name: { type: String, trim: true, required: false },
             phone: { type: String, trim: true, required: false },
         },
 
         // Display strings
-        from:             { type: String, required: true },
-        to:               { type: String, required: true },
-        stops:            [{ type: String }],
+        from: { type: String, required: true },
+        to: { type: String, required: true },
+        stops: [{ type: String }],
 
         // Geo-normalized
-        fromLocation:     { type: PointSchema, index: "2dsphere", required: false },
-        toLocation:       { type: PointSchema, index: "2dsphere", required: false },
-        stopLocations:    { type: [PointSchema], required: false },
+        fromLocation: { type: PointSchema, index: "2dsphere", required: false },
+        toLocation: { type: PointSchema, index: "2dsphere", required: false },
+        stopLocations: { type: [PointSchema], required: false },
 
         // Provider metadata
-        fromPlaceId:      { type: String },
-        toPlaceId:        { type: String },
-        distance:         { type: Number, min: 0 },
-        geoAccuracy:      { type: Number, min: 0 },
-        geocodedAt:       { type: Date },
+        fromPlaceId: { type: String },
+        toPlaceId: { type: String },
+        distance: { type: Number, min: 0 },
+        geoAccuracy: { type: Number, min: 0 },
+        geocodedAt: { type: Date },
 
-        datetime:         { type: Date, required: true },
+        datetime: { type: Date, required: true },
 
         // Correct type enum: completion is a status, not a type
-        type:             { type: String, enum: ["reservation", "asap"], required: true },
+        type: { type: String, enum: ["reservation", "asap"], required: true },
 
-        queue:            [{ type: Schema.Types.ObjectId, ref: "User" }],
+        queue: [{ type: Schema.Types.ObjectId, ref: "User" }],
         assignedDriverId: { type: Schema.Types.ObjectId, ref: "User", default: null },
 
-        coveredVisible:   { type: Boolean, default: true },
+        coveredVisible: { type: Boolean, default: true },
 
         status: {
             type: String,
-            enum: ["unassigned", "assigned", "on_my_way", "on_location", "pob", "clear", "completed"],
+            enum: [
+                "unassigned",
+                "assigned",
+                "on_my_way",
+                "on_location",
+                "pob",
+                "clear",
+                "completed",
+            ],
             default: "unassigned",
         },
 
         notes: { type: String },
 
         payment: {
-            method:     { type: String, enum: ["cash", "card", "qr"] },
-            paid:       { type: Boolean, default: false },
+            method: { type: String, enum: ["cash", "card", "qr"] },
+            paid: { type: Boolean, default: false },
             driverPaid: { type: Boolean, default: false },
-            amountCents:{ type: Number, min: 0 },
+            amountCents: { type: Number, min: 0 },
         },
     },
     { timestamps: true }
@@ -131,7 +139,6 @@ RideSchema.index({ status: 1, datetime: 1 });
 RideSchema.index({ assignedDriverId: 1, datetime: -1 });
 RideSchema.index({ type: 1, datetime: 1 });
 
-const Ride: Model<IRide> =
-    mongoose.models.Ride || mongoose.model<IRide>("Ride", RideSchema);
+const Ride: Model<IRide> = mongoose.models.Ride || mongoose.model<IRide>("Ride", RideSchema);
 
 export default Ride;

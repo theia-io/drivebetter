@@ -12,14 +12,16 @@ export async function connectDb(): Promise<typeof mongoose> {
 
         mongoose.set("strictQuery", true);
 
-        cachedPromise = mongoose.connect(uri, {
-            // keep defaults minimal; tune as needed
-            maxPoolSize: 10
-        }).then((conn) => {
-            cachedConn = conn;
-            bindLifecycleHandlers();
-            return conn;
-        });
+        cachedPromise = mongoose
+            .connect(uri, {
+                // keep defaults minimal; tune as needed
+                maxPoolSize: 10,
+            })
+            .then((conn) => {
+                cachedConn = conn;
+                bindLifecycleHandlers();
+                return conn;
+            });
     }
 
     return cachedPromise;

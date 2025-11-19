@@ -1,23 +1,23 @@
 [
-  {
-    "name": "AMS Airport Drivers",
-    "description": "Licensed Schiphol drivers",
-    "type": "airport",
-    "city": "Amsterdam",
-    "location": "Schiphol",
-    "visibility": "restricted",
-    "isInviteOnly": true,
-    "tags": ["schiphol", "permit", "priority"],
-    "membersEmails": ["admin@example.com", "john.driver@example.com"]
-  },
-  {
-    "name": "City Fleet – Amsterdam",
-    "description": "City-wide drivers",
-    "type": "city",
-    "city": "Amsterdam",
-    "visibility": "public",
-    "isInviteOnly": false,
-    "tags": ["city", "public"],
-    "membersEmails": ["john.driver@example.com"]
-  }
+    {
+        "name": "AMS Airport Drivers",
+        "description": "Licensed Schiphol drivers",
+        "type": "airport",
+        "city": "Amsterdam",
+        "location": "Schiphol",
+        "visibility": "restricted",
+        "isInviteOnly": true,
+        "tags": ["schiphol", "permit", "priority"],
+        "membersEmails": ["admin@example.com", "john.driver@example.com"]
+    },
+    {
+        "name": "City Fleet – Amsterdam",
+        "description": "City-wide drivers",
+        "type": "city",
+        "city": "Amsterdam",
+        "visibility": "public",
+        "isInviteOnly": false,
+        "tags": ["city", "public"],
+        "membersEmails": ["john.driver@example.com"]
+    }
 ]

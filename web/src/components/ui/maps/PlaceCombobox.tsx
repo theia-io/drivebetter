@@ -4,19 +4,19 @@ import { searchPlaces, type PlaceHit } from "@/stores/geocode";
 
 type Props = {
     id?: string;
-    value?: string;                     // optional initial text
+    value?: string; // optional initial text
     onSelectedChange: (hit: PlaceHit | null) => void; // fires only on pick/clear
     error?: string;
     placeholder?: string;
 };
 
 export default function PlaceCombobox({
-                                          id,
-                                          value = "",
-                                          onSelectedChange,
-                                          error,
-                                          placeholder,
-                                      }: Props) {
+    id,
+    value = "",
+    onSelectedChange,
+    error,
+    placeholder,
+}: Props) {
     const [q, setQ] = useState(value);
     const [open, setOpen] = useState(false);
     const [hits, setHits] = useState<PlaceHit[]>([]);
@@ -72,7 +72,7 @@ export default function PlaceCombobox({
     function handlePick(hit: PlaceHit) {
         setSelected(hit);
         onSelectedChange(hit);
-        setQ(hit.label);      // lock text to chosen label
+        setQ(hit.label); // lock text to chosen label
         setOpen(false);
     }
 

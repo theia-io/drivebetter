@@ -11,29 +11,27 @@ export default function AppFooter() {
     return (
         <footer className="mt-6 border-t border-gray-200 py-2 px-3 text-[11px] text-gray-500 flex items-center justify-between">
             <div className="flex flex-wrap items-center gap-2">
-        <span>
-          Web v{WEB_VERSION}
-            {WEB_COMMIT !== "dev" && (
-                <span className="ml-1 text-gray-400">({WEB_COMMIT})</span>
-            )}
-        </span>
+                <span>
+                    Web v{WEB_VERSION}
+                    {WEB_COMMIT !== "dev" && (
+                        <span className="ml-1 text-gray-400">({WEB_COMMIT})</span>
+                    )}
+                </span>
 
                 {apiVersion && (
                     <span className="ml-3">
-            API v{apiVersion.version}
+                        API v{apiVersion.version}
                         {apiVersion.commit && (
-                            <span className="ml-1 text-gray-400">
-                ({apiVersion.commit})
-              </span>
+                            <span className="ml-1 text-gray-400">({apiVersion.commit})</span>
                         )}
-          </span>
+                    </span>
                 )}
             </div>
 
             {apiVersion?.buildTime && (
                 <span className="hidden sm:inline text-gray-400">
-          Built: {new Date(apiVersion.buildTime).toLocaleString()}
-        </span>
+                    Built: {new Date(apiVersion.buildTime).toLocaleString()}
+                </span>
             )}
         </footer>
     );

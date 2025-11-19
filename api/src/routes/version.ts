@@ -31,10 +31,7 @@ const router = Router();
  */
 router.get("/", (req: Request, res: Response) => {
     const pkgName = process.env.npm_package_name || "drivebetter-api";
-    const version =
-        process.env.APP_VERSION ||
-        process.env.npm_package_version ||
-        "0.0.0-dev";
+    const version = process.env.APP_VERSION || process.env.npm_package_version || "0.0.0-dev";
 
     const payload = {
         name: pkgName,

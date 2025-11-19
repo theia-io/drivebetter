@@ -1,6 +1,6 @@
-import {VehicleType} from "@/types/driver-details";
-import {RideCreatorUser} from "@/types/user";
-import {RideStatus} from "@/types/rideStatus";
+import { VehicleType } from "@/types/driver-details";
+import { RideCreatorUser } from "@/types/user";
+import { RideStatus } from "@/types/rideStatus";
 
 export type RideType = "reservation" | "asap";
 export type PaymentMethod = "cash" | "zelle" | "card" | "qr";
@@ -13,7 +13,14 @@ export type GeoPoint = {
 export type EligibleDriver = {
     userId: string;
     user?: { _id: string; name: string; email?: string; phone?: string; roles: string[] };
-    vehicle?: { make?: string; model?: string; year?: number; color?: string; plate?: string; type?: VehicleType };
+    vehicle?: {
+        make?: string;
+        model?: string;
+        year?: number;
+        color?: string;
+        plate?: string;
+        type?: VehicleType;
+    };
     capacity?: { seatsTotal?: number; maxPassengers?: number; luggageCapacityLiters?: number };
     features?: { petFriendly?: boolean; babySeat?: boolean; wheelchairAccessible?: boolean };
     languages?: { primary?: string; list?: string[] };
