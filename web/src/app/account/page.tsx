@@ -1,27 +1,27 @@
 "use client";
 
 import ProtectedLayout from "@/components/ProtectedLayout";
+import { Button, Card, CardBody, CardHeader, Container, Typography } from "@/components/ui";
 import { useAuthStore } from "@/stores/auth";
-import { Card, CardHeader, CardBody, Typography, Container, Button } from "@/components/ui";
 import {
-    User,
+    AlertCircle,
+    Award,
+    Bell,
+    Calendar,
+    Camera,
+    Car,
+    CheckCircle,
+    DollarSign,
+    Edit,
     Mail,
+    MapPin,
     Shield,
     Star,
-    DollarSign,
-    Calendar,
-    MapPin,
-    Car,
-    Bell,
-    Settings,
-    Edit,
-    Camera,
-    CheckCircle,
-    AlertCircle,
-    TrendingUp,
-    Award,
+    User,
 } from "lucide-react";
 import Link from "next/link";
+import Notifications from "./components/notifications";
+import InstallPrompt from "./components/install";
 
 export default function AccountPage() {
     const { user } = useAuthStore();
@@ -134,6 +134,7 @@ export default function AccountPage() {
                                             <Camera className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                                         </button>
                                     </div>
+
                                     <div className="mt-3 sm:mt-0 flex-1">
                                         <Typography
                                             variant="h2"
@@ -161,17 +162,25 @@ export default function AccountPage() {
                                             </div>
                                         </div>
                                     </div>
+
                                     <div className="mt-3 sm:mt-0">
-                                        <div className="flex items-center space-x-2">
+                                        <div className="flex items-center gap-1 w-full">
                                             <div className="flex items-center">
                                                 <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 fill-current" />
+
                                                 <span className="text-base sm:text-lg font-semibold text-gray-900 ml-1">
                                                     4.8
                                                 </span>
                                             </div>
+
                                             <span className="text-xs sm:text-sm text-gray-600">
                                                 (1,247 reviews)
                                             </span>
+
+                                            <div className="ml-auto">
+                                                <Notifications />
+                                                <InstallPrompt />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
