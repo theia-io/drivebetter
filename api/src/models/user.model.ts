@@ -1,5 +1,6 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { Role } from "../types/common";
+import { PushSubscription } from "web-push";
 
 export interface IUser extends Document {
     name: string;
@@ -8,7 +9,7 @@ export interface IUser extends Document {
     passwordHash?: string;
     roles: Role[];
     referralCode?: string;
-
+    notifications?: PushSubscription[];
     emailVerified: boolean;
     emailVerifyToken?: string | null;
     emailVerifyExpires?: Date | null;
@@ -51,6 +52,20 @@ const UserSchema = new Schema<IUser>(
         resetExpires: { type: Date, default: null },
 
         refreshTokens: { type: [String], default: [] },
+
+        notifications: {
+            type: [
+                {
+                    endpoint: { type: String, required: true },
+                    expirationTime: { type: Number, default: null },
+                    keys: {
+                        p256dh: { type: String, required: true },
+                        auth: { type: String, required: true },
+                    },
+                },
+            ],
+            default: [],
+        },
     },
     { timestamps: true }
 );
