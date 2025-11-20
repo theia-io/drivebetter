@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function InstallPrompt() {
     const [isIOS, setIsIOS] = useState(false);
@@ -26,7 +26,7 @@ export default function InstallPrompt() {
                         {" "}
                         ⎋{" "}
                     </span>
-                    and then "Add to Home Screen"
+                    and then &apos;Add to Home Screen&apos;
                     <span role="img" aria-label="plus icon">
                         {" "}
                         ➕{" "}
