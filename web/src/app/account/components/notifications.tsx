@@ -1,7 +1,9 @@
 "use client";
+
 import { Button } from "@/components/ui";
 import { apiPost } from "@/services/http";
-import { useState, useEffect } from "react";
+import { useAuthStore } from "@/stores";
+import { useEffect, useState } from "react";
 
 function urlBase64ToUint8Array(base64String: string) {
     const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -17,8 +19,11 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export default function Notifications({ className }: { className?: string }) {
+    const { user } = useAuthStore();
     const [isSupported, setIsSupported] = useState(false);
-    const [subscription, setSubscription] = useState<PushSubscription | null>(null);
+    const [subscription, setSubscription] = useState<PushSubscription | null>(
+        user?.notifications?.[0] || null
+    );
     const [message, setMessage] = useState("");
 
     useEffect(() => {

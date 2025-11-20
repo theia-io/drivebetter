@@ -9,6 +9,7 @@ export interface User {
     emailVerified?: boolean;
     createdAt?: string;
     updatedAt?: string;
+    notifications?: PushSubscription[];
 }
 
 export interface RideCreatorUser {

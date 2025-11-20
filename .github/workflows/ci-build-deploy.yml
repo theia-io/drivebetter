@@ -2,15 +2,14 @@ name: Build Docker Images for API & UI and Deploy
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   REGISTRY: docker.io
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
 
@@ -79,6 +78,8 @@ jobs:
           PUBLIC_BASE_URL: ${{ secrets.PUBLIC_BASE_URL }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
         run: |
           sed -i 's|<MONGO_INITDB_ROOT_USERNAME>|'"$MONGO_USER"'|g' docker-compose.yml
           sed -i 's|<MONGO_INITDB_ROOT_PASSWORD>|'"$MONGO_PASS"'|g' docker-compose.yml
@@ -89,6 +90,8 @@ jobs:
           sed -i 's|<PUBLIC_BASE_URL>|'"$PUBLIC_BASE_URL"'|g' docker-compose.yml
           sed -i 's|<GOOGLE_CLIENT_ID>|'"$GOOGLE_CLIENT_ID"'|g' docker-compose.yml
           sed -i 's|<GOOGLE_CLIENT_SECRET>|'"$GOOGLE_CLIENT_SECRET"'|g' docker-compose.yml
+          sed -i 's|<NEXT_PUBLIC_VAPID_PUBLIC_KEY>|'"$NEXT_PUBLIC_VAPID_PUBLIC_KEY"'|g' docker-compose.yml
+          sed -i 's|<VAPID_PRIVATE_KEY>|'"$VAPID_PRIVATE_KEY"'|g' docker-compose.yml
 
           echo "docker-compose.yml content after substitution:"
           cat docker-compose.yml

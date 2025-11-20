@@ -45,12 +45,15 @@ services:
       GOOGLE_CLIENT_ID: your-google-client-id.apps.googleusercontent.com
       GOOGLE_CLIENT_SECRET: your-google-client-secret
       GOOGLE_CALLBACK_URL: http://localhost:3000/api/v1/oauth/google/callback
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: <NEXT_PUBLIC_VAPID_PUBLIC_KEY>
+      VAPID_PRIVATE_KEY: <VAPID_PRIVATE_KEY>
   web:
     image: kutsyk/betterdriver-web:latest
     container_name: betterdrive_web
     restart: always
     environment:
       NEXT_PUBLIC_API_BASE_URL: http://api:3000
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: <NEXT_PUBLIC_VAPID_PUBLIC_KEY>
     expose:
       - "4200" # Expose internal port 80 (used by Nginx)
 
