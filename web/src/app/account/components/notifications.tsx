@@ -16,7 +16,7 @@ function urlBase64ToUint8Array(base64String: string) {
     return outputArray;
 }
 
-export default function Notifications() {
+export default function Notifications({ className }: { className?: string }) {
     const [isSupported, setIsSupported] = useState(false);
     const [subscription, setSubscription] = useState<PushSubscription | null>(null);
     const [message, setMessage] = useState("");
@@ -73,7 +73,7 @@ export default function Notifications() {
     }
 
     return (
-        <div>
+        <div className={className}>
             {subscription ? (
                 <>
                     <div className="flex items-center gap-2">

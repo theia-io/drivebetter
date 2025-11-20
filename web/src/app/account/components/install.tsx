@@ -1,7 +1,8 @@
 "use client";
+import { Button } from "@/components/ui";
 import { useEffect, useState } from "react";
 
-export default function InstallPrompt() {
+export default function InstallPrompt({ className }: { className?: string }) {
     const [isIOS, setIsIOS] = useState(false);
     const [isStandalone, setIsStandalone] = useState(false);
 
@@ -16,23 +17,25 @@ export default function InstallPrompt() {
     }
 
     return (
-        <div>
-            <h3>Install App</h3>
-            <button>Add to Home Screen</button>
+        <div className={className}>
             {isIOS && (
-                <p>
-                    To install this app on your iOS device, tap the share button
-                    <span role="img" aria-label="share icon">
-                        {" "}
-                        ⎋{" "}
-                    </span>
-                    and then &apos;Add to Home Screen&apos;
-                    <span role="img" aria-label="plus icon">
-                        {" "}
-                        ➕{" "}
-                    </span>
-                    .
-                </p>
+                <>
+                    <h3 className="text-lg font-bold">Install App: Add to Home Screen</h3>
+
+                    <p>
+                        To install this app on your iOS device, tap the share button
+                        <span role="img" aria-label="share icon">
+                            {" "}
+                            ⎋{" "}
+                        </span>
+                        and then &apos;Add to Home Screen&apos;
+                        <span role="img" aria-label="plus icon">
+                            {" "}
+                            ➕{" "}
+                        </span>
+                        .
+                    </p>
+                </>
             )}
         </div>
     );
