@@ -41,6 +41,8 @@ jobs:
 
       - name: Build and Push WEB Image
         uses: docker/build-push-action@v5
+        env:
+          NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_VAPID_PUBLIC_KEY }}
         with:
           context: ./web
           push: true
