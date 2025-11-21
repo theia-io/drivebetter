@@ -4,7 +4,7 @@ const nextConfig = {
     swcMinify: true,
     experimental: { typedRoutes: true },
     images: {
-        remotePatterns: [{ protocol: "https", hostname: "**.drivebetter.app" }],
+        remotePatterns: [{ protocol: "https", hostname: "**.drivebetter.co" }],
     },
     output: "standalone",
 };

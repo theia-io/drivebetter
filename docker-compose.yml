@@ -64,9 +64,11 @@ services:
     restart: always
     ports:
       - "80:80"
-      # - "443:443" # Uncomment when you set up SSL
+      - "443:443" # HTTPS - uncomment after SSL setup
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./iac/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./iac/certbot/conf:/etc/letsencrypt:ro
+      - ./iac/certbot/www:/var/www/certbot:ro
     depends_on:
       - api
       - web
