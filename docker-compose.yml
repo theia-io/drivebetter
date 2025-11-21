@@ -41,10 +41,11 @@ services:
       JWT_SECRET: dev_super_secret
       SWAGGER_ENABLED: true
       REQUIRE_EMAIL_VERIFICATION: false
-      PUBLIC_BASE_URL: http://193.169.241.16
+      PUBLIC_BASE_URL: http://drivebetter.co
+      CORS_ORIGIN: "http://localhost:4200,http://localhost:4201,https://localhost:4200,https://localhost:4201,http://drivebetter.co,https://drivebetter.co,http://www.drivebetter.co,https://www.drivebetter.co,http://193.169.241.16"
       GOOGLE_CLIENT_ID: your-google-client-id.apps.googleusercontent.com
       GOOGLE_CLIENT_SECRET: your-google-client-secret
-      GOOGLE_CALLBACK_URL: http://localhost:3000/api/v1/oauth/google/callback
+      GOOGLE_CALLBACK_URL: http://drivebetter.co/api/v1/oauth/google/callback
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: <NEXT_PUBLIC_VAPID_PUBLIC_KEY>
       VAPID_PRIVATE_KEY: <VAPID_PRIVATE_KEY>
   web:
@@ -52,7 +53,7 @@ services:
     container_name: betterdrive_web
     restart: always
     environment:
-      NEXT_PUBLIC_API_BASE_URL: http://api:3000
+      NEXT_PUBLIC_API_BASE_URL: /api/v1
       NEXT_PUBLIC_VAPID_PUBLIC_KEY: <NEXT_PUBLIC_VAPID_PUBLIC_KEY>
     expose:
       - "4200" # Expose internal port 80 (used by Nginx)
