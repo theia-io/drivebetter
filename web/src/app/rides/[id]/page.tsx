@@ -294,22 +294,27 @@ export default function RideDetailsPage() {
                                     )}
                                 </div>
 
-                                {/* Active mode hint for driver */}
+                                {/* Floating Active Ride activator (driver only) */}
                                 {isActiveModeAvailable && (
-                                    <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
-                                        <div className="text-[11px] sm:text-xs text-gray-500">
-                                            As the assigned driver you can use an “Active Mode” with
-                                            large buttons for easier status updates while driving.
+                                    <div className="fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-40">
+                                        <div className="group relative flex flex-col items-end gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => router.push(`/rides/${id}/active`)}
+                                                className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                                aria-label="Open Active Ride mode"
+                                            >
+                                                <Play className="w-7 h-7" />
+                                            </button>
+                                            {/* Mobile-visible text under the FAB */}
+                                            <div className="rounded-md bg-gray-900 px-2 py-1 text-[11px] text-white sm:hidden">
+                                                Active Ride mode
+                                            </div>
+                                            {/* Hover label on larger screens */}
+                                            <div className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 rounded-md bg-gray-900 px-2 py-1 text-[11px] text-white opacity-0 group-hover:opacity-100 hidden sm:block">
+                                                Open Active Ride mode
+                                            </div>
                                         </div>
-                                        <Button
-                                            size="xs"
-                                            variant="outline"
-                                            className="hidden sm:inline-flex"
-                                            leftIcon={<Play className="w-3 h-3" />}
-                                            onClick={() => router.push(`/rides/${id}/active`)}
-                                        >
-                                            Start Active Mode
-                                        </Button>
                                     </div>
                                 )}
                             </CardBody>
@@ -628,24 +633,6 @@ export default function RideDetailsPage() {
                 </div>
             </Container>
 
-            {/* Floating speed-dial style activator for Active Mode (driver only) */}
-            {isActiveModeAvailable && (
-                <div className="fixed bottom-5 right-4 md:bottom-6 md:right-6 z-40">
-                    <div className="group relative">
-                        <button
-                            type="button"
-                            onClick={() => router.push(`/rides/${id}/active`)}
-                            className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
-                            aria-label="Start Active Mode"
-                        >
-                            <Play className="w-6 h-6" />
-                        </button>
-                        <div className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 rounded-md bg-gray-900 px-2 py-1 text-[11px] text-white opacity-0 group-hover:opacity-100">
-                            Start Active Mode
-                        </div>
-                    </div>
-                </div>
-            )}
         </ProtectedLayout>
     );
 }

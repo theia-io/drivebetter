@@ -51,6 +51,25 @@ export function getStatusIcon(status: RideStatus) {
     }
 }
 
+export function getStatusShortCode(status: RideStatus): string {
+    switch (status) {
+        case "unassigned":
+            return "U";
+        case "assigned":
+            return "A";
+        case "on_my_way":
+            return "OW";
+        case "on_location":
+            return "OL";
+        case "pob":
+            return "PoB";
+        case "completed":
+            return "C";
+        default:
+            return "";
+    }
+}
+
 export const STATUS_OPTIONS: RideStatusMeta[] = [
     {
         value: "unassigned",
