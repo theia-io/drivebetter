@@ -33,12 +33,16 @@ export default function PWAInstallPrompt() {
             return false;
         };
 
+        console.log("checkIfInstalled", checkIfInstalled());
+
         if (checkIfInstalled()) {
             return;
         }
 
         // Check if user has dismissed the prompt recently (within 7 days)
         const dismissedUntil = localStorage.getItem(STORAGE_DISMISSED_UNTIL);
+
+        console.log("dismissedUntil", dismissedUntil);
         if (dismissedUntil) {
             const dismissedDate = new Date(dismissedUntil);
             if (dismissedDate > new Date()) {
@@ -52,12 +56,14 @@ export default function PWAInstallPrompt() {
 
         // Check if user has permanently dismissed
         const permanentlyDismissed = localStorage.getItem(STORAGE_KEY);
+        console.log("permanentlyDismissed", permanentlyDismissed);
         if (permanentlyDismissed === "true") {
             return;
         }
 
         // Listen for the beforeinstallprompt event
         const handleBeforeInstallPrompt = (e: Event) => {
+            console.log("handleBeforeInstallPrompt", e);
             e.preventDefault();
             setDeferredPrompt(e as BeforeInstallPromptEvent);
             setShowPrompt(true);
@@ -67,6 +73,7 @@ export default function PWAInstallPrompt() {
 
         // Also listen for app installed event to hide prompt if user installs via browser UI
         const handleAppInstalled = () => {
+            console.log("handleAppInstalled");
             setIsInstalled(true);
             setShowPrompt(false);
             setDeferredPrompt(null);
@@ -122,8 +129,11 @@ export default function PWAInstallPrompt() {
         setDeferredPrompt(null);
     };
 
+    console.log("isInstalled, showPrompt, deferredPrompt", isInstalled, showPrompt, deferredPrompt, isInstalling);
+    console.log("RESULT", isInstalled || !showPrompt || !deferredPrompt || isInstalling);
+
     // Don't show if already installed or no prompt available
-    if (isInstalled || !showPrompt || !deferredPrompt) {
+    if (isInstalled || !showPrompt || !deferredPrompt || isInstalling) {
         return null;
     }
 
@@ -144,11 +154,18 @@ export default function PWAInstallPrompt() {
 
                         {/* Content */}
                         <div className="flex-1 min-w-0">
-                            <Typography variant="h5" className="mb-1 !text-gray-900 dark:!text-white">
+                            <Typography
+                                variant="h5"
+                                className="mb-1 !text-gray-900 dark:!text-white"
+                            >
                                 Install DriveBetter
                             </Typography>
-                            <Typography variant="body2" className="!text-gray-600 dark:!text-gray-300 mb-3">
-                                Install our app to access DriveBetter faster and use it offline. Get quick access from your home screen!
+                            <Typography
+                                variant="body2"
+                                className="!text-gray-600 dark:!text-gray-300 mb-3"
+                            >
+                                Install our app to access DriveBetter faster and use it offline. Get
+                                quick access from your home screen!
                             </Typography>
                         </div>
 
@@ -189,4 +206,3 @@ export default function PWAInstallPrompt() {
         </div>
     );
 }
-

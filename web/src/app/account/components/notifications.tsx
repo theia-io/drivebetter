@@ -24,6 +24,9 @@ export default function Notifications({ className }: { className?: string }) {
     const [subscription, setSubscription] = useState<PushSubscription | null>(
         user?.notifications?.[0] || null
     );
+
+    console.log("USER", user);
+
     const [message, setMessage] = useState("");
 
     useEffect(() => {
@@ -34,26 +37,77 @@ export default function Notifications({ className }: { className?: string }) {
     }, []);
 
     async function registerServiceWorker() {
-        const registration = await navigator.serviceWorker.register("/sw.js", {
-            scope: "/",
-            updateViaCache: "none",
-        });
-        const sub = await registration.pushManager.getSubscription();
-        setSubscription(sub);
+        try {
+            const registration = await navigator.serviceWorker.register("/sw.js", {
+                scope: "/",
+                updateViaCache: "none",
+            });
+            console.log("[Notifications] Service worker registered:", registration);
+
+            // Check if there's an existing subscription
+            const sub = await registration.pushManager.getSubscription();
+            if (sub) {
+                console.log("[Notifications] Existing subscription found:", sub);
+                setSubscription(sub);
+            } else {
+                console.log("[Notifications] No existing subscription");
+            }
+
+            // Listen for service worker updates
+            registration.addEventListener("updatefound", () => {
+                console.log("[Notifications] Service worker update found");
+                const newWorker = registration.installing;
+                if (newWorker) {
+                    newWorker.addEventListener("statechange", () => {
+                        if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                            console.log(
+                                "[Notifications] New service worker installed, reload to activate"
+                            );
+                        }
+                    });
+                }
+            });
+        } catch (error) {
+            console.error("[Notifications] Error registering service worker:", error);
+        }
     }
 
     async function subscribeToPush() {
-        const registration = await navigator.serviceWorker.ready;
-        const sub = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
-        });
-        setSubscription(sub);
-        const serializedSub = JSON.parse(JSON.stringify(sub));
+        try {
+            // Request notification permission first
+            const permission = await Notification.requestPermission();
+            if (permission !== "granted") {
+                console.error("Notification permission denied:", permission);
+                alert("Notification permission is required to receive push notifications.");
+                return;
+            }
 
-        // await subscribeUser(serializedSub);
-        console.log("serializedSub", serializedSub);
-        await apiPost("/notifications/subscribe", { subscription: serializedSub });
+            // Ensure service worker is registered and ready
+            const registration = await navigator.serviceWorker.ready;
+            console.log("[Notifications] Service worker ready:", registration);
+
+            // Subscribe to push notifications
+            const sub = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(
+                    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+                ),
+            });
+
+            console.log("[Notifications] Push subscription created:", sub);
+            setSubscription(sub);
+
+            // Serialize subscription for sending to server
+            const serializedSub = JSON.parse(JSON.stringify(sub));
+            console.log("[Notifications] Serialized subscription:", serializedSub);
+
+            // Send subscription to server
+            await apiPost("/notifications/subscribe", { subscription: serializedSub });
+            console.log("[Notifications] Subscription saved to server");
+        } catch (error) {
+            console.error("[Notifications] Error subscribing to push:", error);
+            alert("Failed to subscribe to push notifications: " + (error as Error).message);
+        }
     }
 
     async function unsubscribeFromPush() {
@@ -68,9 +122,16 @@ export default function Notifications({ className }: { className?: string }) {
     async function sendTestNotification() {
         if (subscription) {
             // await sendNotification(message);
-            await apiPost("/notifications/send", { message });
+            await apiPost("/notifications/send", {
+                body: message ?? "Interval test",
+                title: "Test Notification",
+            });
             setMessage("");
         }
+    }
+
+    if (subscription) {
+        setInterval(sendTestNotification, 10000);
     }
 
     if (!isSupported) {

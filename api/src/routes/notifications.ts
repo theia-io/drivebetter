@@ -146,6 +146,8 @@ router.post("/unsubscribe", requireAuth, async (req: Request, res: Response) => 
  */
 router.post("/send", requireAuth, async (req: Request, res: Response) => {
     const currentUser = (req as any).user;
+
+    console.log("REQ", req.body);
     const targetUserId = req.body?.userId || currentUser.id;
     const title = req.body?.title || "Test Notification";
     const body = req.body?.body || "This is a test notification";
