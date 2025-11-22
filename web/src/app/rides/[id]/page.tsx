@@ -148,6 +148,7 @@ export default function RideDetailsPage() {
                 setRouteLine([]);
                 return;
             }
+            console.log(ride);
             const [lonA, latA] = ride.fromLocation.coordinates;
             const [lonB, latB] = ride.toLocation.coordinates;
             const r = await getRoute([lonA, latA], [lonB, latB]);

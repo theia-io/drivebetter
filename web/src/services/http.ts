@@ -61,6 +61,11 @@ const buildUrl = (path: string, query?: Query) => {
     }
 
     const base = new URL(`${API_BASE}${cleanPath}`);
+    if (query) {
+        Object.entries(query).forEach(([k, v]) => {
+            if (v !== undefined && v !== null) base.searchParams.set(k, String(v));
+        });
+    }
     return base.toString();
 };
 
