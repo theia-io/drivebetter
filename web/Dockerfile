@@ -17,6 +17,10 @@ ENV NODE_ENV=production
 # Use relative URL to avoid CORS issues - requests go through nginx
 ARG NEXT_PUBLIC_API_BASE_URL=/api/v1
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+
+ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY=BJOej5soFaS6P_l9pR8KdHfnWJCD5oozRevmEoaso0RvIU5TzCKjFeIWk8_Ct_xdJw4Kuw8oSmw9Fdu3GvbuEmM
+ENV NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Build the Next.js app
