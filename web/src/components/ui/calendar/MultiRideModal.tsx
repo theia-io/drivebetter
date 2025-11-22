@@ -58,8 +58,7 @@ const STATUS_SORT_RANK: Record<RideStatus, number> = {
     on_my_way: 3,
     on_location: 4,
     pob: 5,
-    clear: 6,
-    completed: 7,
+    completed: 6,
 };
 
 function getStatusLabel(status: RideStatus): string {
