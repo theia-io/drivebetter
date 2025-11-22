@@ -157,7 +157,6 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
             { status: "on_my_way", code: "OW", count: buckets.on_my_way },
             { status: "on_location", code: "OL", count: buckets.on_location },
             { status: "pob", code: "PoB", count: buckets.pob },
-            { status: "clear", code: "C", count: buckets.clear },
             { status: "completed", code: "C", count: buckets.completed },
         ];
 
@@ -370,9 +369,6 @@ export default function CalendarPage() {
                     break;
                 case "pob":
                     curr.pob += 1;
-                    break;
-                case "clear":
-                    curr.clear += 1;
                     break;
                 case "completed":
                     curr.completed += 1;
@@ -886,12 +882,6 @@ export default function CalendarPage() {
                                         <span>PoB = Passenger on board</span>
                                     </div>
                                     <div className="inline-flex items-center gap-1">
-                                        {/* show both colors that can use C */}
-                                        <span
-                                            className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
-                                                "clear"
-                                            )}`}
-                                        />
                                         <span
                                             className={`h-2.5 w-2.5 rounded-full ${getStatusDotColor(
                                                 "completed"

@@ -13,7 +13,6 @@ import {
     MapPin,
     Navigation,
     PhoneIcon,
-    X as XIcon,
 } from "lucide-react";
 
 import { useAuthStore } from "@/stores";
@@ -22,17 +21,10 @@ import { fmtDate, fmtTime } from "@/services/convertors";
 import {
     getStatusColors,
     getStatusLabel,
-    type RideStatus,
+    type RideStatus, STATUS_FLOW,
 } from "@/types/rideStatus";
+import RideStatusStepper from "@/components/ui/ride/RideStatusStepper";
 
-const ACTIVE_MODE_FLOW: RideStatus[] = [
-    "assigned",
-    "on_my_way",
-    "on_location",
-    "pob",
-    "clear",
-    "completed",
-];
 
 function getStatusShortCode(status: RideStatus): string {
     switch (status) {
@@ -46,7 +38,6 @@ function getStatusShortCode(status: RideStatus): string {
             return "OL";
         case "pob":
             return "PoB";
-        case "clear":
         case "completed":
             return "C";
         default:
@@ -82,7 +73,7 @@ export default function RideActivePage() {
         if (res?.ok) await mutate();
     }
 
-    // basic guards
+    // loading / guards
     if (isLoading || !ride) {
         return (
             <ProtectedLayout>
@@ -122,174 +113,158 @@ export default function RideActivePage() {
         );
     }
 
-    const currentIdx = ACTIVE_MODE_FLOW.indexOf(statusValue);
-    const activeButtons =
-        currentIdx >= 0 ? ACTIVE_MODE_FLOW.slice(currentIdx) : ACTIVE_MODE_FLOW;
-
     return (
         <ProtectedLayout>
-            <div className="flex min-h-screen flex-col bg-black text-white">
-                {/* Top bar with speed-dial style exit */}
-                <div className="flex items-center justify-between px-4 pt-4 pb-3">
+            <Container className="px-3 sm:px-6 lg:px-8">
+                <div className="min-h-screen py-3 sm:py-4 space-y-4 sm:space-y-6">
+                    {/* Compact top bar – single back action, no duplicated exit */}
                     <div className="flex items-center gap-2">
                         <Button
                             variant="outline"
                             size="sm"
+                            leftIcon={<ArrowLeft className="w-4 h-4" />}
                             onClick={() => router.push(`/rides/${id}`)}
-                            leftIcon={<ArrowLeft className="w-4 h-4 text-white" />}
-                            className="border-white/40 bg-white/10 text-xs text-white hover:bg-white/20"
                         >
-                            Back to normal view
+                            Back
                         </Button>
-                    </div>
-                    <div className="relative">
-                        {/* main FAB to exit */}
-                        <button
-                            type="button"
-                            onClick={() => router.push(`/rides/${id}`)}
-                            className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-red-600 shadow-xl focus:outline-none focus:ring-2 focus:ring-red-400"
-                            aria-label="Exit Active Mode"
-                        >
-                            <XIcon className="w-6 h-6 text-white" />
-                        </button>
-                        {/* label */}
-                        <div className="absolute right-full mr-2 top-1/2 -translate-y-1/2 rounded-md bg-white/10 px-2 py-1 text-[11px] text-white/90">
-                            Exit Active Mode
+                        <div className="min-w-0">
+                            <div className="text-xs uppercase tracking-wide text-gray-500">
+                                Active ride
+                            </div>
+                            <div className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                                {ride.from} → {ride.to}
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Ride header / key details */}
-                <div className="px-4 pb-3">
-                    <div className="text-xs uppercase tracking-wide text-gray-400">
-                        Active ride
-                    </div>
-                    <div className="mt-1 text-lg font-semibold leading-snug">
-                        {ride.from} → {ride.to}
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-gray-300">
-                        <span className="inline-flex items-center gap-1.5">
-                            <Calendar className="w-4 h-4 text-gray-400" />
-                            {fmtDate(ride.datetime)}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5">
-                            <Clock className="w-4 h-4 text-gray-400" />
-                            {fmtTime(ride.datetime)}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5">
-                            <Navigation className="w-4 h-4 text-gray-400" />
-                            {ride.type}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Customer & address block */}
-                <div className="px-4">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-3 space-y-2 text-sm sm:text-base">
-                        <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/10">
-                                    <span className="text-xs font-semibold text-white">
-                                        {ride.customer.name?.[0] || "C"}
+                    {/* Ride summary + status stepper */}
+                    <div className="space-y-3">
+                        {/* Ride details card */}
+                        <div className="rounded-2xl border border-gray-200 bg-white p-3 sm:p-4 space-y-2">
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex flex-col">
+                                    <span className="text-xs uppercase tracking-wide text-gray-500">
+                                        Ride details
                                     </span>
-                                </span>
-                                <span className="font-medium">
-                                    {ride.customer.name || "Customer"}
-                                </span>
-                            </div>
-                            {ride.customer.phone && (
-                                <a
-                                    href={`tel:${ride.customer.phone}`}
-                                    className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white shadow-md active:scale-[0.97]"
-                                >
-                                    <PhoneIcon className="w-3.5 h-3.5" />
-                                    Call
-                                </a>
-                            )}
-                        </div>
-                        <div className="flex items-start gap-2">
-                            <MapPin className="w-4 h-4 mt-0.5 text-gray-400" />
-                            <div>
-                                <div className="text-[11px] uppercase tracking-wide text-gray-400">
-                                    Pickup
+                                    <span className="text-sm font-medium text-gray-900">
+                                        {ride.customer.name || "Customer"}
+                                    </span>
                                 </div>
-                                <div className="text-sm">{ride.from || "—"}</div>
+                                {ride.customer.phone && (
+                                    <a
+                                        href={`tel:${ride.customer.phone}`}
+                                        className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white shadow-sm active:scale-[0.97]"
+                                    >
+                                        <PhoneIcon className="w-3.5 h-3.5" />
+                                        Call
+                                    </a>
+                                )}
                             </div>
-                        </div>
-                        <div className="flex items-start gap-2">
-                            <MapPin className="w-4 h-4 mt-0.5 text-gray-400" />
-                            <div>
-                                <div className="text-[11px] uppercase tracking-wide text-gray-400">
-                                    Drop-off
-                                </div>
-                                <div className="text-sm">{ride.to || "—"}</div>
+
+                            <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-700">
+                                <span className="inline-flex items-center gap-1.5">
+                                    <Calendar className="w-4 h-4 text-gray-400" />
+                                    {fmtDate(ride.datetime)}
+                                </span>
+                                <span className="inline-flex items-center gap-1.5">
+                                    <Clock className="w-4 h-4 text-gray-400" />
+                                    {fmtTime(ride.datetime)}
+                                </span>
+                                <span className="inline-flex items-center gap-1.5">
+                                    <Navigation className="w-4 h-4 text-gray-400" />
+                                    {ride.type}
+                                </span>
                             </div>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Status buttons */}
-                <div className="mt-4 flex-1 px-4 pb-6">
-                    <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-400">
-                        Status actions
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                        {activeButtons.map((status) => {
-                            const { bg, border, text } = getStatusColors(status);
-                            const isCurrent = status === statusValue;
-                            const shortCode = getStatusShortCode(status);
-                            const label = getStatusLabel(status);
-
-                            const disabled =
-                                isSettingStatus || status === statusValue;
-
-                            return (
-                                <button
-                                    key={status}
-                                    type="button"
-                                    disabled={disabled}
-                                    onClick={() => handleStatusChange(status)}
-                                    className={[
-                                        "w-full rounded-2xl px-4 py-3 sm:py-4 text-left shadow-md active:scale-[0.97] transition-transform border",
-                                        bg,
-                                        border,
-                                        text,
-                                        isCurrent
-                                            ? "ring-2 ring-offset-2 ring-offset-black"
-                                            : "",
-                                        disabled
-                                            ? "opacity-70 cursor-not-allowed"
-                                            : "cursor-pointer",
-                                    ].join(" ")}
-                                >
-                                    <div className="flex items-center justify-between gap-3">
-                                        <div className="flex flex-col">
-                                            <span className="text-xs uppercase tracking-wide opacity-80">
-                                                {shortCode || "Status"}
-                                            </span>
-                                            <span className="text-base sm:text-lg font-semibold capitalize">
-                                                {label}
-                                            </span>
+                            <div className="mt-2 space-y-1 text-sm text-gray-800">
+                                <div className="flex items-start gap-2">
+                                    <MapPin className="w-4 h-4 mt-0.5 text-gray-400" />
+                                    <div>
+                                        <div className="text-[11px] uppercase tracking-wide text-gray-500">
+                                            Pickup
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            {isCurrent && (
-                                                <span className="inline-flex items-center rounded-full bg-black/10 px-2 py-1 text-[11px]">
-                                                    Current
-                                                </span>
-                                            )}
-                                            {isSettingStatus &&
-                                                status === statusValue && (
-                                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                                )}
-                                        </div>
+                                        <div>{ride.from || "—"}</div>
                                     </div>
-                                </button>
-                            );
-                        })}
+                                </div>
+                                <div className="flex items-start gap-2">
+                                    <MapPin className="w-4 h-4 mt-0.5 text-gray-400" />
+                                    <div>
+                                        <div className="text-[11px] uppercase tracking-wide text-gray-500">
+                                            Drop-off
+                                        </div>
+                                        <div>{ride.to || "—"}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Stepper – always visible, reflects current status */}
+                        <div className="rounded-2xl border border-gray-200 bg-white p-3 sm:p-4">
+                            <div className="mb-2 flex items-center justify-between">
+                                <span className="text-xs uppercase tracking-wide text-gray-500">
+                                    Ride status
+                                </span>
+                                <span className="text-xs font-semibold text-gray-800 capitalize">
+                                    {getStatusLabel(statusValue)}
+                                </span>
+                            </div>
+                            <RideStatusStepper value={statusValue} />
+                        </div>
+                    </div>
+
+                    {/* Big status buttons – full flow, can go back, color from status map */}
+                    <div className="pb-6">
+                        <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-500">
+                            Status actions
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            {STATUS_FLOW.map((status) => {
+                                const { bg, border, text } = getStatusColors(status);
+                                const isCurrent = status === statusValue;
+                                const shortCode = getStatusShortCode(status);
+                                const label = getStatusLabel(status);
+
+                                const disabled = isSettingStatus;
+
+                                return (
+                                    <button
+                                        key={status}
+                                        type="button"
+                                        disabled={disabled}
+                                        onClick={() => handleStatusChange(status)}
+                                        className={[
+                                            "w-full rounded-2xl px-4 py-4 sm:py-5 text-left shadow-sm border transition-transform active:scale-[0.97]",
+                                            isCurrent ? "border-2" : "border",
+                                            disabled ? "cursor-not-allowed" : "cursor-pointer",
+                                        ].join(" ")}
+                                        style={{
+                                            // active: filled with status color; inactive: white with colored border
+                                            backgroundColor: isCurrent ? bg : "#ffffff",
+                                            borderColor: border,
+                                            color: text,
+                                        }}
+                                    >
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="flex flex-col">
+                                                <span className="text-xs uppercase tracking-wide">
+                                                    {shortCode || "Status"}
+                                                </span>
+                                                <span className="text-base sm:text-lg font-semibold capitalize">
+                                                    {label}
+                                                </span>
+                                            </div>
+                                            {isSettingStatus && status === statusValue && (
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                            )}
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
-            </div>
+            </Container>
         </ProtectedLayout>
     );
 }

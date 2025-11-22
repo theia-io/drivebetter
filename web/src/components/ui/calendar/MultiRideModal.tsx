@@ -49,7 +49,6 @@ const STATUS_FILTER_OPTIONS: { key: RideStatus; label: string }[] = [
     { key: "on_my_way", label: "On my way" },
     { key: "on_location", label: "On location" },
     { key: "pob", label: "POB" },
-    { key: "clear", label: "Clear" },
     { key: "completed", label: "Completed" },
 ];
 

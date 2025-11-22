@@ -288,7 +288,7 @@ router.get(
  *               type: { type: string, enum: [reservation, asap], description: "If omitted, inferred by datetime" }
  *               status:
  *                 type: string
- *                 enum: [unassigned, assigned, on_my_way, on_location, pob, clear, completed]
+ *                 enum: [unassigned, assigned, on_my_way, on_location, pob, completed]
  *               notes: { type: string }
  *               coveredVisible: { type: boolean, default: true }
  *               fromLocation:
@@ -1108,7 +1108,7 @@ router.post(
  *             properties:
  *               status:
  *                 type: string
- *                 enum: [unassigned, assigned, on_my_way, on_location, pob, clear, completed]
+ *                 enum: [unassigned, assigned, on_my_way, on_location, pob, completed]
  *     responses:
  *       200: { description: Updated }
  *       404: { description: Not found }
@@ -1193,7 +1193,7 @@ router.post(
         } = req.body || {};
         const ride = await Ride.findById(id).lean();
         if (!ride) return res.status(404).json({ error: "Ride not found" });
-        if (["completed", "clear"].includes(ride.status)) {
+        if (["completed"].includes(ride.status)) {
             return res.status(409).json({ error: "Ride is already completed/closed" });
         }
 

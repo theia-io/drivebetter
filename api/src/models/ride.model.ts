@@ -116,7 +116,6 @@ const RideSchema = new Schema<IRide>(
                 "on_my_way",
                 "on_location",
                 "pob",
-                "clear",
                 "completed",
             ],
             default: "unassigned",

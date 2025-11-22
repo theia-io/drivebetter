@@ -8,7 +8,6 @@ export type RideStatus =
     | "on_my_way"
     | "on_location"
     | "pob"
-    | "clear"
     | "completed";
 
 /** Canonical lifecycle order for all UI (stepper, analytics, etc.) */
@@ -18,7 +17,6 @@ export const STATUS_FLOW: RideStatus[] = [
     "on_my_way",
     "on_location",
     "pob",
-    "clear",
     "completed",
 ];
 
@@ -46,7 +44,6 @@ export function getStatusIcon(status: RideStatus) {
             return MapPin;
         case "pob":
             return Car;
-        case "clear":
         case "completed":
             return Check;
         default:
@@ -79,11 +76,6 @@ export const STATUS_OPTIONS: RideStatusMeta[] = [
         value: "pob",
         label: "Passenger on board",
         description: "Passenger is in the car.",
-    },
-    {
-        value: "clear",
-        label: "Clear",
-        description: "Trip finished, ready for closing.",
     },
     {
         value: "completed",
@@ -119,11 +111,6 @@ const STATUS_COLOR_MAP: Record<RideStatus, RideStatusColors> = {
         border: "#22d3ee", // cyan-400
         text: "#155e75", // cyan-800
     },
-    clear: {
-        bg: "#e5e7eb", // gray-200
-        border: "#9ca3af", // gray-400
-        text: "#374151", // gray-700
-    },
     completed: {
         bg: "#dcfce7", // emerald-100
         border: "#6ee7b7", // emerald-300
@@ -138,7 +125,6 @@ const PILL_COLOR_MAP: Record<RideStatus, string> = {
     on_my_way: "bg-sky-100 text-sky-800 border-sky-200",
     on_location: "bg-violet-100 text-violet-800 border-violet-200",
     pob: "bg-cyan-100 text-cyan-800 border-cyan-200",
-    clear: "bg-slate-100 text-slate-800 border-slate-200",
     completed: "bg-emerald-100 text-emerald-800 border-emerald-200",
 };
 
@@ -149,7 +135,6 @@ const DOT_COLOR_MAP: Record<RideStatus, string> = {
     on_my_way: "bg-sky-500",
     on_location: "bg-violet-500",
     pob: "bg-cyan-500",
-    clear: "bg-slate-500",
     completed: "bg-emerald-500",
 };
 

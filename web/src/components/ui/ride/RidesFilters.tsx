@@ -37,7 +37,6 @@ const STATUS_FILTERS: (RideStatus | "all")[] = [
     "on_my_way",
     "on_location",
     "pob",
-    "clear",
     "completed",
 ];
 
