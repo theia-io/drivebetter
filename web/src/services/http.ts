@@ -34,7 +34,7 @@ export class ApiError extends Error {
 }
 
 const buildUrl = (path: string, query?: Query) => {
-    // If path is already a full URL, use it as-is
+    // Full URL passed in → just add query
     if (path.startsWith("http")) {
         const url = new URL(path);
         if (query) {
@@ -44,29 +44,24 @@ const buildUrl = (path: string, query?: Query) => {
         }
         return url.toString();
     }
-    
-    // If API_BASE is relative (starts with /), use relative URL
+
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+
     if (API_BASE.startsWith("/")) {
-        let url = `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+        let url = `${API_BASE.replace(/\/$/, "")}${cleanPath}`;
         if (query) {
             const params = new URLSearchParams();
             Object.entries(query).forEach(([k, v]) => {
                 if (v !== undefined && v !== null) params.set(k, String(v));
             });
-            const queryString = params.toString();
-            if (queryString) url += `?${queryString}`;
+            const qs = params.toString();
+            if (qs) url += `?${qs}`;
         }
         return url;
     }
-    
-    // Otherwise, use absolute URL
-    const url = new URL(path.startsWith("/") ? path : `/${path}`, API_BASE);
-    if (query) {
-        Object.entries(query).forEach(([k, v]) => {
-            if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
-        });
-    }
-    return url.toString();
+
+    const base = new URL(`${API_BASE}${cleanPath}`);
+    return base.toString();
 };
 
 export const getAccessToken = () =>

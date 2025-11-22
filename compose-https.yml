@@ -1,0 +1,76 @@
+services:
+  mongo_dev:
+    image: mongo:latest
+    container_name: betterdrive_mongo_dev
+    restart: on-failure
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: betterdrive_db
+    volumes:
+      - mongodb_data:/data/db
+
+  mongo:
+    image: mongo:7
+    container_name: betterdrive_mongo
+    restart: on-failure
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: user_admin
+      MONGO_INITDB_ROOT_PASSWORD: secure_password_123
+      MONGO_INITDB_DATABASE: betterdrive_db
+    volumes:
+      - mongodb_data:/data/db
+
+  # 2. API Service (Node.js API)
+  api:
+    image: kutsyk/betterdriver-api:latest
+    container_name: betterdrive_api
+    restart: on-failure
+    depends_on:
+      mongo:
+        condition: service_started
+    environment:
+      MAPTILER_API_KEY: jb2wR0kvhEyp9kwHP1UA
+      ORS_API_KEY: eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjU4YmRhNjkyNGE2NzRmNTNiMmE4Mzk2Njc5YTg2NGQ2IiwiaCI6Im11cm11cjY0In0=
+      MONGODB_URI: mongodb://user_admin:secure_password_123@mongo:27017/betterdrive_db?authSource=admin
+      PORT: 3000 # Internal API port (used by Nginx)
+      JWT_SECRET: dev_super_secret
+      SWAGGER_ENABLED: true
+      REQUIRE_EMAIL_VERIFICATION: false
+      PUBLIC_BASE_URL: http://drivebetter.co
+      CORS_ORIGIN: "http://localhost:4200,http://localhost:4201,https://localhost:4200,https://localhost:4201,http://drivebetter.co,https://drivebetter.co,http://www.drivebetter.co,https://www.drivebetter.co,http://193.169.241.16"
+      GOOGLE_CLIENT_ID: your-google-client-id.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: your-google-client-secret
+      GOOGLE_CALLBACK_URL: http://drivebetter.co/api/v1/oauth/google/callback
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: BJOej5soFaS6P_l9pR8KdHfnWJCD5oozRevmEoaso0RvIU5TzCKjFeIWk8_Ct_xdJw4Kuw8oSmw9Fdu3GvbuEmM
+      VAPID_PRIVATE_KEY: 7j-NT0euaFt_iV0eEc9fWR9Rr-pjbUqEpZRDgVyUFsc
+  web:
+    image: kutsyk/betterdriver-web:latest
+    container_name: betterdrive_web
+    restart: always
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: /api/v1
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: BJOej5soFaS6P_l9pR8KdHfnWJCD5oozRevmEoaso0RvIU5TzCKjFeIWk8_Ct_xdJw4Kuw8oSmw9Fdu3GvbuEmM
+    expose:
+      - "4200" # Expose internal port 80 (used by Nginx)
+
+  nginx:
+    image: nginx:latest
+    container_name: betterdrive_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      -  /etc/letsencrypt/:/etc/letsencrypt/:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - api
+      - web
+
+volumes:
+  mongodb_data:
+    driver: local
