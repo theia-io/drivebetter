@@ -417,7 +417,7 @@ export default function Navigation() {
                             {mobileItems.map((item) => {
                                 if (item.name === "Groups") {
                                     return (
-                                        <div key="Groups-block" className="space-y-1">
+                                        <div key="Groups-block" className="space-y-1 border-t pt-3">
                                             <Link
                                                 href="/groups"
                                                 onClick={() => setMobileOpen(false)}

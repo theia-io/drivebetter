@@ -23,8 +23,24 @@ function parsePagination(q: Request["query"]) {
     return { page, limit, skip };
 }
 
-function normalizeId(id: Types.ObjectId | string): Types.ObjectId {
-    return typeof id === "string" ? new Types.ObjectId(id) : id;
+function normalizeId(id: any): Types.ObjectId {
+    if (!id) {
+        throw new Error("normalizeId: id is required");
+    }
+
+    if (id instanceof Types.ObjectId) {
+        return id;
+    }
+
+    if (typeof id === "string") {
+        return new Types.ObjectId(id);
+    }
+
+    if (typeof id === "object" && (id as any)._id) {
+        return normalizeId((id as any)._id);
+    }
+
+    throw new Error(`normalizeId: unsupported id value: ${JSON.stringify(id)}`);
 }
 
 function userHasAdminRole(req: Request): boolean {
@@ -182,16 +198,20 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
         return res.status(401).json({ error: "Unauthenticated" });
     }
     const userId = new Types.ObjectId(rawUserId);
+    const isAdmin = userHasAdminRole(req);
 
-    const filter: any = {
-        // user is owner OR moderator OR participant OR (legacy) member
-        $or: [
+    const filter: any = {};
+
+    // Admin/dispatcher: see all groups
+    // Non-admin: only groups where user is owner/mod/participant/legacy member
+    if (!isAdmin) {
+        filter.$or = [
             { ownerId: userId },
             { moderators: userId },
             { participants: userId },
-            { members: userId }, // keep for backwards compatibility
-        ],
-    };
+            { members: userId }, // legacy
+        ];
+    }
 
     if (type) filter.type = type;
     if (city) filter.city = new RegExp(city, "i");
@@ -324,7 +344,7 @@ router.get(
 
         const userId = (req as any).user?.id;
         // Invite-only: only members can access
-        if (!userId || !userInGroup(group, userId)) {
+        if (!canUserManageGroup(group, req) && (!userId || !userInGroup(group, userId))) {
             return res
                 .status(403)
                 .json({ error: "Access denied: invite only group" });
@@ -488,7 +508,7 @@ router.get(
 
         const userId = (req as any).user?.id;
         // Only group members can see membership info
-        if (!userId || !userInGroup(group, userId)) {
+        if (!canUserManageGroup(group, req) && (!userId || !userInGroup(group, userId)) ) {
             return res.status(403).json({ error: "Access denied" });
         }
 
@@ -950,7 +970,7 @@ router.get(
         if (!group) return res.status(404).json({ error: "Group not found" });
 
         // Only group members can see dashboard
-        if (!userInGroup(group, userId)) {
+        if (!canUserManageGroup(group, req) && !userInGroup(group, userId)) {
             return res.status(403).json({ error: "Access denied" });
         }
 

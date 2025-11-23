@@ -1,100 +1,241 @@
 // app/groups/[id]/page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import { ArrowLeft, PencilLine, Trash2, Users, Plus, X, UserIcon } from "lucide-react";
+
+import {
+    ArrowLeft,
+    Trash2,
+    Users,
+    Shield,
+    Edit3,
+    UserMinus,
+    Crown,
+    Activity,
+    LogOut,
+} from "lucide-react";
+
 import { useAuthStore } from "@/stores/auth";
-import { DriverCombobox, type SimpleDriver } from "@/components/ui/ride/DriverCombobox";
-import { dt, KV } from "@/components/ui/commmon";
+import { dt } from "@/components/ui/commmon";
 
 import {
     useGroup,
-    deleteGroup as apiDeleteGroup,
-    joinGroup as apiJoinGroup,
-    leaveGroup as apiLeaveGroup,
-    updateGroupMembers as apiUpdateGroupMembers,
+    useGroupDashboard,
+    useGroupMembers,
+    updateGroup,
+    deleteGroup,
+    leaveGroup,
+    addGroupParticipant,
+    removeGroupParticipant,
+    addGroupModerator,
+    removeGroupModerator,
 } from "@/stores/groups";
-import { useDriversPublicBatchMap } from "@/stores/users";
 
-type MemberLike =
-    | string
-    | { _id?: string; id?: string; userId?: string; name?: string; email?: string };
+import {
+    DriverCombobox,
+    type SimpleDriver,
+} from "@/components/ui/ride/DriverCombobox";
+
+import type { GroupType } from "@/types/group";
 
 export default function GroupDetailsPage() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
     const { user } = useAuthStore();
 
-    const { data: group, isLoading, mutate } = useGroup(id);
+    const {
+        data: group,
+        isLoading: groupLoading,
+        mutate: mutateGroup,
+    } = useGroup(id);
 
-    // NEW: multi-select drivers via new DriverCombobox API
-    const [selectedDrivers, setSelectedDrivers] = useState<SimpleDriver[]>([]);
+    const {
+        data: members,
+        isLoading: membersLoading,
+        mutate: mutateMembers,
+    } = useGroupMembers(id);
 
-    const canManage = user?.roles?.some((r) => r === "admin" || r === "dispatcher");
+    const {
+        data: dashboard,
+        isLoading: dashboardLoading,
+        mutate: mutateDashboard,
+    } = useGroupDashboard(id);
 
-    const membersIds = useMemo(() => {
-        return (group?.members ?? []) as MemberLike[];
+    // meta editing: description, rules, tags
+    const [isEditingMeta, setIsEditingMeta] = useState(false);
+    const [meta, setMeta] = useState({
+        description: "",
+        rules: "",
+        tags: "",
+    });
+
+    // participants add via driver combobox
+    const [newParticipants, setNewParticipants] = useState<SimpleDriver[]>([]);
+    const [savingMeta, setSavingMeta] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [leaving, setLeaving] = useState(false);
+
+    useEffect(() => {
+        if (!group) return;
+        setMeta({
+            description: group.description ?? "",
+            rules: group.rules ?? "",
+            tags: Array.isArray(group.tags) ? group.tags.join(", ") : "",
+        });
     }, [group]);
 
-    const { map: driversMap, isLoading: driversLoading } = useDriversPublicBatchMap(group?.members);
+    const userId = user?._id;
+    const roles = user?.roles ?? [];
+    const isAdmin = roles.includes("admin") || roles.includes("dispatcher");
 
-    const memberId = (m: MemberLike) =>
-        typeof m === "string" ? m : m._id || m.userId || m.id || "";
+    // role detection based on members payload
+    const isOwner = useMemo(
+        () => !!members && !!userId && members.owner?._id === userId,
+        [members, userId],
+    );
 
-    const memberLabel = (m: MemberLike) => {
-        if (typeof m === "string") return `User ${m.slice(-6)}`;
-        return m.name || m.email || `User ${String(memberId(m)).slice(-6)}`;
-    };
+    const isModerator = useMemo(
+        () =>
+            !!members &&
+            !!userId &&
+            (members.moderators ?? []).some((m: any) => m._id === userId),
+        [members, userId],
+    );
 
-    const isMember = useMemo(() => {
-        if (!group || !user?._id) return false;
-        return membersIds.some((m) => String(memberId(m)) === String(user._id));
-    }, [group, membersIds, user]);
+    const isParticipant = useMemo(
+        () =>
+            !!members &&
+            !!userId &&
+            (members.participants ?? []).some((p: any) => p._id === userId),
+        [members, userId],
+    );
 
-    async function onDelete() {
-        if (!id) return;
-        const ok = confirm("Delete this group?");
+    const isMember = isOwner || isModerator || isParticipant;
+
+    const canManage = !!group && (isAdmin || isOwner); // delete, manage moderators, transfer ownership
+    const canModerate = !!group && (isAdmin || isOwner || isModerator); // edit meta, participants, invites
+
+    // capabilities matrix
+    const canManageModerators = canManage;      // admin + owner
+    const canManageParticipants = canModerate;  // admin + owner + moderator
+
+    const memberRoleLabel =
+        isOwner ? "Owner" : isModerator ? "Moderator" : isParticipant ? "Participant" : undefined;
+
+    const ownerUser = members?.owner || null;
+
+    const moderatorsUsers = useMemo(() => {
+        if (!members) return [];
+        const ownerId = members.owner?._id;
+        const mods = members.moderators ?? [];
+        return mods.filter((m: any) => m._id !== ownerId);
+    }, [members]);
+
+    const participantsUsers = useMemo(() => {
+        if (!members) return [];
+        const ownerId = members.owner?._id;
+        const moderatorIds = new Set((members.moderators ?? []).map((m: any) => m._id));
+        return (members.participants ?? []).filter(
+            (p: any) => p._id !== ownerId && !moderatorIds.has(p._id),
+        );
+    }, [members]);
+
+    const membersCount = useMemo(() => {
+        if (!group) return 0;
+        if (Array.isArray(group.members) && group.members.length) return group.members.length;
+        const base = 0 + (group.ownerId ? 1 : 0);
+        return base + (group.moderators?.length ?? 0) + (group.participants?.length ?? 0);
+    }, [group]);
+
+    async function handleDeleteGroup() {
+        if (!id || !group) return;
+        const ok = window.confirm(
+            "Delete this group? This cannot be undone and will remove shares from this group.",
+        );
         if (!ok) return;
-        const success = apiDeleteGroup(id);
-        if (success) router.push("/groups");
+
+        try {
+            setDeleting(true);
+            await deleteGroup(id);
+            router.push("/groups");
+        } finally {
+            setDeleting(false);
+        }
     }
 
-    async function onJoin() {
-        if (!id) return;
-        await apiJoinGroup(id);
-        await mutate();
+    async function handleLeaveGroup() {
+        if (!id || !group || !isMember || isOwner) return;
+
+        const ok = window.confirm("Leave this group?");
+        if (!ok) return;
+
+        try {
+            setLeaving(true);
+            await leaveGroup(id);
+            router.push("/groups");
+        } finally {
+            setLeaving(false);
+        }
     }
 
-    async function onLeave() {
-        if (!id) return;
-        await apiLeaveGroup(id);
-        await mutate();
+    async function handleSaveMeta() {
+        if (!id || !group) return;
+
+        setSavingMeta(true);
+        try {
+            const tags = meta.tags
+                .split(",")
+                .map((t) => t.trim())
+                .filter(Boolean);
+
+            await updateGroup(id, {
+                description: meta.description.trim() || undefined,
+                rules: meta.rules.trim() || undefined,
+                tags: tags.length ? tags : [],
+            });
+
+            await Promise.all([mutateGroup(), mutateDashboard()]);
+            setIsEditingMeta(false);
+        } finally {
+            setSavingMeta(false);
+        }
     }
 
-    // NEW: add one or many selected drivers as members
-    async function onAddMembers(drivers: SimpleDriver[]) {
+    async function handleAddParticipants(drivers: SimpleDriver[]) {
         if (!id || drivers.length === 0) return;
-        const addIds = drivers.map((d) => d.id);
-        await apiUpdateGroupMembers(id, addIds, []);
-        setSelectedDrivers([]);
-        await mutate();
+        await Promise.all(drivers.map((d) => addGroupParticipant(id, d.id)));
+        setNewParticipants([]);
+        await Promise.all([mutateMembers(), mutateGroup()]);
     }
 
-    async function onRemoveMember(userId: string) {
+    async function handleRemoveParticipant(userIdToRemove: string) {
         if (!id) return;
-        await apiUpdateGroupMembers(id, [], [userId]);
-        await mutate();
+        await removeGroupParticipant(id, userIdToRemove);
+        await Promise.all([mutateMembers(), mutateGroup()]);
     }
 
-    if (isLoading && !group) {
+    async function handleAddModerator(userIdToPromote: string) {
+        if (!id) return;
+        await addGroupModerator(id, userIdToPromote);
+        await Promise.all([mutateMembers(), mutateGroup()]);
+    }
+
+    async function handleRemoveModerator(userIdToDemote: string) {
+        if (!id) return;
+        await removeGroupModerator(id, userIdToDemote);
+        await Promise.all([mutateMembers(), mutateGroup()]);
+    }
+
+    if (groupLoading && !group) {
         return (
             <ProtectedLayout>
                 <Container className="px-3 sm:px-6 lg:px-8">
-                    <div className="py-8 text-sm text-gray-600">Loading…</div>
+                    <div className="py-8 text-sm text-gray-600">Loading group…</div>
                 </Container>
             </ProtectedLayout>
         );
@@ -104,7 +245,7 @@ export default function GroupDetailsPage() {
         return (
             <ProtectedLayout>
                 <Container className="px-3 sm:px-6 lg:px-8">
-                    <div className="py-8 text-sm text-gray-600">Not found</div>
+                    <div className="py-8 text-sm text-gray-600">Group not found.</div>
                 </Container>
             </ProtectedLayout>
         );
@@ -113,10 +254,10 @@ export default function GroupDetailsPage() {
     return (
         <ProtectedLayout>
             <Container className="px-3 sm:px-6 lg:px-8">
-                <div className="space-y-4 sm:space-y-6">
+                <div className="space-y-4 sm:space-y-6 py-4 sm:py-6">
                     {/* Toolbar */}
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex items-start gap-3 min-w-0">
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -125,196 +266,578 @@ export default function GroupDetailsPage() {
                             >
                                 Back
                             </Button>
-                            <div className="flex items-center gap-2 min-w-0">
+
+                            <div className="flex items-center gap-3 min-w-0">
                                 <div className="p-2 bg-indigo-50 rounded-xl border border-indigo-200">
                                     <Users className="w-5 h-5 text-indigo-600" />
                                 </div>
-                                <div className="min-w-0">
-                                    <Typography className="text-xs text-gray-500">Group</Typography>
+                                <div className="min-w-0 space-y-1">
+                                    <Typography className="text-xs text-gray-500">
+                                        Group
+                                    </Typography>
                                     <Typography
                                         variant="h1"
-                                        className="text-base sm:text-2xl font-bold text-gray-900 whitespace-normal break-words leading-tight"
+                                        className="text-base sm:text-2xl font-bold text-gray-900 break-words leading-tight"
                                     >
                                         {group.name}
                                     </Typography>
-                                    {isMember && (
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] sm:text-xs font-medium border bg-green-100 text-green-800 border-green-200">
-                                            <span className="ml-1 capitalize">Group Member</span>
+
+                                    <div className="flex flex-wrap gap-1.5 text-[11px] sm:text-xs">
+                                        <span className="inline-flex items-center rounded-full bg-indigo-50 border border-indigo-100 px-2 py-0.5 text-indigo-700">
+                                            {formatGroupType(group.type)}
                                         </span>
-                                    )}
+                                        {group.city && (
+                                            <span className="inline-flex items-center rounded-full bg-gray-50 border border-gray-100 px-2 py-0.5 text-gray-700">
+                                                {group.city}
+                                            </span>
+                                        )}
+                                        {memberRoleLabel && (
+                                            <span className="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-100 px-2 py-0.5 text-emerald-700">
+                                                <Shield className="w-3.5 h-3.5 mr-1" />
+                                                {memberRoleLabel}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-2">
-                            {canManage && (
-                                <Link href={`/groups/${group._id}/edit`}>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        leftIcon={<PencilLine className="w-4 h-4" />}
-                                    >
-                                        Edit
-                                    </Button>
-                                </Link>
+                            {canModerate && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    leftIcon={<Edit3 className="w-4 h-4" />}
+                                    onClick={() => setIsEditingMeta((prev) => !prev)}
+                                >
+                                    {isEditingMeta ? "Cancel edit" : "Edit details"}
+                                </Button>
                             )}
                             {canManage && (
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     leftIcon={<Trash2 className="w-4 h-4" />}
-                                    onClick={onDelete}
+                                    onClick={handleDeleteGroup}
+                                    disabled={deleting}
                                 >
-                                    Delete
+                                    {deleting ? "Deleting…" : "Delete"}
                                 </Button>
                             )}
                         </div>
                     </div>
 
-                    {/* Summary */}
+                    {/* Group meta: description, rules, tags, basic info */}
                     <Card variant="elevated">
-                        <CardBody className="p-4 sm:p-6">
+                        <CardBody className="p-4 sm:p-6 space-y-4">
+                            {/* Basic info */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                                <div className="space-y-3">
-                                    <KV k="Name" v={group.name} />
-                                    <KV k="Type" v={group.type} />
-                                    <KV k="City" v={group.city || "—"} />
-                                    <KV k="Location" v={group.location || "—"} />
+                                <div className="space-y-2">
+                                    <MetaRow label="Name" value={group.name} />
+                                    <MetaRow
+                                        label="Type"
+                                        value={formatGroupType(group.type)}
+                                    />
+                                    <MetaRow label="City" value={group.city || "—"} />
+                                    <MetaRow
+                                        label="Location"
+                                        value={group.location || "—"}
+                                    />
                                 </div>
-                                <div className="space-y-3">
-                                    <KV k="Description" v={group.description || "—"} />
-                                    <KV k="Created" v={dt(group.createdAt)} />
-                                    <KV k="Updated" v={dt(group.updatedAt)} />
+                                <div className="space-y-2">
+                                    <MetaRow
+                                        label="Created"
+                                        value={group.createdAt ? dt(group.createdAt) : "—"}
+                                    />
+                                    <MetaRow
+                                        label="Updated"
+                                        value={group.updatedAt ? dt(group.updatedAt) : "—"}
+                                    />
+                                    <MetaRow
+                                        label="Members"
+                                        value={membersCount ? String(membersCount) : "0"}
+                                    />
+                                    <MetaRow
+                                        label="Visibility"
+                                        value={`${group.visibility}${
+                                            group.isInviteOnly ? " · invite only" : ""
+                                        }`}
+                                    />
                                 </div>
-                                <div className="mt-4">
+                            </div>
+
+                            {/* Editable details */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pt-2 border-t border-gray-100">
+                                {/* Description */}
+                                <div className="space-y-2">
                                     <Typography className="text-sm font-semibold text-gray-900">
-                                        Tags
+                                        Description
                                     </Typography>
-                                    <div className="mt-2 flex flex-wrap gap-2">
-                                        {Array.isArray(group.tags) && group.tags.length > 0 ? (
+                                    {isEditingMeta && canModerate ? (
+                                        <textarea
+                                            rows={4}
+                                            value={meta.description}
+                                            onChange={(e) =>
+                                                setMeta((prev) => ({
+                                                    ...prev,
+                                                    description: e.target.value,
+                                                }))
+                                            }
+                                            className={inputClass()}
+                                            placeholder="Short description of what this group is for"
+                                        />
+                                    ) : (
+                                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                            {group.description || "No description yet."}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Rules */}
+                                <div className="space-y-2">
+                                    <Typography className="text-sm font-semibold text-gray-900">
+                                        Rules
+                                    </Typography>
+                                    {isEditingMeta && canModerate ? (
+                                        <textarea
+                                            rows={4}
+                                            value={meta.rules}
+                                            onChange={(e) =>
+                                                setMeta((prev) => ({
+                                                    ...prev,
+                                                    rules: e.target.value,
+                                                }))
+                                            }
+                                            className={inputClass()}
+                                            placeholder="Add rules or guidelines for this group"
+                                        />
+                                    ) : (
+                                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                            {group.rules || "No rules defined yet."}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Tags */}
+                            <div className="pt-2 border-t border-gray-100 space-y-2">
+                                <Typography className="text-sm font-semibold text-gray-900">
+                                    Tags
+                                </Typography>
+                                {isEditingMeta && canModerate ? (
+                                    <input
+                                        value={meta.tags}
+                                        onChange={(e) =>
+                                            setMeta((prev) => ({
+                                                ...prev,
+                                                tags: e.target.value,
+                                            }))
+                                        }
+                                        className={inputClass()}
+                                        placeholder="Comma-separated tags, e.g. airport, night, corporate"
+                                    />
+                                ) : (
+                                    <div className="flex flex-wrap gap-2">
+                                        {Array.isArray(group.tags) &&
+                                        group.tags.length > 0 ? (
                                             group.tags.map((t: string) => (
                                                 <span
                                                     key={t}
                                                     className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-xs font-medium text-gray-700"
-                                                    title={t}
                                                 >
                                                     #{t}
                                                 </span>
                                             ))
                                         ) : (
-                                            <span className="text-sm text-gray-600">No tags</span>
+                                            <span className="text-sm text-gray-600">
+                                                No tags.
+                                            </span>
                                         )}
                                     </div>
+                                )}
+                            </div>
+
+                            {isEditingMeta && canModerate && (
+                                <div className="pt-3 flex flex-wrap gap-2">
+                                    <Button
+                                        size="sm"
+                                        onClick={handleSaveMeta}
+                                        disabled={savingMeta}
+                                    >
+                                        {savingMeta ? "Saving…" : "Save changes"}
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                            setIsEditingMeta(false);
+                                            if (group) {
+                                                setMeta({
+                                                    description: group.description ?? "",
+                                                    rules: group.rules ?? "",
+                                                    tags: Array.isArray(group.tags)
+                                                        ? group.tags.join(", ")
+                                                        : "",
+                                                });
+                                            }
+                                        }}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                            )}
+                        </CardBody>
+                    </Card>
+
+                    {/* Members + roles */}
+                    <Card variant="elevated">
+                        <CardBody className="p-4 sm:p-6 space-y-4">
+                            <div className="flex items-center justify-between gap-2">
+                                <Typography className="text-sm font-semibold text-gray-900">
+                                    Members
+                                </Typography>
+                                <span className="text-xs text-gray-500">
+                                    {membersCount} total
+                                </span>
+                            </div>
+
+                            {/* Owner */}
+                            <div className="space-y-2">
+                                <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                    Owner
+                                </Typography>
+                                <div className="flex flex-wrap gap-2">
+                                    {ownerUser ? (
+                                        <UserChip
+                                            user={ownerUser}
+                                            badge="Owner"
+                                            badgeColor="indigo"
+                                            link
+                                            canRemove={false}
+                                        />
+                                    ) : (
+                                        <span className="text-sm text-gray-600">
+                                            No owner data loaded.
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Join/Leave */}
-                            <div className="mt-4 flex flex-wrap gap-2">
-                                {!isMember ? (
-                                    <Button size="sm" onClick={onJoin} disabled={isLoading}>
-                                        Join Group
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={onLeave}
-                                        disabled={isLoading}
-                                    >
-                                        Leave Group
-                                    </Button>
+                            {/* Moderators */}
+                            <div className="space-y-2">
+                                <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                    Moderators
+                                </Typography>
+                                <div className="flex flex-wrap gap-2">
+                                    {moderatorsUsers.length === 0 && (
+                                        <span className="text-sm text-gray-600">
+                                            No moderators.
+                                        </span>
+                                    )}
+                                    {moderatorsUsers.map((u: any) => (
+                                        <UserChip
+                                            key={u._id}
+                                            user={u}
+                                            badge="Moderator"
+                                            badgeColor="emerald"
+                                            link
+                                            canRemove={
+                                                canManageModerators &&
+                                                u._id !== ownerUser?._id
+                                            }
+                                            onRemove={() => handleRemoveModerator(u._id)}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Participants */}
+                            <div className="space-y-3">
+                                <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                    Participants
+                                </Typography>
+
+                                {/* Add participants (only moderators/owner/admin) */}
+                                {canModerate && (
+                                    <div className="max-w-xl">
+                                        <DriverCombobox
+                                            id="add-participants"
+                                            mode="multi"
+                                            label="Add participants"
+                                            placeholder="Select drivers to add"
+                                            values={newParticipants}
+                                            onChange={setNewParticipants}
+                                            actionLabel="Add selected to group"
+                                            actionHint="Selected drivers will be added as participants."
+                                            actionDisabled={groupLoading || membersLoading}
+                                            onAction={handleAddParticipants}
+                                        />
+                                    </div>
                                 )}
+
+                                <div className="flex flex-wrap gap-2">
+                                    {participantsUsers.length === 0 && (
+                                        <span className="text-sm text-gray-600">
+                                            No participants.
+                                        </span>
+                                    )}
+                                    {participantsUsers.map((u: any) => (
+                                        <UserChip
+                                            key={u._id}
+                                            user={u}
+                                            link
+                                            canRemove={
+                                                canManageParticipants &&
+                                                u._id !== ownerUser?._id
+                                            }
+                                            onRemove={() => handleRemoveParticipant(u._id)}
+                                            extraActions={
+                                                canManageModerators &&
+                                                u._id !== ownerUser?._id &&
+                                                !moderatorsUsers.some(
+                                                    (m: any) => m._id === u._id,
+                                                ) && (
+                                                    <button
+                                                        type="button"
+                                                        className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:underline"
+                                                        onClick={() =>
+                                                            handleAddModerator(u._id)
+                                                        }
+                                                    >
+                                                        <Crown className="w-3 h-3" />
+                                                        Make moderator
+                                                    </button>
+                                                )
+                                            }
+                                        />
+                                    ))}
+                                </div>
                             </div>
                         </CardBody>
                     </Card>
 
-                    {/* Members (add/remove) */}
-                    {canManage && (
+                    {/* Rides / activity */}
+                    {dashboard && (
                         <Card variant="elevated">
                             <CardBody className="p-4 sm:p-6 space-y-4">
-                                <Typography className="text-sm font-semibold text-gray-900">
-                                    Members: {membersIds.length}
-                                </Typography>
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <Activity className="w-4 h-4 text-indigo-600" />
+                                        <Typography className="text-sm font-semibold text-gray-900">
+                                            Group rides
+                                        </Typography>
+                                    </div>
+                                    <span className="text-xs text-gray-500">
+                                        Drivers: {dashboard.drivers?.length ?? 0}
+                                    </span>
+                                </div>
 
-                                {/* Add members with new DriverCombobox (multi + action) */}
-                                <div className="flex flex-col gap-3">
-                                    <DriverCombobox
-                                        id="add-drivers"
-                                        mode="multi"
-                                        label="Add members"
-                                        placeholder="Select drivers to add"
-                                        values={selectedDrivers}
-                                        onChange={setSelectedDrivers}
-                                        actionLabel="Add selected to group"
-                                        actionHint="Selected drivers will be added as group members."
-                                        actionDisabled={isLoading}
-                                        onAction={onAddMembers}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                                    <StatBox
+                                        label="Active assigned"
+                                        value={dashboard.rides.activeAssigned.length}
+                                    />
+                                    <StatBox
+                                        label="Active unassigned"
+                                        value={dashboard.rides.activeUnassigned.length}
+                                    />
+                                    <StatBox
+                                        label="Completed"
+                                        value={dashboard.rides.history.length}
                                     />
                                 </div>
 
-                                {/* Members list */}
-                                <div className="flex flex-wrap gap-2">
-                                    {membersIds.length === 0 && !driversLoading && (
-                                        <div className="text-sm text-gray-600">No members yet.</div>
-                                    )}
-
-                                    {driversLoading && membersIds.length > 0 && (
-                                        <div className="text-sm text-gray-600">
-                                            Loading members…
+                                {dashboard.rides.history.length > 0 && (
+                                    <div className="space-y-2">
+                                        <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                            Recent completed rides
+                                        </Typography>
+                                        <div className="space-y-1.5">
+                                            {dashboard.rides.history
+                                                .slice(0, 5)
+                                                .map((r: any) => (
+                                                    <div
+                                                        key={String(r._id)}
+                                                        className="flex items-center justify-between gap-2 text-xs"
+                                                    >
+                                                        <div className="min-w-0">
+                                                            <div className="text-gray-900 truncate">
+                                                                {(r.from && String(r.from)) ||
+                                                                    "From ?"}{" "}
+                                                                →{" "}
+                                                                {(r.to && String(r.to)) ||
+                                                                    "To ?"}
+                                                            </div>
+                                                            <div className="text-[11px] text-gray-500">
+                                                                {r.status || "status ?"}
+                                                                {r.datetime && (
+                                                                    <>
+                                                                        {" · "}
+                                                                        {dt(r.datetime)}
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                         </div>
-                                    )}
-
-                                    {membersIds.map((m) => {
-                                        const uid = String(
-                                            typeof m === "string"
-                                                ? m
-                                                : m._id || m.userId || m.id || ""
-                                        );
-                                        const d = driversMap[uid];
-                                        const displayName =
-                                            (typeof m !== "string" && (m as any).name) ||
-                                            d?.name ||
-                                            memberLabel(m);
-                                        const secondary =
-                                            (typeof m !== "string" && (m as any).email) ||
-                                            d?.email ||
-                                            "";
-
-                                        return (
-                                            <span
-                                                key={uid}
-                                                className="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs bg-white"
-                                                title={secondary || uid}
-                                            >
-                                                <UserIcon className="w-3.5 h-3.5 text-gray-500" />
-                                                <Link
-                                                    href={`/users/${uid}`}
-                                                    className="hover:underline font-medium text-gray-900 truncate max-w-[12rem]"
-                                                >
-                                                    {displayName}
-                                                </Link>
-                                                {secondary && (
-                                                    <span className="text-gray-600 truncate max-w-[10rem]">
-                                                        • {secondary}
-                                                    </span>
-                                                )}
-                                                <button
-                                                    type="button"
-                                                    className="p-0.5 rounded hover:bg-gray-100"
-                                                    onClick={() => onRemoveMember(uid)}
-                                                    aria-label={`Remove ${displayName}`}
-                                                >
-                                                    <X className="w-3.5 h-3.5" />
-                                                </button>
-                                            </span>
-                                        );
-                                    })}
-                                </div>
+                                    </div>
+                                )}
                             </CardBody>
                         </Card>
                     )}
+
+                    {/* Membership actions */}
+                    <Card>
+                        <CardBody className="p-4 sm:p-5 space-y-3">
+                            <Typography className="text-sm font-semibold text-gray-900">
+                                Membership
+                            </Typography>
+                            <div className="flex flex-wrap gap-2">
+                                {isMember && !isOwner && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        leftIcon={<LogOut className="w-4 h-4" />}
+                                        onClick={handleLeaveGroup}
+                                        disabled={leaving}
+                                    >
+                                        {leaving ? "Leaving…" : "Leave group"}
+                                    </Button>
+                                )}
+                                {!isMember && (
+                                    <span className="text-xs text-gray-600">
+                                        This group is invite-only. Join with an invite link.
+                                    </span>
+                                )}
+                            </div>
+                        </CardBody>
+                    </Card>
                 </div>
             </Container>
         </ProtectedLayout>
+    );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Small helpers                                                              */
+/* -------------------------------------------------------------------------- */
+
+function formatGroupType(t: GroupType | undefined): string {
+    if (!t) return "Custom";
+    switch (t) {
+        case "fleet":
+            return "Fleet";
+        case "coop":
+            return "Co-op";
+        case "airport":
+            return "Airport";
+        case "city":
+            return "City";
+        case "custom":
+            return "Custom";
+        case "global":
+            return "Global";
+        default:
+            return t;
+    }
+}
+
+function inputClass() {
+    return [
+        "w-full rounded-lg border px-3 py-2.5 text-sm sm:text-base",
+        "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
+        "border-gray-300",
+    ].join(" ");
+}
+
+function MetaRow({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="flex items-start justify-between gap-2 text-sm">
+            <span className="text-gray-500">{label}</span>
+            <span className="text-gray-900 text-right break-words">{value}</span>
+        </div>
+    );
+}
+
+function StatBox({ label, value }: { label: string; value: number }) {
+    return (
+        <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+            <div className="text-[11px] text-gray-500">{label}</div>
+            <div className="text-sm font-semibold text-gray-900">{value}</div>
+        </div>
+    );
+}
+
+type UserChipProps = {
+    user: { _id: string; name?: string; email?: string };
+    badge?: string;
+    badgeColor?: "indigo" | "emerald";
+    link?: boolean;
+    canRemove?: boolean;
+    onRemove?: () => void;
+    extraActions?: React.ReactNode;
+};
+
+function UserChip({
+                      user,
+                      badge,
+                      badgeColor = "indigo",
+                      link,
+                      canRemove,
+                      onRemove,
+                      extraActions,
+                  }: UserChipProps) {
+    const displayName =
+        user.name || user.email || `User ${user._id.slice(-6)}`;
+
+    const badgeClass =
+        badgeColor === "emerald"
+            ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+            : "bg-indigo-50 text-indigo-700 border-indigo-100";
+
+    const content = (
+        <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-900 truncate max-w-[12rem]">
+            {displayName}
+        </span>
+    );
+
+    return (
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs">
+            <Users className="w-3.5 h-3.5 text-gray-500" />
+            {link ? (
+                <Link
+                    href={`/users/${user._id}`}
+                    className="hover:underline max-w-[12rem] truncate"
+                >
+                    {content}
+                </Link>
+            ) : (
+                content
+            )}
+            {user.email && (
+                <span className="text-[11px] text-gray-500 max-w-[10rem] truncate">
+                    • {user.email}
+                </span>
+            )}
+            {badge && (
+                <span
+                    className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] ${badgeClass}`}
+                >
+                    {badge}
+                </span>
+            )}
+            {canRemove && onRemove && (
+                <button
+                    type="button"
+                    className="p-0.5 rounded hover:bg-gray-100"
+                    onClick={onRemove}
+                    aria-label={`Remove ${displayName}`}
+                >
+                    <UserMinus className="w-3.5 h-3.5" />
+                </button>
+            )}
+            {extraActions}
+        </div>
     );
 }
