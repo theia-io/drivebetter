@@ -1,8 +1,17 @@
 // web/ui/src/services/groups.ts
 import useSWR from "swr";
 import { apiGet, apiPost, apiPatch, apiDelete } from "@/services/http";
-import type { Group, CreateGroupRequest, UpdateGroupRequest, GroupActivity } from "@/types/group";
-import { PageResp } from "@/types";
+import type {
+    Group,
+    CreateGroupRequest,
+    UpdateGroupRequest,
+    GroupDashboard,
+    GroupMembersPayload,
+    GroupInviteResponse,
+    JoinGroupResponse,
+    GroupActivity,
+} from "@/types/group";
+import type { PageResp } from "@/types";
 
 /* ------------------------------ Helpers ------------------------------ */
 
@@ -17,58 +26,128 @@ const qs = (params?: Record<string, any>) => {
     return s ? `?${s}` : "";
 };
 
-/* -------------------------------- API -------------------------------- */
+/* ------------------------------ Types -------------------------------- */
 
-export type GroupsListQuery = {
+export interface ListGroupsParams {
     q?: string;
-    type?: string;
+    type?: Group["type"];
     city?: string;
-    page?: number; // optional if your API supports paging
-    limit?: number; // optional
-};
+    visibility?: "public" | "private" | "restricted";
+    isInviteOnly?: boolean;
+    page?: number;
+    limit?: number;
+}
 
-export const listGroups = (params?: GroupsListQuery) =>
-    apiGet<PageResp<Group>>(`/groups${qs(params)}`);
+/* ------------------------------ REST calls --------------------------- */
 
-export const getGroup = (id: string) => apiGet<Group>(`/groups/${id}`);
+// list
+export async function listGroups(params?: ListGroupsParams) {
+    return apiGet<PageResp<Group>>(`/groups${qs(params)}`);
+}
 
-export const createGroup = (payload: CreateGroupRequest) => apiPost<Group>(`/groups`, payload);
+// get single
+export async function getGroup(id: string) {
+    return apiGet<Group>(`/groups/${id}`);
+}
 
-export const updateGroup = (id: string, payload: UpdateGroupRequest) =>
-    apiPatch<Group>(`/groups/${id}`, payload);
+// create
+export async function createGroup(body: CreateGroupRequest) {
+    return apiPost<Group, CreateGroupRequest>("/groups", body);
+}
 
-export const deleteGroup = (id: string) => apiDelete<void>(`/groups/${id}`);
+// update
+export async function updateGroup(id: string, body: UpdateGroupRequest) {
+    return apiPatch<Group, UpdateGroupRequest>(`/groups/${id}`, body);
+}
 
-/** Add/remove members in one call (POST /groups/:id/members) */
-export const updateGroupMembers = (id: string, add: string[], remove: string[]) =>
-    apiPost<Group>(`/groups/${id}/members`, { add, remove });
+// delete
+export async function deleteGroup(id: string) {
+    return apiDelete<void>(`/groups/${id}`);
+}
 
-/** Membership helpers */
-export const joinGroup = (groupId: string) => apiPost<{ ok: true }>(`/groups/${groupId}/join`, {});
+/* ----------------------- membership / roles -------------------------- */
 
-export const leaveGroup = (groupId: string) =>
-    apiPost<{ ok: true }>(`/groups/${groupId}/leave`, {});
+export async function getGroupMembers(id: string) {
+    return apiGet<GroupMembersPayload>(`/groups/${id}/members`);
+}
 
-/** Activity feed (if exposed by your API) */
-export const listGroupActivity = () => apiGet<GroupActivity[]>(`/groups/activity`);
+export async function addGroupParticipant(groupId: string, userId: string) {
+    return apiPost<Group, { userId: string }>(`/groups/${groupId}/participants`, { userId });
+}
 
-/* -------------------------------- Hooks ------------------------------- */
+export async function removeGroupParticipant(groupId: string, userId: string) {
+    return apiDelete<Group>(`/groups/${groupId}/participants/${userId}`);
+}
 
-export function useGroups(params?: GroupsListQuery) {
-    const key = `/groups${qs(params)}`;
+export async function addGroupModerator(groupId: string, userId: string) {
+    return apiPost<Group, { userId: string }>(`/groups/${groupId}/moderators`, { userId });
+}
+
+export async function removeGroupModerator(groupId: string, userId: string) {
+    return apiDelete<Group>(`/groups/${groupId}/moderators/${userId}`);
+}
+
+export async function leaveGroup(groupId: string) {
+    return apiPost<{ ok: boolean }>(`/groups/${groupId}/leave`, {});
+}
+
+export async function transferGroupOwner(groupId: string, userId: string) {
+    return apiPost<Group, { userId: string }>(`/groups/${groupId}/owner`, { userId });
+}
+
+/* ------------------------------ invites ----------------------------- */
+
+export async function createGroupInvite(groupId: string, expiresAt?: string) {
+    return apiPost<GroupInviteResponse, { expiresAt?: string }>(
+        `/groups/${groupId}/invites`,
+        expiresAt ? { expiresAt } : {}
+    );
+}
+
+export async function joinGroupByCode(code: string) {
+    return apiPost<JoinGroupResponse, { code: string }>("/groups/join", { code });
+}
+
+/* ------------------------------ dashboard ---------------------------- */
+
+export async function getGroupDashboard(id: string) {
+    return apiGet<GroupDashboard>(`/groups/${id}/dashboard`);
+}
+
+/* ----------------------- legacy: group activity ---------------------- */
+/* if backend still exposes /groups/activity; otherwise drop when unused */
+
+export async function listGroupActivity() {
+    return apiGet<GroupActivity[]>("/groups/activity");
+}
+
+/* ------------------------------ SWR hooks ---------------------------- */
+
+export function useGroups(params?: ListGroupsParams) {
+    const key = params ? `/groups${qs(params)}` : "/groups";
     return useSWR<PageResp<Group>>(key, () => listGroups(params));
 }
 
 export function useGroup(id?: string) {
     const key = id ? `/groups/${id}` : null;
-    return useSWR<Group>(key, () => getGroup(id as string));
+    return useSWR<Group | undefined>(key, () => (id ? getGroup(id) : undefined));
 }
 
-export function useDeleteGroup(id?: string) {
-    const key = id ? `/groups/${id}` : null;
-    return useSWR<void>(key, () => deleteGroup(id as string));
+export function useGroupDashboard(id?: string) {
+    const key = id ? `/groups/${id}/dashboard` : null;
+    return useSWR<GroupDashboard | undefined>(key, () =>
+        id ? getGroupDashboard(id) : undefined
+    );
 }
 
+export function useGroupMembers(id?: string) {
+    const key = id ? `/groups/${id}/members` : null;
+    return useSWR<GroupMembersPayload | undefined>(key, () =>
+        id ? getGroupMembers(id) : undefined
+    );
+}
+
+// keep for now; remove when you drop /groups/activity on backend
 export function useGroupActivity() {
     const key = `/groups/activity`;
     return useSWR<GroupActivity[]>(key, listGroupActivity);

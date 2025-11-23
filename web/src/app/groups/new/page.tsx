@@ -2,50 +2,44 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import { ArrowLeft, Save, Users as UsersIcon, Plus, X } from "lucide-react";
-import { DriverCombobox, SimpleDriver } from "@/components/ui/ride/DriverCombobox";
-import { createGroup as apiCreateGroup } from "@/stores/groups";
-import type { CreateGroupRequest } from "@/types"; // uses your existing store/service
+import { ArrowLeft, Save, Users } from "lucide-react";
 
-type Visibility = "public" | "private";
+import { createGroup } from "@/stores/groups";
+import type { CreateGroupRequest, GroupType } from "@/types/group";
+import { GROUP_TYPE_OPTIONS } from "@/types/group";
 
-type Form = {
+type FormState = {
     name: string;
+    type: GroupType | "";
     description: string;
-    type: string;
     city: string;
     location: string;
-    visibility: Visibility;
-    isInviteOnly: boolean;
-    tagsText: string; // comma-separated
-    members: Array<{ _id: string; name?: string; email?: string }>;
+    rules: string;
 };
 
-const initialForm: Form = {
+const INITIAL_FORM: FormState = {
     name: "",
-    description: "",
     type: "",
+    description: "",
     city: "",
     location: "",
-    visibility: "public",
-    isInviteOnly: false,
-    tagsText: "",
-    members: [],
+    rules: "",
 };
 
 export default function NewGroupPage() {
     const router = useRouter();
-    const [form, setForm] = useState<Form>(initialForm);
+    const [form, setForm] = useState<FormState>(INITIAL_FORM);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [saving, setSaving] = useState(false);
-    const [selectedDriver, setSelectedDriver] = useState<any | null>(null);
-    const [pickedDrivers, setPickedDrivers] = useState<SimpleDriver[]>([]);
 
-    const set = <K extends keyof Form>(k: K, v: Form[K]) => setForm((s) => ({ ...s, [k]: v }));
+    const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
+        setForm((prev) => ({ ...prev, [key]: value }));
+    };
 
     function validate(): Record<string, string> {
         const e: Record<string, string> = {};
@@ -53,263 +47,241 @@ export default function NewGroupPage() {
         return e;
     }
 
-    async function onSubmit(e: React.FormEvent) {
+    async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
-        const eMap = validate();
-        setErrors(eMap);
-        if (Object.keys(eMap).length) return;
+        const validation = validate();
+        setErrors(validation);
+        if (Object.keys(validation).length > 0) return;
 
         setSaving(true);
         try {
-            const payload = {
+            const payload: CreateGroupRequest = {
                 name: form.name.trim(),
                 description: form.description.trim() || undefined,
                 type: form.type || undefined,
-                city: form.city || undefined,
-                location: form.location || undefined,
-                visibility: form.visibility as Visibility,
-                isInviteOnly: !!form.isInviteOnly,
-                tags: splitCSV(form.tagsText),
-                members: form.members.map((m) => m._id),
+                city: form.city.trim() || undefined,
+                location: form.location.trim() || undefined,
+                rules: form.rules.trim() || undefined,
+                // visibility / isInviteOnly / tags are server-defaulted; not set here
             };
 
-            const created = await apiCreateGroup(payload as CreateGroupRequest);
-            if (!created) throw new Error("Failed to create group");
+            const created = await createGroup(payload);
+            if (!created?._id) throw new Error("No group id returned");
+
             router.push(`/groups/${created._id}`);
         } catch (err) {
             console.error(err);
-            setErrors({ form: "Failed to create group" });
+            setErrors({ form: "Failed to create group. Try again." });
             setSaving(false);
         }
-    }
-
-    function onAddMember() {
-        if (!selectedDriver?._id) return;
-        const exists = form.members.some((m) => m._id === selectedDriver._id);
-        if (exists) {
-            setSelectedDriver(null);
-            return;
-        }
-        set("members", [
-            ...form.members,
-            { _id: selectedDriver._id, name: selectedDriver.name, email: selectedDriver.email },
-        ]);
-        setSelectedDriver(null);
-    }
-
-    function onRemoveMember(id: string) {
-        set(
-            "members",
-            form.members.filter((m) => m._id !== id)
-        );
     }
 
     return (
         <ProtectedLayout>
             <Container className="px-3 sm:px-6 lg:px-8">
-                <div className="space-y-4 sm:space-y-6 max-w-3xl">
-                    {/* Toolbar */}
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            leftIcon={<ArrowLeft className="w-4 h-4" />}
-                        >
-                            <Link href="/groups">Back</Link>
-                        </Button>
+                <div className="flex justify-center">
+                    <div className="w-full max-w-xl space-y-4 sm:space-y-6 py-4 sm:py-6">
+                        {/* Top bar */}
                         <div className="flex items-center gap-2">
-                            <div className="p-2 bg-indigo-50 rounded-xl border border-indigo-200">
-                                <UsersIcon className="w-5 h-5 text-indigo-600" />
+                            <Link href="/groups">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    leftIcon={<ArrowLeft className="w-4 h-4" />}
+                                >
+                                    Back
+                                </Button>
+                            </Link>
+
+                            <div className="flex items-center gap-2">
+                                <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-2">
+                                    <Users className="w-5 h-5 text-indigo-600" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <Typography className="text-base sm:text-2xl font-bold text-gray-900">
+                                        Create group
+                                    </Typography>
+                                    <span className="text-xs sm:text-sm text-gray-500">
+                                        Basic setup. You can manage members and sharing later.
+                                    </span>
+                                </div>
                             </div>
-                            <Typography className="text-base sm:text-2xl font-bold text-gray-900">
-                                Create Group
-                            </Typography>
                         </div>
-                    </div>
 
-                    {errors.form && (
-                        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                            {errors.form}
-                        </div>
-                    )}
+                        {errors.form && (
+                            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                                {errors.form}
+                            </div>
+                        )}
 
-                    <Card variant="elevated">
-                        <CardBody className="p-4 sm:p-6">
-                            <form onSubmit={onSubmit} className="space-y-6" noValidate>
-                                {/* Basics */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Card variant="elevated">
+                            <CardBody className="p-4 sm:p-6">
+                                <form
+                                    onSubmit={handleSubmit}
+                                    className="space-y-6"
+                                    noValidate
+                                >
+                                    {/* Basic info */}
+                                    <div className="space-y-4">
+                                        <Field>
+                                            <FieldLabel htmlFor="name">Group name</FieldLabel>
+                                            <input
+                                                id="name"
+                                                value={form.name}
+                                                onChange={(e) =>
+                                                    setField("name", e.target.value)
+                                                }
+                                                className={inputClass(errors.name)}
+                                                placeholder="Night shift LA drivers"
+                                            />
+                                            <FieldError message={errors.name} />
+                                        </Field>
+
+                                        <Field>
+                                            <FieldLabel htmlFor="type">
+                                                Type{" "}
+                                                <span className="text-gray-400 text-xs">
+                                                    (optional)
+                                                </span>
+                                            </FieldLabel>
+                                            <select
+                                                id="type"
+                                                value={form.type}
+                                                onChange={(e) =>
+                                                    setField(
+                                                        "type",
+                                                        e.target.value as GroupType | ""
+                                                    )
+                                                }
+                                                className={inputClass()}
+                                            >
+                                                <option value="">Select type…</option>
+                                                {GROUP_TYPE_OPTIONS.map((opt) => (
+                                                    <option key={opt} value={opt}>
+                                                        {opt}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </Field>
+
+                                        <Field>
+                                            <FieldLabel htmlFor="description">
+                                                Description
+                                            </FieldLabel>
+                                            <textarea
+                                                id="description"
+                                                rows={3}
+                                                value={form.description}
+                                                onChange={(e) =>
+                                                    setField("description", e.target.value)
+                                                }
+                                                className={inputClass()}
+                                                placeholder="Short description of what this group is for"
+                                            />
+                                        </Field>
+                                    </div>
+
+                                    {/* Location */}
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        <Field>
+                                            <FieldLabel htmlFor="city">City</FieldLabel>
+                                            <input
+                                                id="city"
+                                                value={form.city}
+                                                onChange={(e) =>
+                                                    setField("city", e.target.value)
+                                                }
+                                                className={inputClass()}
+                                                placeholder="Los Angeles"
+                                            />
+                                        </Field>
+
+                                        <Field>
+                                            <FieldLabel htmlFor="location">
+                                                Area / Zone{" "}
+                                                <span className="text-gray-400 text-xs">
+                                                    (optional)
+                                                </span>
+                                            </FieldLabel>
+                                            <input
+                                                id="location"
+                                                value={form.location}
+                                                onChange={(e) =>
+                                                    setField("location", e.target.value)
+                                                }
+                                                className={inputClass()}
+                                                placeholder="LAX / Westside"
+                                            />
+                                        </Field>
+                                    </div>
+
+                                    {/* Rules */}
                                     <Field>
-                                        <FieldLabel htmlFor="name">Name</FieldLabel>
-                                        <input
-                                            id="name"
-                                            value={form.name}
-                                            onChange={(e) => set("name", e.target.value)}
-                                            className={inputClass(errors.name)}
-                                            placeholder="Team LA Drivers"
-                                        />
-                                        <FieldError message={errors.name} />
-                                    </Field>
-
-                                    <Field>
-                                        <FieldLabel htmlFor="type">Type</FieldLabel>
-                                        <input
-                                            id="type"
-                                            value={form.type}
-                                            onChange={(e) => set("type", e.target.value)}
-                                            className={inputClass()}
-                                            placeholder="e.g., airport, corporate, nightly"
-                                        />
-                                    </Field>
-
-                                    <Field className="sm:col-span-2">
-                                        <FieldLabel htmlFor="description">Description</FieldLabel>
+                                        <FieldLabel htmlFor="rules">
+                                            Group rules{" "}
+                                            <span className="text-gray-400 text-xs">
+                                                (optional)
+                                            </span>
+                                        </FieldLabel>
                                         <textarea
-                                            id="description"
-                                            rows={3}
-                                            value={form.description}
-                                            onChange={(e) => set("description", e.target.value)}
-                                            className={inputClass()}
-                                            placeholder="Short description of what this group is about"
-                                        />
-                                    </Field>
-                                </div>
-
-                                {/* Location-ish */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <Field>
-                                        <FieldLabel htmlFor="city">City</FieldLabel>
-                                        <input
-                                            id="city"
-                                            value={form.city}
-                                            onChange={(e) => set("city", e.target.value)}
-                                            className={inputClass()}
-                                            placeholder="Los Angeles"
-                                        />
-                                    </Field>
-                                    <Field>
-                                        <FieldLabel htmlFor="location">Location/Area</FieldLabel>
-                                        <input
-                                            id="location"
-                                            value={form.location}
-                                            onChange={(e) => set("location", e.target.value)}
-                                            className={inputClass()}
-                                            placeholder="LAX / Westside"
-                                        />
-                                    </Field>
-                                </div>
-
-                                {/* Visibility / Invite */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <Field>
-                                        <FieldLabel htmlFor="visibility">Visibility</FieldLabel>
-                                        <select
-                                            id="visibility"
-                                            value={form.visibility}
+                                            id="rules"
+                                            rows={4}
+                                            value={form.rules}
                                             onChange={(e) =>
-                                                set("visibility", e.target.value as Visibility)
+                                                setField("rules", e.target.value)
                                             }
                                             className={inputClass()}
-                                        >
-                                            <option value="public">Public</option>
-                                            <option value="private">Private</option>
-                                        </select>
+                                            placeholder="Add rules or guidelines for this group (will be shown on group page)"
+                                        />
                                     </Field>
 
-                                    <Field>
-                                        <FieldLabel htmlFor="invite">Invite Only</FieldLabel>
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                id="invite"
-                                                type="checkbox"
-                                                checked={form.isInviteOnly}
-                                                onChange={(e) =>
-                                                    set("isInviteOnly", e.target.checked)
-                                                }
-                                            />
-                                            <span className="text-sm text-gray-700">
-                                                Require invitations to join
-                                            </span>
-                                        </div>
-                                    </Field>
-                                </div>
-
-                                {/* Tags */}
-                                <Field>
-                                    <FieldLabel htmlFor="tags">Tags (comma-separated)</FieldLabel>
-                                    <input
-                                        id="tags"
-                                        value={form.tagsText}
-                                        onChange={(e) => set("tagsText", e.target.value)}
-                                        className={inputClass()}
-                                        placeholder="airport, luxury, nights"
-                                    />
-                                </Field>
-
-                                {/* Members add */}
-                                <div className="space-y-2">
-                                    <FieldLabel>Initial Members (optional)</FieldLabel>
-                                    <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-                                        <div className="flex-1 min-w-0">
-                                            <DriverCombobox
-                                                id="driver-pick"
-                                                mode="multi"
-                                                label="Drivers"
-                                                placeholder="Select drivers to share with"
-                                                values={pickedDrivers}
-                                                onChange={setPickedDrivers}
-                                            />
-                                        </div>
+                                    {/* Actions */}
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                                        <Link href="/groups">
+                                            <Button variant="outline" type="button">
+                                                Cancel
+                                            </Button>
+                                        </Link>
                                         <Button
-                                            size="sm"
-                                            leftIcon={<Plus className="w-4 h-4" />}
-                                            type="button"
-                                            onClick={onAddMember}
-                                            disabled={!selectedDriver?._id}
+                                            type="submit"
+                                            leftIcon={<Save className="w-4 h-4" />}
+                                            disabled={saving}
                                         >
-                                            Add member
+                                            {saving ? "Creating…" : "Create group"}
                                         </Button>
                                     </div>
-                                </div>
-
-                                {/* Actions */}
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                                    <Button variant="outline">
-                                        <Link href="/groups">Cancel</Link>
-                                    </Button>
-                                    <Button
-                                        type="submit"
-                                        leftIcon={<Save className="w-4 h-4" />}
-                                        disabled={saving}
-                                    >
-                                        {saving ? "Creating…" : "Create Group"}
-                                    </Button>
-                                </div>
-                            </form>
-                        </CardBody>
-                    </Card>
+                                </form>
+                            </CardBody>
+                        </Card>
+                    </div>
                 </div>
             </Container>
         </ProtectedLayout>
     );
 }
 
-/* ----------------------------- UI primitives ---------------------------- */
+/* --------------------------- Small helpers --------------------------- */
 
-function Field({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+function Field(props: { children: React.ReactNode; className?: string }) {
+    const { children, className = "" } = props;
     return <div className={`space-y-1.5 ${className}`}>{children}</div>;
 }
 
-function FieldLabel({ htmlFor, children }: { htmlFor?: string; children: React.ReactNode }) {
+function FieldLabel(props: { htmlFor?: string; children: React.ReactNode }) {
+    const { htmlFor, children } = props;
     return (
-        <label htmlFor={htmlFor} className="flex items-center text-sm font-medium text-gray-700">
+        <label
+            htmlFor={htmlFor}
+            className="flex items-center text-sm font-medium text-gray-700"
+        >
             {children}
         </label>
     );
 }
 
-function FieldError({ message }: { message?: string }) {
-    if (!message) return null;
-    return <p className="text-sm text-red-600">{message}</p>;
+function FieldError(props: { message?: string }) {
+    if (!props.message) return null;
+    return <p className="text-sm text-red-600">{props.message}</p>;
 }
 
 function inputClass(error?: string) {
@@ -318,14 +290,4 @@ function inputClass(error?: string) {
         "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
         error ? "border-red-300" : "border-gray-300",
     ].join(" ");
-}
-
-/* ----------------------------- helpers ---------------------------- */
-
-function splitCSV(s?: string): string[] | undefined {
-    if (!s) return [];
-    return s
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean);
 }

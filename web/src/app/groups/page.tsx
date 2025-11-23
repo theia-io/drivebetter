@@ -1,327 +1,333 @@
+// app/groups/page.tsx
 "use client";
 
-import useSWR from "swr";
-import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import ProtectedLayout from "@/components/ProtectedLayout";
-import { Button, Card, CardBody, Container, Typography, Badge } from "@/components/ui";
-import { Users, Plus, Search, Trash2, PencilLine, Eye } from "lucide-react";
-import { apiGet, apiDelete } from "@/services/http";
-import { Group, PageResp } from "@/types";
-import { useGroups } from "@/stores/groups";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Search, Users, Plus, Loader2, MapPin, ListFilter } from "lucide-react";
 
-/* ----------------------------- Helpers ----------------------------- */
-const qstring = (params: Record<string, any>) => {
-    const sp = new URLSearchParams();
-    Object.entries(params).forEach(([k, v]) => {
-        if (v === undefined || v === null || v === "") return;
-        sp.set(k, String(v));
-    });
-    const s = sp.toString();
-    return s ? `?${s}` : "";
+import ProtectedLayout from "@/components/ProtectedLayout";
+import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
+import { useGroups } from "@/stores/groups";
+import type { Group, GroupType } from "@/types/group";
+import { GROUP_TYPE_OPTIONS } from "@/types/group";
+
+type FilterState = {
+    q: string;
+    type: GroupType | "";
+    city: string;
 };
 
-function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-    return (
-        <th
-            scope="col"
-            className={`px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider ${className}`}
-        >
-            {children}
-        </th>
-    );
-}
-function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-    return <td className={`px-4 py-3 text-sm text-gray-900 ${className}`}>{children}</td>;
-}
+const INITIAL_FILTERS: FilterState = {
+    q: "",
+    type: "",
+    city: "",
+};
 
 export default function GroupsPage() {
     const router = useRouter();
-    const searchParams = useSearchParams();
+    const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
 
-    const [q, setQ] = useState(searchParams.get("q") || "");
-    const [type, setType] = useState(searchParams.get("type") || "");
-    const [active, setActive] = useState(searchParams.get("active") || "");
-    const [page, setPage] = useState(Number(searchParams.get("page") || 1));
-    const [limit, setLimit] = useState(Number(searchParams.get("limit") || 20));
+    const queryParams = useMemo(
+        () => ({
+            q: filters.q.trim() || undefined,
+            type: filters.type || undefined,
+            city: filters.city.trim() || undefined,
+        }),
+        [filters],
+    );
 
-    const { data, isLoading, mutate } = useGroups({ q: q, type: type, page: page, limit: limit });
+    const { data, error } = useGroups(queryParams);
+    const loading = !data && !error;
 
-    const items = data?.items ?? [];
-    const pages = data?.pages ?? 1;
+    const groups = data?.items ?? [];
     const total = data?.total ?? 0;
 
-    async function onDelete(id: string) {
-        if (!confirm("Delete this group?")) return;
-        await apiDelete(`/groups/${id}`);
-        await mutate();
-    }
-
-    function applyFilters() {
-        const s = qstring({ q, type, active, page: 1, limit });
-        router.replace(`/groups${s}`);
-        setPage(1);
-        mutate();
-    }
+    const onFilterChange = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
+        setFilters((prev) => ({ ...prev, [key]: value }));
+    };
 
     return (
         <ProtectedLayout>
-            <Container className="px-4 sm:px-6 lg:px-8">
-                <div className="space-y-6 sm:space-y-8">
+            <Container className="px-3 sm:px-6 lg:px-8">
+                <div className="mx-auto max-w-6xl py-4 sm:py-6 space-y-4 sm:space-y-6">
                     {/* Header */}
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-center gap-2">
-                            <div className="p-2 bg-indigo-50 rounded-xl border border-indigo-200">
-                                <Users className="w-5 h-5 text-indigo-600" />
+                        <div className="flex items-center gap-3">
+                            <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-2.5">
+                                <Users className="h-5 w-5 text-indigo-600" />
                             </div>
-                            <div className="min-w-0">
-                                <Typography
-                                    variant="h1"
-                                    className="text-xl sm:text-3xl font-bold text-gray-900"
-                                >
+                            <div className="space-y-0.5">
+                                <Typography className="text-xl sm:text-2xl font-bold text-gray-900">
                                     Groups
                                 </Typography>
-                                <Typography variant="body1" className="text-gray-600 text-sm">
-                                    {isLoading ? "Loading…" : `${total} total`}
-                                </Typography>
+                                <p className="text-xs sm:text-sm text-gray-500">
+                                    Organise drivers and rides into private groups. Membership is invite-only.
+                                </p>
                             </div>
                         </div>
-                        <div>
-                            <Button leftIcon={<Plus className="w-4 h-4" />}>
-                                <Link href="/groups/new">New Group</Link>
+
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => router.push("/groups/new")}
+                                className="sm:hidden"
+                            >
+                                <Plus className="h-4 w-4 mr-1" />
+                                New
+                            </Button>
+                            <Button
+                                variant="solid"
+                                size="sm"
+                                className="hidden sm:inline-flex"
+                                onClick={() => router.push("/groups/new")}
+                                leftIcon={<Plus className="h-4 w-4" />}
+                            >
+                                New group
                             </Button>
                         </div>
                     </div>
 
                     {/* Filters */}
-                    <Card variant="elevated">
-                        <CardBody className="p-4 sm:p-6">
-                            <div className="flex flex-col sm:flex-row gap-3">
-                                <div className="relative flex-1">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                    <input
-                                        type="text"
-                                        value={q}
-                                        onChange={(e) => setQ(e.target.value)}
-                                        placeholder="Search by group name/city"
-                                        className="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                                    />
+                    <Card>
+                        <CardBody className="p-3 sm:p-4 space-y-3">
+                            <div className="flex items-center gap-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                <ListFilter className="h-4 w-4" />
+                                <span>Filters</span>
+                            </div>
+
+                            <div className="flex flex-col gap-3 sm:grid sm:grid-cols-3">
+                                {/* Search */}
+                                <div className="flex flex-col gap-1.5">
+                                    <label
+                                        htmlFor="q"
+                                        className="text-xs font-medium text-gray-600"
+                                    >
+                                        Search
+                                    </label>
+                                    <div className="relative">
+                                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                        <input
+                                            id="q"
+                                            value={filters.q}
+                                            onChange={(e) =>
+                                                onFilterChange("q", e.target.value)
+                                            }
+                                            className="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                            placeholder="Search by name or description…"
+                                        />
+                                    </div>
                                 </div>
-                                <select
-                                    value={type}
-                                    onChange={(e) => setType(e.target.value)}
-                                    className="w-full sm:w-48 px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                                >
-                                    <option value="">All types</option>
-                                    <option value="local">local</option>
-                                    <option value="corporate">corporate</option>
-                                    <option value="global">global</option>
-                                </select>
-                                <select
-                                    value={active}
-                                    onChange={(e) => setActive(e.target.value)}
-                                    className="w-full sm:w-40 px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                                >
-                                    <option value="">All states</option>
-                                    <option value="true">Active</option>
-                                    <option value="false">Inactive</option>
-                                </select>
-                                <select
-                                    value={limit}
-                                    onChange={(e) => setLimit(Number(e.target.value))}
-                                    className="w-full sm:w-32 px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-                                >
-                                    {[10, 20, 50, 100].map((n) => (
-                                        <option key={n} value={n}>
-                                            {n}/page
-                                        </option>
-                                    ))}
-                                </select>
-                                <Button variant="outline" onClick={applyFilters}>
-                                    Apply
-                                </Button>
+
+                                {/* Type */}
+                                <div className="flex flex-col gap-1.5">
+                                    <label
+                                        htmlFor="type"
+                                        className="text-xs font-medium text-gray-600"
+                                    >
+                                        Type
+                                    </label>
+                                    <select
+                                        id="type"
+                                        value={filters.type}
+                                        onChange={(e) =>
+                                            onFilterChange(
+                                                "type",
+                                                e.target.value as GroupType | "",
+                                            )
+                                        }
+                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    >
+                                        <option value="">All types</option>
+                                        {GROUP_TYPE_OPTIONS.map((t) => (
+                                            <option key={t} value={t}>
+                                                {formatGroupType(t as GroupType)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* City */}
+                                <div className="flex flex-col gap-1.5">
+                                    <label
+                                        htmlFor="city"
+                                        className="text-xs font-medium text-gray-600"
+                                    >
+                                        City
+                                    </label>
+                                    <div className="relative">
+                                        <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                        <input
+                                            id="city"
+                                            value={filters.city}
+                                            onChange={(e) =>
+                                                onFilterChange("city", e.target.value)
+                                            }
+                                            className="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                            placeholder="Filter by city"
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </CardBody>
                     </Card>
 
-                    {/* Table (desktop) */}
-                    <div className="hidden md:block">
-                        <div className="overflow-hidden rounded-lg border border-gray-200">
-                            <table className="min-w-full divide-y divide-gray-200 bg-white">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <Th>Name</Th>
-                                        <Th>Type</Th>
-                                        <Th>City</Th>
-                                        <Th>Members</Th>
-                                        <Th>Active</Th>
-                                        <Th className="text-right pr-4">Actions</Th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {items.map((g) => (
-                                        <tr key={g._id} className="hover:bg-gray-50">
-                                            <Td className="font-medium">{g.name}</Td>
-                                            <Td className="capitalize">{g.type}</Td>
-                                            <Td>{g.city || "—"}</Td>
-                                            <Td>
-                                                {typeof g.membersCount === "number"
-                                                    ? g.membersCount
-                                                    : (g.members?.length ?? 0)}
-                                            </Td>
-                                            <Td>{g.isActive === false ? "No" : "Yes"}</Td>
-                                            <Td className="text-right">
-                                                <div className="flex items-center justify-end gap-2 pr-1">
-                                                    <Link href={`/groups/${g._id}`}>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            leftIcon={<Eye className="w-4 h-4" />}
-                                                        >
-                                                            Details
-                                                        </Button>
-                                                    </Link>
-                                                    <Link href={`/groups/${g._id}/edit`}>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            leftIcon={
-                                                                <PencilLine className="w-4 h-4" />
-                                                            }
-                                                        >
-                                                            Edit
-                                                        </Button>
-                                                    </Link>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        leftIcon={<Trash2 className="w-4 h-4" />}
-                                                        onClick={() => onDelete(g._id)}
-                                                    >
-                                                        Delete
-                                                    </Button>
-                                                </div>
-                                            </Td>
-                                        </tr>
-                                    ))}
-                                    {!items.length && (
-                                        <tr>
-                                            <td
-                                                colSpan={6}
-                                                className="p-6 text-center text-sm text-gray-600"
-                                            >
-                                                No groups
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                    {/* Content */}
+                    {loading && (
+                        <div className="flex items-center justify-center py-10 text-gray-500">
+                            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                            <span className="text-sm">Loading groups…</span>
                         </div>
-                    </div>
+                    )}
 
-                    {/* Cards (mobile) */}
-                    <div className="grid md:hidden grid-cols-1 gap-3">
-                        {items.map((g) => (
-                            <Card
-                                key={g._id}
-                                variant="elevated"
-                                className="hover:shadow-lg transition-shadow"
-                            >
-                                <CardBody className="p-4">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="min-w-0">
-                                            <div className="font-semibold text-gray-900">
-                                                {g.name}
-                                            </div>
-                                            <div className="text-sm text-gray-700">
-                                                {g.city || "—"} • {g.type}
-                                            </div>
-                                            <div className="text-xs text-gray-600 mt-1">
-                                                Members:{" "}
-                                                {typeof g.membersCount === "number"
-                                                    ? g.membersCount
-                                                    : (g.members?.length ?? 0)}{" "}
-                                                • {g.isActive === false ? "Inactive" : "Active"}
-                                            </div>
-                                        </div>
-                                        <div className="flex flex-col gap-2">
-                                            <Link href={`/groups/${g._id}`}>
+                    {error && !loading && (
+                        <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                            Failed to load groups.
+                        </div>
+                    )}
+
+                    {!loading && !error && (
+                        <>
+                            {groups.length === 0 ? (
+                                <Card>
+                                    <CardBody className="p-6 text-center space-y-2">
+                                        <p className="text-sm font-medium text-gray-800">
+                                            No groups found
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            Adjust filters or create a new group.
+                                        </p>
+                                        <div className="pt-2">
+                                            <Link href="/groups/new">
                                                 <Button
-                                                    variant="outline"
                                                     size="sm"
-                                                    leftIcon={<Eye className="w-4 h-4" />}
+                                                    leftIcon={<Plus className="h-4 w-4" />}
                                                 >
-                                                    View
+                                                    Create group
                                                 </Button>
                                             </Link>
-                                            <Link href={`/groups/${g._id}/edit`}>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    leftIcon={<PencilLine className="w-4 h-4" />}
-                                                >
-                                                    Edit
-                                                </Button>
-                                            </Link>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                leftIcon={<Trash2 className="w-4 h-4" />}
-                                                onClick={() => onDelete(g._id)}
-                                            >
-                                                Delete
-                                            </Button>
                                         </div>
+                                    </CardBody>
+                                </Card>
+                            ) : (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between text-xs text-gray-500 px-0.5">
+                                        <span>{total} groups</span>
                                     </div>
-                                </CardBody>
-                            </Card>
-                        ))}
-                        {!items.length && (
-                            <div className="p-6 text-center text-sm text-gray-600">No groups</div>
-                        )}
-                    </div>
 
-                    {/* Pagination */}
-                    <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-600">
-                            Page {page} / {pages}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    const p = Math.max(1, page - 1);
-                                    setPage(p);
-                                    router.replace(
-                                        `/groups${qstring({ q, type, active, page: p, limit })}`
-                                    );
-                                    mutate();
-                                }}
-                                disabled={page <= 1 || isLoading}
-                            >
-                                Prev
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                    const p = Math.min(pages, page + 1);
-                                    setPage(p);
-                                    router.replace(
-                                        `/groups${qstring({ q, type, active, page: p, limit })}`
-                                    );
-                                    mutate();
-                                }}
-                                disabled={page >= pages || isLoading}
-                            >
-                                Next
-                            </Button>
-                        </div>
-                    </div>
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                        {groups.map((g) => (
+                                            <GroupCard key={g._id} group={g} />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
             </Container>
         </ProtectedLayout>
     );
+}
+
+/* ------------------------------------------------------------------ */
+/* Card                                                               */
+/* ------------------------------------------------------------------ */
+
+function GroupCard({ group }: { group: Group }) {
+    const membersCount =
+        typeof group.membersCount === "number"
+            ? group.membersCount
+            : group.members?.length ?? 0;
+
+    return (
+        <Card className="h-full flex flex-col">
+            <CardBody className="p-4 sm:p-5 flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-2">
+                    <div className="space-y-1">
+                        <Link
+                            href={`/groups/${group._id}`}
+                            className="text-sm sm:text-base font-semibold text-gray-900 hover:underline"
+                        >
+                            {group.name}
+                        </Link>
+                        {group.description && (
+                            <p className="text-xs sm:text-sm text-gray-500 line-clamp-2">
+                                {group.description}
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs">
+                    <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-indigo-700 border border-indigo-100">
+                        {formatGroupType(group.type)}
+                    </span>
+
+                    {group.city && (
+                        <span className="inline-flex items-center rounded-full bg-gray-50 px-2 py-0.5 text-gray-600 border border-gray-100">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {group.city}
+                        </span>
+                    )}
+
+                    {group.isActive !== undefined && (
+                        <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 border ${
+                                group.isActive
+                                    ? "border-emerald-100 bg-emerald-50 text-emerald-700"
+                                    : "border-gray-200 bg-gray-50 text-gray-500"
+                            }`}
+                        >
+                            {group.isActive ? "Active" : "Inactive"}
+                        </span>
+                    )}
+
+                    {typeof group.activeRides === "number" && (
+                        <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-amber-700 border border-amber-100">
+                            {group.activeRides} active rides
+                        </span>
+                    )}
+                </div>
+
+                <div className="mt-1 flex items-center justify-between text-[11px] sm:text-xs text-gray-500">
+                    <div className="inline-flex items-center gap-1.5">
+                        <Users className="h-3.5 w-3.5" />
+                        <span>{membersCount} members</span>
+                    </div>
+                    {typeof group.totalRides === "number" && (
+                        <span>{group.totalRides} rides total</span>
+                    )}
+                </div>
+
+                <div className="pt-2 flex justify-end">
+                    <Link href={`/groups/${group._id}`}>
+                        <Button variant="outline" size="sm">
+                            Open
+                        </Button>
+                    </Link>
+                </div>
+            </CardBody>
+        </Card>
+    );
+}
+
+/* ------------------------------------------------------------------ */
+
+function formatGroupType(t: GroupType | undefined): string {
+    if (!t) return "Custom";
+    switch (t) {
+        case "fleet":
+            return "Fleet";
+        case "coop":
+            return "Co-op";
+        case "airport":
+            return "Airport";
+        case "city":
+            return "City";
+        case "custom":
+        default:
+            return "Custom";
+    }
 }

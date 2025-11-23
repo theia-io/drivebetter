@@ -6,6 +6,7 @@ import {
     Bell,
     Calendar,
     CalendarDays,
+    ChevronDown,
     LogOut,
     Menu,
     MoreHorizontal,
@@ -109,6 +110,7 @@ export default function Navigation() {
     const [mobileOpen, setMobileOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [moreOpen, setMoreOpen] = useState(false);
+    const [groupsMenuOpen, setGroupsMenuOpen] = useState(false);
 
     const items = useMemo(
         () =>
@@ -152,13 +154,17 @@ export default function Navigation() {
     };
 
     const createRideItem = items.find((i) => i.name === "Create Ride") || null;
+    const groupsItem = items.find((i) => i.name === "Groups") || null;
 
     const primaryNames: string[] = ["New Rides", "Calendar", "My Assignments", "My Created"];
     const primaryItems = items.filter(
         (i) => primaryNames.includes(i.name) && i.name !== "Create Ride"
     );
     const dropdownItems = items.filter(
-        (i) => i.name !== "Create Ride" && !primaryNames.includes(i.name)
+        (i) =>
+            i.name !== "Create Ride" &&
+            !primaryNames.includes(i.name) &&
+            i.name !== "Groups"
     );
 
     const findByName = (name: string) => items.find((i) => i.name === name) || null;
@@ -171,6 +177,8 @@ export default function Navigation() {
 
     // Mobile menu items without "Create Ride" (we show it as a primary button instead)
     const mobileItems = items.filter((i) => i.name !== "Create Ride");
+
+    const isGroupsActive = pathname.startsWith("/groups");
 
     return (
         <>
@@ -201,11 +209,70 @@ export default function Navigation() {
                                     </Link>
                                 ))}
 
+                                {/* Groups dropdown */}
+                                {groupsItem && (
+                                    <div className="relative">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setGroupsMenuOpen((prev) => !prev);
+                                                setMoreOpen(false);
+                                            }}
+                                            className={`inline-flex items-center gap-1 px-2 pt-1 border-b-2 text-sm font-medium ${
+                                                isGroupsActive || groupsMenuOpen
+                                                    ? "border-indigo-500 text-gray-900"
+                                                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                                            }`}
+                                        >
+                                            <Users className="h-4 w-4" />
+                                            <span>Groups</span>
+                                            <ChevronDown className="h-3 w-3" />
+                                        </button>
+                                        {groupsMenuOpen && (
+                                            <div className="absolute z-40 mt-2 w-56 rounded-md bg-white shadow-lg border border-gray-100">
+                                                <div className="py-1">
+                                                    <Link
+                                                        href="/groups"
+                                                        onClick={() =>
+                                                            setGroupsMenuOpen(false)
+                                                        }
+                                                        className={`flex items-center gap-2 px-3 py-2 text-sm ${
+                                                            isActive("/groups")
+                                                                ? "bg-indigo-50 text-indigo-700"
+                                                                : "text-gray-700 hover:bg-gray-50"
+                                                        }`}
+                                                    >
+                                                        <Users className="h-4 w-4" />
+                                                        <span>View groups</span>
+                                                    </Link>
+                                                    <Link
+                                                        href="/groups/new"
+                                                        onClick={() =>
+                                                            setGroupsMenuOpen(false)
+                                                        }
+                                                        className={`flex items-center gap-2 px-3 py-2 text-sm ${
+                                                            isActive("/groups/new")
+                                                                ? "bg-indigo-50 text-indigo-700"
+                                                                : "text-gray-700 hover:bg-gray-50"
+                                                        }`}
+                                                    >
+                                                        <Plus className="h-4 w-4" />
+                                                        <span>New group</span>
+                                                    </Link>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 {dropdownItems.length > 0 && (
                                     <div className="relative">
                                         <button
                                             type="button"
-                                            onClick={() => setMoreOpen((prev) => !prev)}
+                                            onClick={() => {
+                                                setMoreOpen((prev) => !prev);
+                                                setGroupsMenuOpen(false);
+                                            }}
                                             className={`inline-flex items-center gap-1 px-2 pt-1 border-b-2 text-sm font-medium ${
                                                 dropdownItems.some((d) => isActive(d.href))
                                                     ? "border-indigo-500 text-gray-900"
@@ -222,7 +289,9 @@ export default function Navigation() {
                                                         <Link
                                                             key={item.name}
                                                             href={item.href}
-                                                            onClick={() => setMoreOpen(false)}
+                                                            onClick={() =>
+                                                                setMoreOpen(false)
+                                                            }
                                                             className={`flex items-center gap-2 px-3 py-2 text-sm ${
                                                                 isActive(item.href)
                                                                     ? "bg-indigo-50 text-indigo-700"
@@ -259,7 +328,9 @@ export default function Navigation() {
                                 <div className="relative">
                                     <button
                                         type="button"
-                                        onClick={() => setUserMenuOpen((prev) => !prev)}
+                                        onClick={() =>
+                                            setUserMenuOpen((prev) => !prev)
+                                        }
                                         className="inline-flex items-center gap-2 rounded-full bg-gray-50 px-2.5 py-1 border border-gray-200 hover:bg-gray-100"
                                     >
                                         <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
@@ -275,7 +346,9 @@ export default function Navigation() {
                                             <div className="py-1">
                                                 <Link
                                                     href="/account"
-                                                    onClick={() => setUserMenuOpen(false)}
+                                                    onClick={() =>
+                                                        setUserMenuOpen(false)
+                                                    }
                                                     className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 ${
                                                         pathname === "/account"
                                                             ? "bg-indigo-50 text-indigo-700"
@@ -341,22 +414,59 @@ export default function Navigation() {
 
                         {/* Other nav items */}
                         <div className="pt-1 pb-3 space-y-1">
-                            {mobileItems.map((item) => (
-                                <Link
-                                    key={item.name}
-                                    href={item.href}
-                                    onClick={() => setMobileOpen(false)}
-                                    className={`flex items-center justify-between pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-                                        isActive(item.href)
-                                            ? "bg-indigo-50 border-indigo-500 text-indigo-700"
-                                            : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300"
-                                    }`}
-                                >
-                                    <span className="inline-flex items-center gap-2">
-                                        {renderNavLabel(item)}
-                                    </span>
-                                </Link>
-                            ))}
+                            {mobileItems.map((item) => {
+                                if (item.name === "Groups") {
+                                    return (
+                                        <div key="Groups-block" className="space-y-1">
+                                            <Link
+                                                href="/groups"
+                                                onClick={() => setMobileOpen(false)}
+                                                className={`flex items-center justify-between pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                                                    isActive("/groups")
+                                                        ? "bg-indigo-50 border-indigo-500 text-indigo-700"
+                                                        : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300"
+                                                }`}
+                                            >
+                                                <span className="inline-flex items-center gap-2">
+                                                    <Users className="h-4 w-4" />
+                                                    <span>Groups</span>
+                                                </span>
+                                            </Link>
+                                            <Link
+                                                href="/groups/new"
+                                                onClick={() => setMobileOpen(false)}
+                                                className={`flex items-center justify-between pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                                                    isActive("/groups/new")
+                                                        ? "bg-indigo-50 border-indigo-500 text-indigo-700"
+                                                        : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300"
+                                                }`}
+                                            >
+                                                <span className="inline-flex items-center gap-2">
+                                                    <Plus className="h-4 w-4" />
+                                                    <span>New group</span>
+                                                </span>
+                                            </Link>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <Link
+                                        key={item.name}
+                                        href={item.href}
+                                        onClick={() => setMobileOpen(false)}
+                                        className={`flex items-center justify-between pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                                            isActive(item.href)
+                                                ? "bg-indigo-50 border-indigo-500 text-indigo-700"
+                                                : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300"
+                                        }`}
+                                    >
+                                        <span className="inline-flex items-center gap-2">
+                                            {renderNavLabel(item)}
+                                        </span>
+                                    </Link>
+                                );
+                            })}
                         </div>
 
                         <div className="border-t px-4 py-3 space-y-3">
