@@ -195,6 +195,7 @@ router.post("/login", async (req: Request, res: Response) => {
             email: user.email,
             roles: user.roles,
             emailVerified: user.emailVerified,
+            subscriptions: user.subscriptions,
         },
         accessToken,
         refreshToken,

@@ -22,10 +22,11 @@ export default function Notifications({ className }: { className?: string }) {
     const { user } = useAuthStore();
     const [isSupported, setIsSupported] = useState(false);
     const [subscription, setSubscription] = useState<PushSubscription | null>(
-        user?.notifications?.[0] || null
+        user?.subscriptions?.[0] || null
     );
 
     console.log("USER", user);
+    console.log("SUBSCRIPTION", subscription);
 
     const [message, setMessage] = useState("");
 
@@ -130,10 +131,6 @@ export default function Notifications({ className }: { className?: string }) {
         }
     }
 
-    if (subscription) {
-        setInterval(sendTestNotification, 10000);
-    }
-
     if (!isSupported) {
         return <p>Push notifications are not supported in this browser.</p>;
     }
@@ -159,7 +156,7 @@ export default function Notifications({ className }: { className?: string }) {
             ) : (
                 <>
                     <p>You are not subscribed to push notifications.</p>
-                    <button onClick={subscribeToPush}>Subscribe</button>
+                    <Button onClick={subscribeToPush}>Subscribe</Button>
                 </>
             )}
         </div>

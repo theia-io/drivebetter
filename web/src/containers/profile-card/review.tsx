@@ -1,11 +1,9 @@
-import InstallPrompt from "@/app/account/components/install";
-import Notifications from "@/app/account/components/notifications";
 import { cn } from "@/utils/css";
 import { Star } from "lucide-react";
 
 export default function Review({ className }: { className?: string }) {
     return (
-        <div className={cn(className, "mt-3 sm:mt-0")}>
+        <div className={cn(className)}>
             <div className="flex items-center gap-2 w-full">
                 <div className="flex items-center">
                     <Star className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 fill-current" />

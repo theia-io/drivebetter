@@ -12,11 +12,27 @@ interface BeforeInstallPromptEvent extends Event {
 const STORAGE_KEY = "pwa-install-prompt-dismissed";
 const STORAGE_DISMISSED_UNTIL = "pwa-install-prompt-dismissed-until";
 
+// Global storage for deferred prompt (in case event fires before component mounts)
+declare global {
+    interface Window {
+        deferredPrompt?: BeforeInstallPromptEvent | null;
+        pwaInstallPromptReady?: boolean;
+    }
+}
+
 export default function PWAInstallPrompt() {
-    const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+    const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(
+        window.deferredPrompt || null
+    );
     const [showPrompt, setShowPrompt] = useState(false);
     const [isInstalled, setIsInstalled] = useState(false);
     const [isInstalling, setIsInstalling] = useState(false);
+    const [swRegistered, setSwRegistered] = useState(false);
+    const [pwaCriteria, setPwaCriteria] = useState({
+        hasManifest: false,
+        hasServiceWorker: false,
+        isHttps: false,
+    });
 
     useEffect(() => {
         // Check if app is already installed
@@ -33,19 +49,67 @@ export default function PWAInstallPrompt() {
             return false;
         };
 
-        console.log("checkIfInstalled", checkIfInstalled());
+        // Check PWA criteria
+        const checkPwaCriteria = async () => {
+            const hasManifest = document.querySelector('link[rel="manifest"]') !== null;
+            const isHttps =
+                window.location.protocol === "https:" ||
+                window.location.hostname === "localhost" ||
+                window.location.hostname === "127.0.0.1";
 
+            let hasServiceWorker = false;
+            if ("serviceWorker" in navigator) {
+                try {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    hasServiceWorker = registrations.length > 0;
+                    setSwRegistered(hasServiceWorker);
+                } catch (error) {
+                    console.error("[PWA] Error checking service worker:", error);
+                    return false;
+                }
+            }
+
+            const criteria = { hasManifest, hasServiceWorker, isHttps };
+            setPwaCriteria(criteria);
+
+            console.log("[PWA] Criteria check:", criteria);
+            console.log("[PWA] Installed check:", checkIfInstalled());
+
+            // If criteria not met, try to register service worker
+            if (!hasServiceWorker && "serviceWorker" in navigator) {
+                try {
+                    console.log("[PWA] Registering service worker...");
+                    const registration = await navigator.serviceWorker.register("/sw.js", {
+                        scope: "/",
+                    });
+                    console.log("[PWA] Service worker registered:", registration);
+                    setSwRegistered(true);
+                    setPwaCriteria({ ...criteria, hasServiceWorker: true });
+
+                    // Wait for service worker to be ready
+                    await navigator.serviceWorker.ready;
+                    console.log("[PWA] Service worker ready");
+                } catch (error) {
+                    console.error("[PWA] Error registering service worker:", error);
+                    return false;
+                }
+            }
+
+            return hasServiceWorker && hasManifest && isHttps;
+        };
+
+        console.log("[PWA] Initial check...");
         if (checkIfInstalled()) {
+            console.log("[PWA] App is already installed");
             return;
         }
 
         // Check if user has dismissed the prompt recently (within 7 days)
         const dismissedUntil = localStorage.getItem(STORAGE_DISMISSED_UNTIL);
-
-        console.log("dismissedUntil", dismissedUntil);
         if (dismissedUntil) {
             const dismissedDate = new Date(dismissedUntil);
             if (dismissedDate > new Date()) {
+                console.log("[PWA] Prompt dismissed until:", dismissedUntil);
                 return; // Still in dismiss period
             } else {
                 // Expired, clear it
@@ -56,29 +120,45 @@ export default function PWAInstallPrompt() {
 
         // Check if user has permanently dismissed
         const permanentlyDismissed = localStorage.getItem(STORAGE_KEY);
-        console.log("permanentlyDismissed", permanentlyDismissed);
         if (permanentlyDismissed === "true") {
+            console.log("[PWA] Prompt permanently dismissed");
             return;
+        }
+
+        // Check if we already have a deferred prompt stored globally
+        if (window.deferredPrompt) {
+            console.log("[PWA] Found existing deferred prompt in global storage");
+            setDeferredPrompt(window.deferredPrompt);
+            setShowPrompt(true);
         }
 
         // Listen for the beforeinstallprompt event
         const handleBeforeInstallPrompt = (e: Event) => {
-            console.log("handleBeforeInstallPrompt", e);
+            console.log("[PWA] beforeinstallprompt event fired!", e);
             e.preventDefault();
-            setDeferredPrompt(e as BeforeInstallPromptEvent);
+
+            const promptEvent = e as BeforeInstallPromptEvent;
+
+            // Store globally in case component unmounts
+            window.deferredPrompt = promptEvent;
+
+            setDeferredPrompt(promptEvent);
             setShowPrompt(true);
         };
-
+        // Set up global handler before component-specific one
         window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+        // setTimeout(() => {
+        //     handleBeforeInstallPrompt(new Event("beforeinstallprompt"));
+        // }, 1000);
 
         // Also listen for app installed event to hide prompt if user installs via browser UI
         const handleAppInstalled = () => {
-            console.log("handleAppInstalled");
+            console.log("[PWA] App installed event fired");
             setIsInstalled(true);
             setShowPrompt(false);
             setDeferredPrompt(null);
+            window.deferredPrompt = null;
         };
-
         window.addEventListener("appinstalled", handleAppInstalled);
 
         return () => {
@@ -129,11 +209,21 @@ export default function PWAInstallPrompt() {
         setDeferredPrompt(null);
     };
 
-    console.log("isInstalled, showPrompt, deferredPrompt", isInstalled, showPrompt, deferredPrompt, isInstalling);
-    console.log("RESULT", isInstalled || !showPrompt || !deferredPrompt || isInstalling);
+    // Debug logging
+    useEffect(() => {
+        console.log("[PWA] State:", {
+            isInstalled,
+            showPrompt,
+            hasDeferredPrompt: !!deferredPrompt,
+            isInstalling,
+            swRegistered,
+            pwaCriteria,
+        });
+    }, [isInstalled, showPrompt, deferredPrompt, isInstalling, swRegistered, pwaCriteria]);
 
     // Don't show if already installed or no prompt available
     if (isInstalled || !showPrompt || !deferredPrompt || isInstalling) {
+        // if (isInstalled || isInstalling || !swRegistered || !pwaCriteria.hasServiceWorker) {
         return null;
     }
 

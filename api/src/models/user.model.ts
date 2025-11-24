@@ -9,7 +9,7 @@ export interface IUser extends Document {
     passwordHash?: string;
     roles: Role[];
     referralCode?: string;
-    notifications?: PushSubscription[];
+    subscriptions?: PushSubscription[];
     emailVerified: boolean;
     emailVerifyToken?: string | null;
     emailVerifyExpires?: Date | null;
@@ -53,7 +53,7 @@ const UserSchema = new Schema<IUser>(
 
         refreshTokens: { type: [String], default: [] },
 
-        notifications: {
+        subscriptions: {
             type: [
                 {
                     endpoint: { type: String, required: true },

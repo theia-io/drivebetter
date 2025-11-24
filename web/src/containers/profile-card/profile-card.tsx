@@ -14,7 +14,7 @@ export default function ProfileCard({ className, user }: { className?: string; u
             <CardBody className="p-0">
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-600 h-24 sm:h-32"></div>
                 <div className="px-4 sm:px-6 pb-4 sm:pb-6 -mt-12 sm:-mt-16">
-                    <div className="flex flex-col sm:flex-row sm:items-end sm:space-x-6">
+                    <div className="flex flex-col sm:flex-row sm:items-end sm:space-x-6 gap-2">
                         <div className="relative w-24 h-24 sm:w-32 sm:h-32 bg-white rounded-full border-4 border-white shadow-lg flex items-center justify-center">
                             <UserIcon className="w-12 h-12 sm:w-16 sm:h-16 text-gray-400" />
 
@@ -23,12 +23,14 @@ export default function ProfileCard({ className, user }: { className?: string; u
                             </button>
                         </div>
 
-                        <UserInfo className="bg-white p-2 rounded-lg shadow-2xl" user={user} />
+                        <div className="flex flex-col gap-2">
+                            <Review className="bg-white p-2 rounded-lg shadow-2xl" />
+                            <UserInfo className="bg-white p-2 rounded-lg shadow-2xl" user={user} />
+                        </div>
 
-                        <div className="bg-white p-2 rounded-lg shadow-2xl flex flex-col gap-2">
-                            <Review />
-                            <Notifications />
-                            <InstallPrompt />
+                        <div className="flex flex-col gap-2">
+                            <Notifications className="bg-white p-2 rounded-lg shadow-2xl" />
+                            <InstallPrompt className="bg-white p-2 rounded-lg shadow-2xl" />
                         </div>
                     </div>
                 </div>

@@ -58,19 +58,18 @@ router.post("/subscribe", requireAuth, async (req: Request, res: Response) => {
     }
 
     // Check if subscription already exists (by endpoint)
-    const existingIndex = dbUser.notifications?.findIndex(
-        (sub) => sub.endpoint === subscription.endpoint
-    ) ?? -1;
+    const existingIndex =
+        dbUser.subscriptions?.findIndex((sub) => sub.endpoint === subscription.endpoint) ?? -1;
 
     if (existingIndex >= 0) {
         // Update existing subscription
-        dbUser.notifications![existingIndex] = subscription;
+        dbUser.subscriptions![existingIndex] = subscription;
     } else {
         // Add new subscription
-        if (!dbUser.notifications) {
-            dbUser.notifications = [];
+        if (!dbUser.subscriptions) {
+            dbUser.subscriptions = [];
         }
-        dbUser.notifications.push(subscription);
+        dbUser.subscriptions.push(subscription);
     }
 
     await dbUser.save();
@@ -109,12 +108,11 @@ router.post("/unsubscribe", requireAuth, async (req: Request, res: Response) => 
 
     if (endpoint) {
         // Remove specific subscription by endpoint
-        dbUser.notifications = dbUser.notifications?.filter(
-            (sub) => sub.endpoint !== endpoint
-        ) ?? [];
+        dbUser.subscriptions =
+            dbUser.subscriptions?.filter((sub) => sub.endpoint !== endpoint) ?? [];
     } else {
         // Remove all subscriptions
-        dbUser.notifications = [];
+        dbUser.subscriptions = [];
     }
 
     await dbUser.save();
@@ -157,22 +155,19 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
         return res.status(404).json({ error: "User not found" });
     }
 
-    if (!user.notifications || user.notifications.length === 0) {
+    if (!user.subscriptions || user.subscriptions.length === 0) {
         return res.status(400).json({ error: "No subscription found for this user" });
     }
 
     const results = [];
-    for (const subscription of user.notifications) {
+    for (const subscription of user.subscriptions) {
         try {
-            await webpush.sendNotification(
-                subscription as any,
-                JSON.stringify({ title, body })
-            );
+            await webpush.sendNotification(subscription as any, JSON.stringify({ title, body }));
             results.push({ endpoint: subscription.endpoint, success: true });
         } catch (error: any) {
             // If subscription is invalid, remove it
             if (error.statusCode === 410 || error.statusCode === 404) {
-                user.notifications = user.notifications.filter(
+                user.subscriptions = user.subscriptions.filter(
                     (sub) => sub.endpoint !== subscription.endpoint
                 );
                 await user.save();
@@ -186,7 +181,7 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
         ok: true,
         delivered: successCount > 0,
         results,
-        total: user.notifications.length,
+        total: user.subscriptions.length,
         successful: successCount,
     });
 });
