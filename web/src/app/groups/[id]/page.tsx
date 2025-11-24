@@ -14,7 +14,7 @@ import {
     Users,
     Shield,
     Edit3,
-    UserMinus,
+    X,
     Crown,
     Activity,
     LogOut,
@@ -93,7 +93,7 @@ export default function GroupDetailsPage() {
     const roles = user?.roles ?? [];
     const isAdmin = roles.includes("admin") || roles.includes("dispatcher");
 
-    // role detection based on members payload
+    // role detection based on members payload (authoritative)
     const isOwner = useMemo(
         () => !!members && !!userId && members.owner?._id === userId,
         [members, userId],
@@ -117,10 +117,11 @@ export default function GroupDetailsPage() {
 
     const isMember = isOwner || isModerator || isParticipant;
 
-    const canManage = !!group && (isAdmin || isOwner); // delete, manage moderators, transfer ownership
+    // high-level powers
+    const canManage = !!group && (isAdmin || isOwner); // delete group, manage moderators, transfer ownership
     const canModerate = !!group && (isAdmin || isOwner || isModerator); // edit meta, participants, invites
 
-    // capabilities matrix
+    // fine-grained capabilities
     const canManageModerators = canManage;      // admin + owner
     const canManageParticipants = canModerate;  // admin + owner + moderator
 
@@ -231,6 +232,24 @@ export default function GroupDetailsPage() {
         await Promise.all([mutateMembers(), mutateGroup()]);
     }
 
+    // Remove user completely from group (for owner/admin):
+    //  - drop moderator role (if any)
+    //  - drop participant membership
+    async function handleRemoveMemberCompletely(userIdToRemove: string) {
+        if (!id) return;
+        try {
+            await removeGroupModerator(id, userIdToRemove);
+        } catch {
+            // ignore if not moderator / no permission
+        }
+        try {
+            await removeGroupParticipant(id, userIdToRemove);
+        } catch {
+            // ignore if not participant
+        }
+        await Promise.all([mutateMembers(), mutateGroup()]);
+    }
+
     if (groupLoading && !group) {
         return (
             <ProtectedLayout>
@@ -250,6 +269,8 @@ export default function GroupDetailsPage() {
             </ProtectedLayout>
         );
     }
+
+    const shares: any[] = (dashboard as any)?.shares ?? [];
 
     return (
         <ProtectedLayout>
@@ -545,7 +566,23 @@ export default function GroupDetailsPage() {
                                                 canManageModerators &&
                                                 u._id !== ownerUser?._id
                                             }
-                                            onRemove={() => handleRemoveModerator(u._id)}
+                                            onRemove={() =>
+                                                handleRemoveMemberCompletely(u._id)
+                                            }
+                                            extraActions={
+                                                canManageModerators &&
+                                                u._id !== ownerUser?._id && (
+                                                    <button
+                                                        type="button"
+                                                        className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:underline"
+                                                        onClick={() =>
+                                                            handleRemoveModerator(u._id)
+                                                        }
+                                                    >
+                                                        Remove moderator role
+                                                    </button>
+                                                )
+                                            }
                                         />
                                     ))}
                                 </div>
@@ -590,7 +627,9 @@ export default function GroupDetailsPage() {
                                                 canManageParticipants &&
                                                 u._id !== ownerUser?._id
                                             }
-                                            onRemove={() => handleRemoveParticipant(u._id)}
+                                            onRemove={() =>
+                                                handleRemoveParticipant(u._id)
+                                            }
                                             extraActions={
                                                 canManageModerators &&
                                                 u._id !== ownerUser?._id &&
@@ -616,7 +655,7 @@ export default function GroupDetailsPage() {
                         </CardBody>
                     </Card>
 
-                    {/* Rides / activity */}
+                    {/* Rides / activity + shares */}
                     {dashboard && (
                         <Card variant="elevated">
                             <CardBody className="p-4 sm:p-6 space-y-4">
@@ -683,36 +722,85 @@ export default function GroupDetailsPage() {
                                         </div>
                                     </div>
                                 )}
+
+                                {shares.length > 0 && (
+                                    <div className="space-y-2">
+                                        <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                            Ride shares history
+                                        </Typography>
+                                        <div className="space-y-1.5">
+                                            {shares.slice(0, 10).map((s: any) => {
+                                                const ride = s.ride;
+                                                const from = ride?.from
+                                                    ? String(ride.from)
+                                                    : "From ?";
+                                                const to = ride?.to
+                                                    ? String(ride.to)
+                                                    : "To ?";
+                                                const sharedBy =
+                                                    s.sharedBy?.name ||
+                                                    s.sharedBy?.email ||
+                                                    (s.sharedBy
+                                                        ? `User ${String(
+                                                            s.sharedBy._id || s.sharedBy,
+                                                        ).slice(-6)}`
+                                                        : "Unknown");
+                                                const sharedAt = s.createdAt
+                                                    ? dt(s.createdAt)
+                                                    : undefined;
+
+                                                return (
+                                                    <div
+                                                        key={String(s._id)}
+                                                        className="flex items-center justify-between gap-2 text-xs"
+                                                    >
+                                                        <div className="min-w-0">
+                                                            <div className="text-gray-900 truncate">
+                                                                {from} → {to}
+                                                            </div>
+                                                            <div className="text-[11px] text-gray-500 truncate">
+                                                                Shared by {sharedBy}
+                                                                {sharedAt && ` · ${sharedAt}`}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
                             </CardBody>
                         </Card>
                     )}
 
-                    {/* Membership actions */}
-                    <Card>
-                        <CardBody className="p-4 sm:p-5 space-y-3">
-                            <Typography className="text-sm font-semibold text-gray-900">
-                                Membership
-                            </Typography>
-                            <div className="flex flex-wrap gap-2">
-                                {isMember && !isOwner && (
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        leftIcon={<LogOut className="w-4 h-4" />}
-                                        onClick={handleLeaveGroup}
-                                        disabled={leaving}
-                                    >
-                                        {leaving ? "Leaving…" : "Leave group"}
-                                    </Button>
-                                )}
-                                {!isMember && (
-                                    <span className="text-xs text-gray-600">
-                                        This group is invite-only. Join with an invite link.
-                                    </span>
-                                )}
-                            </div>
-                        </CardBody>
-                    </Card>
+                    {/* Membership actions – only show if there is something actionable */}
+                    {(!isOwner || !isMember) && (
+                        <Card>
+                            <CardBody className="p-4 sm:p-5 space-y-3">
+                                <Typography className="text-sm font-semibold text-gray-900">
+                                    Membership
+                                </Typography>
+                                <div className="flex flex-wrap gap-2">
+                                    {isMember && !isOwner && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            leftIcon={<LogOut className="w-4 h-4" />}
+                                            onClick={handleLeaveGroup}
+                                            disabled={leaving}
+                                        >
+                                            {leaving ? "Leaving…" : "Leave group"}
+                                        </Button>
+                                    )}
+                                    {!isMember && (
+                                        <span className="text-xs text-gray-600">
+                        This group is invite-only. Join with an invite link.
+                    </span>
+                                    )}
+                                </div>
+                            </CardBody>
+                        </Card>
+                    )}
                 </div>
             </Container>
         </ProtectedLayout>
@@ -834,7 +922,7 @@ function UserChip({
                     onClick={onRemove}
                     aria-label={`Remove ${displayName}`}
                 >
-                    <UserMinus className="w-3.5 h-3.5" />
+                    <X className="w-3.5 h-3.5" />
                 </button>
             )}
             {extraActions}

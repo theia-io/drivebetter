@@ -9,6 +9,8 @@ import Ride from "../models/ride.model";
 import RideGroupShare from "../models/rideGroupShare.model";
 import { RideClaim } from "../models/rideClaim.model";
 import User from "../models/user.model";
+import {RideShare} from "@/models/rideShare.model";
+import {pick} from "next/dist/lib/pick";
 
 const router = Router();
 
@@ -43,9 +45,34 @@ function normalizeId(id: any): Types.ObjectId {
     throw new Error(`normalizeId: unsupported id value: ${JSON.stringify(id)}`);
 }
 
+function getCurrentUserId(req: Request): Types.ObjectId {
+    let rawId = (req as any).user?.id;
+    return new Types.ObjectId(rawId);
+}
+
 function userHasAdminRole(req: Request): boolean {
     const roles: string[] = ((req as any).user?.roles) ?? [];
     return roles.includes("admin") || roles.includes("dispatcher");
+}
+
+function userInGroupDoc(doc: any, userId: Types.ObjectId): boolean {
+    const uid = userId.toString();
+
+    if (doc.ownerId && String(doc.ownerId) === uid) return true;
+
+    if (Array.isArray(doc.moderators) && doc.moderators.some((id: any) => String(id) === uid)) {
+        return true;
+    }
+
+    if (Array.isArray(doc.participants) && doc.participants.some((id: any) => String(id) === uid)) {
+        return true;
+    }
+
+    if (Array.isArray(doc.members) && doc.members.some((id: any) => String(id) === uid)) {
+        return true;
+    }
+
+    return false;
 }
 
 function userIsOwner(group: IGroup, userId: Types.ObjectId | string): boolean {
@@ -193,11 +220,10 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
     >;
     const { page, limit, skip } = parsePagination(req.query);
 
-    const rawUserId = (req as any).user?._id || (req as any).user?.id;
-    if (!rawUserId) {
+    const userId = getCurrentUserId(req);
+    if (!userId) {
         return res.status(401).json({ error: "Unauthenticated" });
     }
-    const userId = new Types.ObjectId(rawUserId);
     const isAdmin = userHasAdminRole(req);
 
     const filter: any = {};
@@ -288,7 +314,7 @@ router.post(
                 return res.status(400).json({ error: "name is required" });
             }
 
-            const userId = new Types.ObjectId((req as any).user.id);
+            const userId = getCurrentUserId(req);
 
             const group = await Group.create({
                 name: body.name.trim(),
@@ -342,7 +368,7 @@ router.get(
         const group = await Group.findById(req.params.id).lean<IGroup | null>();
         if (!group) return res.status(404).json({ error: "Group not found" });
 
-        const userId = (req as any).user?.id;
+        const userId = getCurrentUserId(req);
         // Invite-only: only members can access
         if (!canUserManageGroup(group, req) && (!userId || !userInGroup(group, userId))) {
             return res
@@ -506,7 +532,7 @@ router.get(
 
         if (!group) return res.status(404).json({ error: "Group not found" });
 
-        const userId = (req as any).user?.id;
+        const userId = getCurrentUserId(req);
         // Only group members can see membership info
         if (!canUserManageGroup(group, req) && (!userId || !userInGroup(group, userId)) ) {
             return res.status(403).json({ error: "Access denied" });
@@ -546,7 +572,7 @@ router.post(
     "/:id([0-9a-fA-F]{24})/participants",
     requireAuth,
     async (req: Request, res: Response) => {
-        const { userId } = req.body as { userId?: string };
+        const userId = getCurrentUserId(req);;
         if (!userId) return res.status(400).json({ error: "userId is required" });
 
         const group = await Group.findById(req.params.id);
@@ -644,7 +670,7 @@ router.post(
     "/:id([0-9a-fA-F]{24})/moderators",
     requireAuth,
     async (req: Request, res: Response) => {
-        const { userId } = req.body as { userId?: string };
+        const userId = getCurrentUserId(req);
         if (!userId) return res.status(400).json({ error: "userId is required" });
 
         const group = await Group.findById(req.params.id);
@@ -742,7 +768,7 @@ router.post(
         const group = await Group.findById(req.params.id);
         if (!group) return res.status(404).json({ error: "Group not found" });
 
-        const userId = new Types.ObjectId((req as any).user.id);
+        const userId = getCurrentUserId(req);
 
         if (normalizeId(group.ownerId).equals(userId)) {
             return res.status(400).json({
@@ -789,7 +815,7 @@ router.post(
     "/:id([0-9a-fA-F]{24})/owner",
     requireAuth,
     async (req: Request, res: Response) => {
-        const { userId } = req.body as { userId?: string };
+        const userId = getCurrentUserId(req);
         if (!userId) return res.status(400).json({ error: "userId is required" });
 
         const group = await Group.findById(req.params.id);
@@ -945,142 +971,188 @@ router.post("/join", requireAuth, async (req: Request, res: Response) => {
  * @openapi
  * /groups/{id}/dashboard:
  *   get:
- *     summary: Group dashboard with drivers and rides
+ *     summary: Group dashboard - rides, ride shares, requests, drivers
  *     tags: [Groups]
+ *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         schema: { type: string }
+ *         schema:
+ *           type: string
+ *           pattern: "^[0-9a-fA-F]{24}$"
  *     responses:
- *       200: { description: OK }
- *       403: { description: Forbidden }
- *       404: { description: Not found }
- *     security:
- *       - bearerAuth: []
+ *       200:
+ *         description: Dashboard snapshot for a group
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 group:
+ *                   type: object
+ *                 drivers:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 rides:
+ *                   type: object
+ *                   properties:
+ *                     activeAssigned: { type: array }
+ *                     activeUnassigned: { type: array }
+ *                     history: { type: array }
+ *                 rideRequests:
+ *                   type: array
+ *                 shares:
+ *                   type: array
  */
 router.get(
     "/:id([0-9a-fA-F]{24})/dashboard",
     requireAuth,
     async (req: Request, res: Response) => {
-        const groupId = new Types.ObjectId(req.params.id);
-        const userId = new Types.ObjectId((req as any).user.id);
-
-        const group = await Group.findById(groupId).lean<IGroup | null>();
-        if (!group) return res.status(404).json({ error: "Group not found" });
-
-        // Only group members can see dashboard
-        if (!canUserManageGroup(group, req) && !userInGroup(group, userId)) {
-            return res.status(403).json({ error: "Access denied" });
+        const userId= getCurrentUserId(req);
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthenticated" });
         }
 
-        const memberIds: Types.ObjectId[] = (group.members ?? []).map((m: any) =>
-            new Types.ObjectId(m)
-        );
+        const isAdmin = userHasAdminRole(req);
+        const groupId = new Types.ObjectId(req.params.id);
 
-        // Drivers (profiles) = all members
-        const drivers = await User.find(
-            { _id: { $in: memberIds } },
-            { password: 0 }
-        )
-            .lean()
-            .exec();
+        const group = await Group.findById(groupId).lean();
+        if (!group) {
+            return res.status(404).json({ error: "Not found" });
+        }
 
-        // Rides linked to this group via RideGroupShare
-        const shares = await RideGroupShare.find({ groupId }).lean();
-        const rideIdsFromShares = shares.map((s: any) => s.rideId);
+        if (!isAdmin && !userInGroupDoc(group, userId)) {
+            return res.status(403).json({ error: "forbidden" });
+        }
 
-        const activeStatuses = ["assigned", "on_my_way", "on_location", "pob", "clear"];
+        // 1) All group-targeted ride shares (newest first)
+        const shares = await RideShare.find({
+            visibility: "groups",
+            groupIds: groupId,
+            status: { $in: ["active", "revoked", "expired", "closed"] },
+        })
+            .sort({ createdAt: -1 })
+            .limit(100)
+            .lean();
 
-        const [activeAssigned, activeUnassigned, history, claims] = await Promise.all(
-            [
-                // active rides assigned to group members
-                Ride.find({
-                    _id: { $in: rideIdsFromShares },
-                    assignedDriverId: { $in: memberIds },
-                    status: { $in: activeStatuses },
-                })
-                    .sort({ datetime: 1 })
-                    .lean(),
-
-                // active unassigned rides in this group
-                Ride.find({
-                    _id: { $in: rideIdsFromShares },
-                    status: "unassigned",
-                })
-                    .sort({ datetime: 1 })
-                    .lean(),
-
-                // history = completed rides for this group
-                Ride.find({
-                    _id: { $in: rideIdsFromShares },
-                    status: "completed",
-                })
-                    .sort({ datetime: -1 })
-                    .limit(100)
-                    .lean(),
-
-                // ride requests (claims) from group members on rides shared with this group
-                RideClaim.find({
-                    driverId: { $in: memberIds },
-                    rideId: { $in: rideIdsFromShares },
-                })
-                    .sort({ createdAt: -1 })
-                    .limit(200)
-                    .lean(),
-            ]
-        );
-
-        const claimRideIds = Array.from(
-            new Set(claims.map((c: any) => String(c.rideId)))
-        ).map((id) => new Types.ObjectId(id));
-        const claimDriverIds = Array.from(
-            new Set(claims.map((c: any) => String(c.driverId)))
+        const rideIds = Array.from(
+            new Set(shares.map((s: any) => String(s.rideId)))
         ).map((id) => new Types.ObjectId(id));
 
-        const [claimRides, claimDrivers] = await Promise.all([
-            Ride.find(
-                { _id: { $in: claimRideIds } },
-                { from: 1, to: 1, status: 1, datetime: 1 }
-            ).lean(),
-            User.find(
-                { _id: { $in: claimDriverIds } },
-                { name: 1, email: 1 }
-            ).lean(),
+        const shareCreatorIds = Array.from(
+            new Set(
+                shares
+                    .map((s: any) => s.createdBy && String(s.createdBy))
+                    .filter(Boolean)
+            )
+        ).map((id) => new Types.ObjectId(id));
+
+        // 2) Load rides, share creators, and claims
+        const [rides, shareCreators, rideClaims] = await Promise.all([
+            rideIds.length
+                ? Ride.find(
+                    { _id: { $in: rideIds } },
+                    {
+                        from: 1,
+                        to: 1,
+                        status: 1,
+                        datetime: 1,
+                        assignedDriverId: 1,
+                    }
+                ).lean()
+                : [],
+            shareCreatorIds.length
+                ? User.find(
+                    { _id: { $in: shareCreatorIds } },
+                    { name: 1, email: 1 }
+                ).lean()
+                : [],
+            rideIds.length
+                ? RideClaim.find({ rideId: { $in: rideIds } }).lean()
+                : [],
         ]);
 
-        const claimRideMap = new Map(
-            claimRides.map((r: any) => [String(r._id), r])
+        const rideMap = new Map<string, any>(
+            rides.map((r: any) => [String(r._id), r])
         );
-        const claimDriverMap = new Map(
-            claimDrivers.map((d: any) => [String(d._id), d])
+        const shareCreatorMap = new Map<string, any>(
+            shareCreators.map((u: any) => [String(u._id), u])
         );
 
-        const claimsWithDetails = claims.map((c: any) => ({
-            ...c,
-            ride: claimRideMap.get(String(c.rideId)) || null,
-            driver: claimDriverMap.get(String(c.driverId)) || null,
+        // 3) Bucket rides: activeAssigned / activeUnassigned / history
+        const activeAssigned: any[] = [];
+        const activeUnassigned: any[] = [];
+        const history: any[] = [];
+
+        const doneStatuses = ["clear", "completed", "cancelled"];
+
+        for (const ride of rides) {
+            const status = ride.status;
+            if (doneStatuses.includes(status)) {
+                history.push(ride);
+            } else if (ride.assignedDriverId) {
+                activeAssigned.push(ride);
+            } else {
+                activeUnassigned.push(ride);
+            }
+        }
+
+        // 4) Decorate shares with ride + user
+        const sharesWithDetails = shares.map((s: any) => ({
+            _id: s._id,
+            rideId: s.rideId,
+            visibility: s.visibility,
+            status: s.status,
+            groupIds: s.groupIds,
+            driverIds: s.driverIds,
+            expiresAt: s.expiresAt,
+            maxClaims: s.maxClaims,
+            claimsCount: s.claimsCount,
+            createdAt: s.createdAt,
+            ride: rideMap.get(String(s.rideId)) || null,
+            sharedBy: s.createdBy
+                ? shareCreatorMap.get(String(s.createdBy)) || null
+                : null,
         }));
 
+        // 5) Driver profiles (assigned drivers in these rides)
+        const driverIds = Array.from(
+            new Set(
+                rides
+                    .map((r: any) => r.assignedDriverId && String(r.assignedDriverId))
+                    .filter(Boolean)
+            )
+        ).map((id) => new Types.ObjectId(id));
+
+        const drivers = driverIds.length
+            ? await User.find(
+                { _id: { $in: driverIds } },
+                { name: 1, email: 1 }
+            ).lean()
+            : [];
+
         res.json({
-            group: {
-                _id: group._id,
-                name: group.name,
-                type: group.type,
-                city: group.city,
-                visibility: group.visibility,
-                isInviteOnly: group.isInviteOnly,
-                tags: group.tags,
-                rules: group.rules,
-                ownerId: group.ownerId,
-            },
+            group: pick(group as any, [
+                "_id",
+                "name",
+                "type",
+                "city",
+                "visibility",
+                "isInviteOnly",
+                "tags",
+                "rules",
+                "ownerId",
+            ]),
             drivers,
             rides: {
                 activeAssigned,
                 activeUnassigned,
                 history,
             },
-            rideRequests: claimsWithDetails,
+            rideRequests: rideClaims,
+            shares: sharesWithDetails,
         });
     }
 );
