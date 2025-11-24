@@ -21,9 +21,7 @@ declare global {
 }
 
 export default function PWAInstallPrompt() {
-    const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(
-        window.deferredPrompt || null
-    );
+    const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
     const [showPrompt, setShowPrompt] = useState(false);
     const [isInstalled, setIsInstalled] = useState(false);
     const [isInstalling, setIsInstalling] = useState(false);
@@ -35,6 +33,8 @@ export default function PWAInstallPrompt() {
     });
 
     useEffect(() => {
+        // Guard: only run in browser
+        if (typeof window === "undefined") return;
         // Check if app is already installed
         const checkIfInstalled = () => {
             if (window.matchMedia("(display-mode: standalone)").matches) {
@@ -126,9 +126,9 @@ export default function PWAInstallPrompt() {
         }
 
         // Check if we already have a deferred prompt stored globally
-        if (window.deferredPrompt) {
+        if (typeof window !== "undefined" && window.deferredPrompt) {
             console.log("[PWA] Found existing deferred prompt in global storage");
-            setDeferredPrompt(window.deferredPrompt);
+            setDeferredPrompt(window.deferredPrompt as BeforeInstallPromptEvent);
             setShowPrompt(true);
         }
 
@@ -140,13 +140,18 @@ export default function PWAInstallPrompt() {
             const promptEvent = e as BeforeInstallPromptEvent;
 
             // Store globally in case component unmounts
-            window.deferredPrompt = promptEvent;
+            if (typeof window !== "undefined") {
+                window.deferredPrompt = promptEvent;
+            }
 
             setDeferredPrompt(promptEvent);
             setShowPrompt(true);
         };
+        
         // Set up global handler before component-specific one
-        window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+        if (typeof window !== "undefined") {
+            window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+        }
         // setTimeout(() => {
         //     handleBeforeInstallPrompt(new Event("beforeinstallprompt"));
         // }, 1000);
@@ -157,13 +162,20 @@ export default function PWAInstallPrompt() {
             setIsInstalled(true);
             setShowPrompt(false);
             setDeferredPrompt(null);
-            window.deferredPrompt = null;
+            if (typeof window !== "undefined") {
+                window.deferredPrompt = null;
+            }
         };
-        window.addEventListener("appinstalled", handleAppInstalled);
+        
+        if (typeof window !== "undefined") {
+            window.addEventListener("appinstalled", handleAppInstalled);
+        }
 
         return () => {
-            window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-            window.removeEventListener("appinstalled", handleAppInstalled);
+            if (typeof window !== "undefined") {
+                window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+                window.removeEventListener("appinstalled", handleAppInstalled);
+            }
         };
     }, []);
 

@@ -11,11 +11,14 @@ export const metadata: Metadata = {
     title: "DriveBetter",
     description: "A modern application for driving better",
     manifest: "/manifest.json",
-    themeColor: "#000000",
     appleWebApp: {
         capable: true,
         statusBarStyle: "black-translucent",
     },
+};
+
+export const viewport = {
+    themeColor: "#000000",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
