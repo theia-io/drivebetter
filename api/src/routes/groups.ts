@@ -9,7 +9,7 @@ import Ride from "../models/ride.model";
 import RideGroupShare from "../models/rideGroupShare.model";
 import { RideClaim } from "../models/rideClaim.model";
 import User from "../models/user.model";
-import {RideShare} from "@/models/rideShare.model";
+import {RideShare} from "../models/rideShare.model";
 import {pick} from "next/dist/lib/pick";
 
 const router = Router();
