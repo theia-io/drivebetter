@@ -41,6 +41,8 @@ import {
     type SimpleDriver,
 } from "@/components/ui/ride/DriverCombobox";
 
+import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
+
 import type { GroupType } from "@/types/group";
 
 export default function GroupDetailsPage() {
@@ -118,12 +120,12 @@ export default function GroupDetailsPage() {
     const isMember = isOwner || isModerator || isParticipant;
 
     // high-level powers
-    const canManage = !!group && (isAdmin || isOwner); // delete group, manage moderators, transfer ownership
+    const canManage = !!group && (isAdmin || isOwner); // delete, manage moderators, transfer ownership
     const canModerate = !!group && (isAdmin || isOwner || isModerator); // edit meta, participants, invites
 
     // fine-grained capabilities
-    const canManageModerators = canManage;      // admin + owner
-    const canManageParticipants = canModerate;  // admin + owner + moderator
+    const canManageModerators = canManage; // admin + owner
+    const canManageParticipants = canModerate; // admin + owner + moderator
 
     const memberRoleLabel =
         isOwner ? "Owner" : isModerator ? "Moderator" : isParticipant ? "Participant" : undefined;
@@ -152,6 +154,25 @@ export default function GroupDetailsPage() {
         const base = 0 + (group.ownerId ? 1 : 0);
         return base + (group.moderators?.length ?? 0) + (group.participants?.length ?? 0);
     }, [group]);
+
+    const shares: any[] = (dashboard as any)?.shares ?? [];
+
+    const activeRides: any[] = useMemo(() => {
+        if (!dashboard || !dashboard.rides) return [];
+        const a = dashboard.rides.activeAssigned ?? [];
+        const u = dashboard.rides.activeUnassigned ?? [];
+        const all = [...a, ...u];
+        return all.sort((r1: any, r2: any) => {
+            const t1 = r1.datetime ? new Date(r1.datetime).getTime() : 0;
+            const t2 = r2.datetime ? new Date(r2.datetime).getTime() : 0;
+            return t1 - t2;
+        });
+    }, [dashboard]);
+
+    const completedRides: any[] = useMemo(
+        () => (dashboard?.rides?.history ?? []) as any[],
+        [dashboard],
+    );
 
     async function handleDeleteGroup() {
         if (!id || !group) return;
@@ -269,8 +290,6 @@ export default function GroupDetailsPage() {
             </ProtectedLayout>
         );
     }
-
-    const shares: any[] = (dashboard as any)?.shares ?? [];
 
     return (
         <ProtectedLayout>
@@ -671,6 +690,7 @@ export default function GroupDetailsPage() {
                                     </span>
                                 </div>
 
+                                {/* Stats */}
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                                     <StatBox
                                         label="Active assigned"
@@ -686,45 +706,50 @@ export default function GroupDetailsPage() {
                                     />
                                 </div>
 
-                                {dashboard.rides.history.length > 0 && (
-                                    <div className="space-y-2">
+                                {/* Active rides with RideSummaryCard */}
+                                {activeRides.length > 0 && (
+                                    <div className="space-y-2 pt-2 border-t border-gray-100">
                                         <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                            Recent completed rides
+                                            Active rides
                                         </Typography>
-                                        <div className="space-y-1.5">
-                                            {dashboard.rides.history
-                                                .slice(0, 5)
-                                                .map((r: any) => (
-                                                    <div
-                                                        key={String(r._id)}
-                                                        className="flex items-center justify-between gap-2 text-xs"
-                                                    >
-                                                        <div className="min-w-0">
-                                                            <div className="text-gray-900 truncate">
-                                                                {(r.from && String(r.from)) ||
-                                                                    "From ?"}{" "}
-                                                                →{" "}
-                                                                {(r.to && String(r.to)) ||
-                                                                    "To ?"}
-                                                            </div>
-                                                            <div className="text-[11px] text-gray-500">
-                                                                {r.status || "status ?"}
-                                                                {r.datetime && (
-                                                                    <>
-                                                                        {" · "}
-                                                                        {dt(r.datetime)}
-                                                                    </>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                        <div className="space-y-2">
+                                            {activeRides.map((r: any) => (
+                                                <RideSummaryCard
+                                                    key={String(r._id)}
+                                                    ride={r}
+                                                    variant="accordion"
+                                                    defaultExpanded={false}
+                                                    detailsHref={`/rides/${r._id}`}
+                                                />
+                                            ))}
                                         </div>
                                     </div>
                                 )}
 
+                                {/* Completed rides with RideSummaryCard (recent) */}
+                                {completedRides.length > 0 && (
+                                    <div className="space-y-2 pt-2 border-t border-gray-100">
+                                        <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                            Recent completed rides
+                                        </Typography>
+                                        <div className="space-y-2">
+                                            {completedRides.slice(0, 5).map((r: any) => (
+                                                <RideSummaryCard
+                                                    key={String(r._id)}
+                                                    ride={r}
+                                                    variant="accordion"
+                                                    defaultExpanded={false}
+                                                    detailsHref={`/rides/${r._id}`}
+                                                    hideActions={false}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Ride shares history with actions */}
                                 {shares.length > 0 && (
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 pt-2 border-t border-gray-100">
                                         <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                                             Ride shares history
                                         </Typography>
@@ -748,19 +773,60 @@ export default function GroupDetailsPage() {
                                                 const sharedAt = s.createdAt
                                                     ? dt(s.createdAt)
                                                     : undefined;
+                                                const isActiveShare =
+                                                    s.status === "active";
 
                                                 return (
                                                     <div
                                                         key={String(s._id)}
-                                                        className="flex items-center justify-between gap-2 text-xs"
+                                                        className="flex flex-col gap-1.5 rounded-md border border-gray-200 bg-white p-2 text-xs"
                                                     >
-                                                        <div className="min-w-0">
-                                                            <div className="text-gray-900 truncate">
-                                                                {from} → {to}
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <div className="min-w-0">
+                                                                <div className="text-gray-900 truncate">
+                                                                    {from} → {to}
+                                                                </div>
+                                                                <div className="text-[11px] text-gray-500 truncate">
+                                                                    Shared by {sharedBy}
+                                                                    {sharedAt &&
+                                                                        ` · ${sharedAt}`}
+                                                                </div>
                                                             </div>
-                                                            <div className="text-[11px] text-gray-500 truncate">
-                                                                Shared by {sharedBy}
-                                                                {sharedAt && ` · ${sharedAt}`}
+                                                            <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 items-end sm:items-center">
+                                                                <span
+                                                                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border ${
+                                                                        isActiveShare
+                                                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                                                            : "bg-gray-50 text-gray-600 border-gray-200"
+                                                                    }`}
+                                                                >
+                                                                    {s.status || "unknown"}
+                                                                </span>
+                                                                {ride && (
+                                                                    <Button
+                                                                        size="xs"
+                                                                        variant="outline"
+                                                                        onClick={() =>
+                                                                            router.push(
+                                                                                `/rides/${ride._id}`,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        View ride
+                                                                    </Button>
+                                                                )}
+                                                                {ride && isActiveShare && (
+                                                                    <Button
+                                                                        size="xs"
+                                                                        onClick={() =>
+                                                                            router.push(
+                                                                                `/rides/${ride._id}`,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        Request this ride
+                                                                    </Button>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -794,8 +860,8 @@ export default function GroupDetailsPage() {
                                     )}
                                     {!isMember && (
                                         <span className="text-xs text-gray-600">
-                        This group is invite-only. Join with an invite link.
-                    </span>
+                                            This group is invite-only. Join with an invite link.
+                                        </span>
                                     )}
                                 </div>
                             </CardBody>
