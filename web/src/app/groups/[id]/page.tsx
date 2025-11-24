@@ -356,6 +356,7 @@ export default function GroupDetailsPage() {
                             {canManage && (
                                 <Button
                                     variant="outline"
+                                    colorScheme="error"
                                     size="sm"
                                     leftIcon={<Trash2 className="w-4 h-4" />}
                                     onClick={handleDeleteGroup}

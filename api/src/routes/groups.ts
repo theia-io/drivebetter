@@ -1074,14 +1074,16 @@ router.get(
                 : [],
         ]);
 
-        const rideMap = new Map<string, any>(
-            rides.map((r: any) => [String(r._id), r])
-        );
-        const shareCreatorMap = new Map<string, any>(
-            shareCreators.map((u: any) => [String(u._id), u])
-        );
+        const rideMap: Record<string, any> = {};
+        for (const r of rides) {
+            rideMap[String(r._id)] = r;
+        }
 
-        // 3) Bucket rides: activeAssigned / activeUnassigned / history
+        const shareCreatorMap: Record<string, any> = {};
+        for (const u of shareCreators) {
+            shareCreatorMap[String(u._id)] = u;
+        }
+
         const activeAssigned: any[] = [];
         const activeUnassigned: any[] = [];
         const history: any[] = [];
@@ -1099,7 +1101,7 @@ router.get(
             }
         }
 
-        // 4) Decorate shares with ride + user
+// 4) Decorate shares with ride + user
         const sharesWithDetails = shares.map((s: any) => ({
             _id: s._id,
             rideId: s.rideId,
@@ -1111,10 +1113,8 @@ router.get(
             maxClaims: s.maxClaims,
             claimsCount: s.claimsCount,
             createdAt: s.createdAt,
-            ride: rideMap.get(String(s.rideId)) || null,
-            sharedBy: s.createdBy
-                ? shareCreatorMap.get(String(s.createdBy)) || null
-                : null,
+            ride: rideMap[String(s.rideId)] || null,
+            sharedBy: s.createdBy ? shareCreatorMap[String(s.createdBy)] || null : null,
         }));
 
         // 5) Driver profiles (assigned drivers in these rides)
