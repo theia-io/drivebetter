@@ -7,6 +7,7 @@ import {
     Calendar,
     CalendarDays,
     ChevronDown,
+    ChevronUp,
     LogOut,
     Menu,
     MoreHorizontal,
@@ -22,7 +23,8 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode, useMemo, useState } from "react";
-import { Button } from "./ui";
+import { Button } from "../../components/ui";
+import UserMenu from "./user-menu";
 
 type NavItem = {
     name: string;
@@ -108,7 +110,6 @@ export default function Navigation() {
     const newRidesCount = inboxCountData?.count ?? 0;
 
     const [mobileOpen, setMobileOpen] = useState(false);
-    const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [moreOpen, setMoreOpen] = useState(false);
     const [groupsMenuOpen, setGroupsMenuOpen] = useState(false);
 
@@ -161,10 +162,7 @@ export default function Navigation() {
         (i) => primaryNames.includes(i.name) && i.name !== "Create Ride"
     );
     const dropdownItems = items.filter(
-        (i) =>
-            i.name !== "Create Ride" &&
-            !primaryNames.includes(i.name) &&
-            i.name !== "Groups"
+        (i) => i.name !== "Create Ride" && !primaryNames.includes(i.name) && i.name !== "Groups"
     );
 
     const findByName = (name: string) => items.find((i) => i.name === name) || null;
@@ -226,16 +224,20 @@ export default function Navigation() {
                                         >
                                             <Users className="h-4 w-4" />
                                             <span>Groups</span>
-                                            <ChevronDown className="h-3 w-3" />
+
+                                            {groupsMenuOpen ? (
+                                                <ChevronUp className="h-3 w-3" />
+                                            ) : (
+                                                <ChevronDown className="h-3 w-3" />
+                                            )}
                                         </button>
+
                                         {groupsMenuOpen && (
                                             <div className="absolute z-40 mt-2 w-56 rounded-md bg-white shadow-lg border border-gray-100">
                                                 <div className="py-1">
                                                     <Link
                                                         href="/groups"
-                                                        onClick={() =>
-                                                            setGroupsMenuOpen(false)
-                                                        }
+                                                        onClick={() => setGroupsMenuOpen(false)}
                                                         className={`flex items-center gap-2 px-3 py-2 text-sm ${
                                                             isActive("/groups")
                                                                 ? "bg-indigo-50 text-indigo-700"
@@ -247,9 +249,7 @@ export default function Navigation() {
                                                     </Link>
                                                     <Link
                                                         href="/groups/new"
-                                                        onClick={() =>
-                                                            setGroupsMenuOpen(false)
-                                                        }
+                                                        onClick={() => setGroupsMenuOpen(false)}
                                                         className={`flex items-center gap-2 px-3 py-2 text-sm ${
                                                             isActive("/groups/new")
                                                                 ? "bg-indigo-50 text-indigo-700"
@@ -289,9 +289,7 @@ export default function Navigation() {
                                                         <Link
                                                             key={item.name}
                                                             href={item.href}
-                                                            onClick={() =>
-                                                                setMoreOpen(false)
-                                                            }
+                                                            onClick={() => setMoreOpen(false)}
                                                             className={`flex items-center gap-2 px-3 py-2 text-sm ${
                                                                 isActive(item.href)
                                                                     ? "bg-indigo-50 text-indigo-700"
@@ -325,53 +323,7 @@ export default function Navigation() {
                                     </Link>
                                 )}
 
-                                <div className="relative">
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setUserMenuOpen((prev) => !prev)
-                                        }
-                                        className="inline-flex items-center gap-2 rounded-full bg-gray-50 px-2.5 py-1 border border-gray-200 hover:bg-gray-100"
-                                    >
-                                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
-                                            <UserIcon className="h-4 w-4" />
-                                        </span>
-                                        <span className="text-sm font-medium text-gray-700 max-w-[8rem] truncate">
-                                            {user?.name || "Account"}
-                                        </span>
-                                    </button>
-
-                                    {userMenuOpen && (
-                                        <div className="absolute right-0 mt-2 w-48 rounded-md bg-white shadow-lg border border-gray-100 z-50">
-                                            <div className="py-1">
-                                                <Link
-                                                    href="/account"
-                                                    onClick={() =>
-                                                        setUserMenuOpen(false)
-                                                    }
-                                                    className={`block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 ${
-                                                        pathname === "/account"
-                                                            ? "bg-indigo-50 text-indigo-700"
-                                                            : ""
-                                                    }`}
-                                                >
-                                                    Account
-                                                </Link>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setUserMenuOpen(false);
-                                                        logout();
-                                                    }}
-                                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 inline-flex items-center gap-2"
-                                                >
-                                                    <LogOut className="h-4 w-4" />
-                                                    <span>Logout</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                                <UserMenu user={user} />
                             </div>
 
                             <button

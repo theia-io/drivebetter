@@ -3,7 +3,7 @@
 import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import Navigation from "./Navigation";
+import Navigation from "../containers/navigation/Navigation";
 import AppFooter from "@/components/layout/AppFooter";
 
 interface ProtectedLayoutProps {
