@@ -1,89 +1,19 @@
 "use client";
 
 import ProtectedLayout from "@/components/ProtectedLayout";
-import { Button, Card, CardBody, CardHeader, Container, Typography } from "@/components/ui";
+import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import ProfileCard from "@/containers/profile-card/profile-card";
 import { useAuthStore } from "@/stores/auth";
-import {
-    AlertCircle,
-    Award,
-    Bell,
-    Calendar,
-    Car,
-    CheckCircle,
-    DollarSign,
-    Edit,
-    Mail,
-    MapPin,
-    Star,
-    User,
-} from "lucide-react";
+import { Edit } from "lucide-react";
 import Link from "next/link";
+import Achievements from "./components/archievements";
+import InstallPrompt from "./components/install";
+import Preferences from "./components/preferences";
+import ProfileInformation from "./components/profile-information";
+import { ACHIEVEMENTS, STATS } from "./data";
 
 export default function AccountPage() {
     const { user } = useAuthStore();
-
-    const stats = [
-        {
-            label: "Total Rides",
-            value: "1,247",
-            icon: Car,
-            color: "text-blue-600",
-            bgColor: "bg-blue-50",
-        },
-        {
-            label: "Average Rating",
-            value: "4.8",
-            icon: Star,
-            color: "text-yellow-600",
-            bgColor: "bg-yellow-50",
-        },
-        {
-            label: "Total Earnings",
-            value: "$15,420",
-            icon: DollarSign,
-            color: "text-green-600",
-            bgColor: "bg-green-50",
-        },
-        {
-            label: "Member Since",
-            value: "Jan 2023",
-            icon: Calendar,
-            color: "text-purple-600",
-            bgColor: "bg-purple-50",
-        },
-    ];
-
-    const achievements = [
-        {
-            id: 1,
-            title: "Top Performer",
-            description: "Highest rated driver this month",
-            icon: Award,
-            earned: true,
-        },
-        {
-            id: 2,
-            title: "Mile Master",
-            description: "Completed 1000+ rides",
-            icon: MapPin,
-            earned: true,
-        },
-        {
-            id: 3,
-            title: "Earnings Champion",
-            description: "Earned $10,000+ this year",
-            icon: DollarSign,
-            earned: true,
-        },
-        {
-            id: 4,
-            title: "Perfect Week",
-            description: "5-star rating for 7 days straight",
-            icon: Star,
-            earned: false,
-        },
-    ];
 
     return (
         <ProtectedLayout>
@@ -120,9 +50,11 @@ export default function AccountPage() {
                     {/* Profile Card */}
                     <ProfileCard user={user} />
 
+                    <InstallPrompt className="bg-white p-2 rounded-lg shadow-2xl" />
+
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-                        {stats.map((stat, index) => {
+                        {STATS.map((stat, index) => {
                             const Icon = stat.icon;
                             return (
                                 <Card
@@ -162,236 +94,13 @@ export default function AccountPage() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                         {/* Profile Information */}
-                        <div className="lg:col-span-2">
-                            <Card variant="elevated">
-                                <CardHeader className="pb-4">
-                                    <Typography
-                                        variant="h3"
-                                        className="text-lg font-semibold text-gray-900"
-                                    >
-                                        Profile Information
-                                    </Typography>
-                                </CardHeader>
-                                <CardBody className="pt-0">
-                                    <div className="space-y-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Full Name
-                                                </label>
-                                                <div className="relative">
-                                                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                                                    <input
-                                                        type="text"
-                                                        value={user?.name || "John Driver"}
-                                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                                        readOnly
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Email Address
-                                                </label>
-                                                <div className="relative">
-                                                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                                                    <input
-                                                        type="email"
-                                                        value={
-                                                            user?.email || "john.driver@example.com"
-                                                        }
-                                                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                                        readOnly
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Phone Number
-                                                </label>
-                                                <input
-                                                    type="tel"
-                                                    value="+1 (555) 123-4567"
-                                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                                    readOnly
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    Driver License
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    value="D123456789"
-                                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                                    readOnly
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                Address
-                                            </label>
-                                            <textarea
-                                                value="123 Main Street, Los Angeles, CA 90210"
-                                                rows={3}
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                                readOnly
-                                            />
-                                        </div>
-                                    </div>
-                                </CardBody>
-                            </Card>
-                        </div>
+                        <ProfileInformation user={user} />
 
                         {/* Preferences & Achievements */}
                         <div className="space-y-6">
-                            {/* Preferences */}
-                            <Card variant="elevated">
-                                <CardHeader className="pb-4">
-                                    <Typography
-                                        variant="h3"
-                                        className="text-lg font-semibold text-gray-900"
-                                    >
-                                        Preferences
-                                    </Typography>
-                                </CardHeader>
-                                <CardBody className="pt-0">
-                                    <div className="space-y-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center">
-                                                <Bell className="w-5 h-5 text-gray-400 mr-3" />
-                                                <div>
-                                                    <Typography
-                                                        variant="body1"
-                                                        className="font-medium text-gray-900"
-                                                    >
-                                                        Email Notifications
-                                                    </Typography>
-                                                    <Typography
-                                                        variant="body2"
-                                                        className="text-gray-600"
-                                                    >
-                                                        Get notified about new rides
-                                                    </Typography>
-                                                </div>
-                                            </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    className="sr-only peer"
-                                                    defaultChecked
-                                                />
-                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                                            </label>
-                                        </div>
+                            <Preferences />
 
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center">
-                                                <Car className="w-5 h-5 text-gray-400 mr-3" />
-                                                <div>
-                                                    <Typography
-                                                        variant="body1"
-                                                        className="font-medium text-gray-900"
-                                                    >
-                                                        Available for Rides
-                                                    </Typography>
-                                                    <Typography
-                                                        variant="body2"
-                                                        className="text-gray-600"
-                                                    >
-                                                        Accept new ride requests
-                                                    </Typography>
-                                                </div>
-                                            </div>
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    className="sr-only peer"
-                                                    defaultChecked
-                                                />
-                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                                            </label>
-                                        </div>
-                                    </div>
-                                </CardBody>
-                            </Card>
-
-                            {/* Achievements */}
-                            <Card variant="elevated">
-                                <CardHeader className="pb-4">
-                                    <Typography
-                                        variant="h3"
-                                        className="text-lg font-semibold text-gray-900"
-                                    >
-                                        Achievements
-                                    </Typography>
-                                </CardHeader>
-                                <CardBody className="pt-0">
-                                    <div className="space-y-4">
-                                        {achievements.map((achievement) => {
-                                            const Icon = achievement.icon;
-                                            return (
-                                                <div
-                                                    key={achievement.id}
-                                                    className={`flex items-center p-3 rounded-lg ${
-                                                        achievement.earned
-                                                            ? "bg-green-50 border border-green-200"
-                                                            : "bg-gray-50 border border-gray-200"
-                                                    }`}
-                                                >
-                                                    <div
-                                                        className={`p-2 rounded-full ${
-                                                            achievement.earned
-                                                                ? "bg-green-100"
-                                                                : "bg-gray-100"
-                                                        }`}
-                                                    >
-                                                        <Icon
-                                                            className={`w-5 h-5 ${
-                                                                achievement.earned
-                                                                    ? "text-green-600"
-                                                                    : "text-gray-400"
-                                                            }`}
-                                                        />
-                                                    </div>
-                                                    <div className="ml-3 flex-1">
-                                                        <Typography
-                                                            variant="body1"
-                                                            className={`font-medium ${
-                                                                achievement.earned
-                                                                    ? "text-green-900"
-                                                                    : "text-gray-500"
-                                                            }`}
-                                                        >
-                                                            {achievement.title}
-                                                        </Typography>
-                                                        <Typography
-                                                            variant="body2"
-                                                            className={`text-sm ${
-                                                                achievement.earned
-                                                                    ? "text-green-700"
-                                                                    : "text-gray-400"
-                                                            }`}
-                                                        >
-                                                            {achievement.description}
-                                                        </Typography>
-                                                    </div>
-                                                    {achievement.earned ? (
-                                                        <CheckCircle className="w-5 h-5 text-green-600" />
-                                                    ) : (
-                                                        <AlertCircle className="w-5 h-5 text-gray-400" />
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </CardBody>
-                            </Card>
+                            <Achievements achievements={ACHIEVEMENTS} />
                         </div>
                     </div>
                 </div>

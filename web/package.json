@@ -13,6 +13,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@radix-ui/react-switch": "^1.2.6",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "leaflet": "^1.9.4",
@@ -24,6 +26,7 @@
     "react-leaflet": "^4.2.1",
     "swr": "^2.2.4",
     "tailwind-merge": "^3.4.0",
+    "tailwindcss-animate": "^1.0.7",
     "zustand": "^4.4.6"
   },
   "devDependencies": {

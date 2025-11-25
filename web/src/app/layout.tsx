@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
 import PWAInstallPrompt from "@/components/PWAInstallPrompt";
-import { PWARegister } from "./pwa-register";
+import { PWARegister } from "../services/pwa-register";
 
 const inter = Inter({ subsets: ["latin"] });
 

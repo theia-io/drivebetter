@@ -1,6 +1,7 @@
 import { Request, Response, Router } from "express";
 import { FilterQuery, Types } from "mongoose";
 import { requireAuth, requireRole } from "../lib/auth";
+import { sendPushNotificationToUser, sendPushNotificationToUsers } from "../lib/pushNotifications";
 import { assertCanAccessRide, rideScopeFilter } from "../lib/rideAuthz";
 import Group from "../models/group.model";
 import Ride from "../models/ride.model";
@@ -914,6 +915,20 @@ router.post(
         // 5) Close any active shares for this ride (prevent new requests)
         await RideShare.updateMany({ rideId, status: "active" }, { $set: { status: "closed" } });
 
+        // 6) Send push notification to the assigned driver
+        try {
+            const driver = await User.findById(claim.driverId);
+            if (!driver) return res.status(404).json({ error: "Driver not found" });
+            await sendPushNotificationToUser(driver, {
+                title: "Ride Claim Approved",
+                body: `Your ride claim has been approved! Ride: ${ride.from} → ${ride.to}`,
+                url: `/rides/${rideId}`,
+                tag: `ride-${rideId}-assigned`,
+            });
+        } catch (error) {
+            console.error("[Rides] Failed to send push notification to driver:", error);
+        }
+
         return res.json({
             ok: true,
             status: "assigned",
@@ -1083,6 +1098,19 @@ router.post(
         if (!ride.queue.map(String).includes(String(oid))) ride.queue.push(oid);
 
         await ride.save();
+
+        // Send push notification to assigned driver
+        try {
+            await sendPushNotificationToUser(driver, {
+                title: "New Ride Assigned",
+                body: `You have been assigned to a new ride: ${ride.from} → ${ride.to}`,
+                url: `/rides/${ride._id}`,
+                tag: `ride-${ride._id}-assigned`,
+            });
+        } catch (error) {
+            console.error("[Rides] Failed to send push notification to driver:", error);
+        }
+
         res.json({ ok: true, ride });
     }
 );
@@ -1125,6 +1153,25 @@ router.post(
             { new: true }
         );
         if (!ride) return res.status(404).json({ error: "Ride not found" });
+
+        const assignedDriver = await User.findById(ride.assignedDriverId);
+        const currentUser = (req as any).user;
+
+        // Send push notification to assigned driver if status changed by someone else
+        if (assignedDriver && assignedDriver.id !== currentUser.id) {
+            try {
+                await sendPushNotificationToUser(assignedDriver.id, {
+                    title: "Ride Status Updated",
+                    body: `Your ride status has been updated to ${status}`,
+                    url: `/rides/${ride._id}`,
+                    tag: `ride-${ride._id}-status`,
+                });
+            } catch (error) {
+                // Log error but don't fail the request
+                console.error("[Rides] Failed to send push notification:", error);
+            }
+        }
+
         res.json({ ok: true, ride });
     }
 );
@@ -1241,6 +1288,23 @@ router.post(
         }
 
         const url = `${APP_BASE_URL}/ride-share/${share._id}`;
+
+        try {
+            const drivers = await User.find({
+                _id: { $in: driverIds?.map((id) => new Types.ObjectId(id)) },
+            });
+            if (drivers.length > 0) {
+                await sendPushNotificationToUsers(drivers, {
+                    title: "New Ride Share",
+                    body: `You have a new ride share: ${url}`,
+                    url: `/rides/${ride._id}`,
+                    tag: `ride-${ride._id}-share`,
+                });
+            }
+        } catch (error) {
+            console.error("[Rides] Failed to send push notification to drivers:", error);
+        }
+
         return res.status(201).json({
             shareId: share._id,
             url,

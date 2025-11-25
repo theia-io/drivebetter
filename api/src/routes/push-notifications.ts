@@ -1,25 +1,17 @@
 import { Request, Response, Router } from "express";
-import webpush, { PushSubscription } from "web-push";
+import { PushSubscription } from "web-push";
 import { requireAuth } from "../lib/auth";
+import { sendPushNotificationToUser } from "../lib/pushNotifications";
 import User from "../models/user.model";
 
 const router = Router();
 
-console.log("NEXT_PUBLIC_VAPID_PUBLIC_KEY:", process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
-console.log("VAPID_PRIVATE_KEY:", process.env.VAPID_PRIVATE_KEY);
-
-webpush.setVapidDetails(
-    "mailto:support@drivebetter.com",
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!
-);
-
 /**
  * @openapi
- * /notifications/subscribe:
+ * /push-notifications/subscribe:
  *   post:
  *     summary: Subscribe to push notifications
- *     tags: [Notifications]
+ *     tags: [Push Notifications]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -79,10 +71,10 @@ router.post("/subscribe", requireAuth, async (req: Request, res: Response) => {
 
 /**
  * @openapi
- * /notifications/unsubscribe:
+ * /push-notifications/unsubscribe:
  *   post:
  *     summary: Unsubscribe from push notifications
- *     tags: [Notifications]
+ *     tags: [Push Notifications]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -110,10 +102,12 @@ router.post("/unsubscribe", requireAuth, async (req: Request, res: Response) => 
         // Remove specific subscription by endpoint
         dbUser.subscriptions =
             dbUser.subscriptions?.filter((sub) => sub.endpoint !== endpoint) ?? [];
-    } else {
-        // Remove all subscriptions
-        dbUser.subscriptions = [];
     }
+    // Should we remove all subscriptions if endpoint is not provided?
+    // else {
+    //     // Remove all subscriptions
+    //     dbUser.subscriptions = [];
+    // }
 
     await dbUser.save();
     res.json({ ok: true });
@@ -121,10 +115,10 @@ router.post("/unsubscribe", requireAuth, async (req: Request, res: Response) => 
 
 /**
  * @openapi
- * /notifications/send:
+ * /push-notifications/send:
  *   post:
  *     summary: Send a test notification to a user
- *     tags: [Notifications]
+ *     tags: [Push Notifications]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -146,43 +140,37 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
     const currentUser = (req as any).user;
 
     const targetUserId = req.body?.userId || currentUser.id;
-    const title = req.body?.title || "Test Notification";
-    const body = req.body?.body || "This is a test notification";
+    const title = req.body?.title || "DriveBetter";
+    const body = req.body?.body || "You have a message from DriveBetter";
 
     const user = await User.findById(targetUserId);
     if (!user) {
         return res.status(404).json({ error: "User not found" });
     }
 
-    if (!user.subscriptions || user.subscriptions.length === 0) {
-        return res.status(400).json({ error: "No subscription found for this user" });
-    }
+    try {
+        const result = await sendPushNotificationToUser(user, {
+            title,
+            body,
+            icon: req.body?.icon,
+            badge: req.body?.badge,
+            tag: req.body?.tag,
+            url: req.body?.url,
+        });
 
-    const results = [];
-    for (const subscription of user.subscriptions) {
-        try {
-            await webpush.sendNotification(subscription as any, JSON.stringify({ title, body }));
-            results.push({ endpoint: subscription.endpoint, success: true });
-        } catch (error: any) {
-            // If subscription is invalid, remove it
-            if (error.statusCode === 410 || error.statusCode === 404) {
-                user.subscriptions = user.subscriptions.filter(
-                    (sub) => sub.endpoint !== subscription.endpoint
-                );
-                await user.save();
-            }
-            results.push({ endpoint: subscription.endpoint, success: false, error: error.message });
+        if (!result.delivered && result.total === 0) {
+            return res.status(400).json({ error: "No subscription found for this user" });
         }
-    }
 
-    const successCount = results.filter((r) => r.success).length;
-    return res.json({
-        ok: true,
-        delivered: successCount > 0,
-        results,
-        total: user.subscriptions.length,
-        successful: successCount,
-    });
+        return res.json(result);
+    } catch (error: any) {
+        if (error.message === "User not found") {
+            return res.status(404).json({ error: "User not found" });
+        }
+        return res
+            .status(500)
+            .json({ error: "Failed to send notification", message: error.message });
+    }
 });
 
 export default router;

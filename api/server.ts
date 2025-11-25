@@ -15,14 +15,17 @@ import oauth from "./src/routes/oauth";
 import groupsRoutes from "./src/routes/groups";
 import calendarRoutes from "./src/routes/calendar";
 import clientsRoutes from "./src/routes/clients";
-import notificationsRoutes from "./src/routes/notifications";
+import pushNotificationsRoutes from "./src/routes/push-notifications";
 import healthRoutes from "./src/routes/health";
 import geoRoutes from "./src/routes/geo";
 import driverReviewsRoutes from "./src/routes/driverReviews";
 import driverDetailsRoutes from "./src/routes/driverDetails";
-import versionRoutes from "./src/routes/version"
+import versionRoutes from "./src/routes/version";
 
-async function startExpressServer(isNextJsEnabled: boolean, nextHandle?: ReturnType<typeof next>['getRequestHandler']) {
+async function startExpressServer(
+    isNextJsEnabled: boolean,
+    nextHandle?: ReturnType<typeof next>["getRequestHandler"]
+) {
     try {
         await mongoose.connect(env.MONGODB_URI);
 
@@ -45,10 +48,10 @@ async function startExpressServer(isNextJsEnabled: boolean, nextHandle?: ReturnT
         server.use("/api/v1/groups", groupsRoutes);
         server.use("/api/v1/calendar", calendarRoutes);
         server.use("/api/v1/clients", clientsRoutes);
-        server.use("/api/v1/notifications", notificationsRoutes);
+        server.use("/api/v1/push-notifications", pushNotificationsRoutes);
         server.use("/api/v1/health", healthRoutes);
         server.use("/api/v1/geo", geoRoutes);
-        server.use("/api/v1/version", versionRoutes)
+        server.use("/api/v1/version", versionRoutes);
 
         setupSwagger(server);
 
@@ -56,14 +59,14 @@ async function startExpressServer(isNextJsEnabled: boolean, nextHandle?: ReturnT
             server.all("*", nextHandle as RequestHandler);
         }
 
-        server.listen(env.PORT, '0.0.0.0', () => {
+        server.listen(env.PORT, "0.0.0.0", () => {
             console.log(`🚀 Server running on port ${env.PORT}`);
             console.log(`📚 Swagger UI: http://localhost:${env.PORT}/api/docs`);
             console.log(`📋 OpenAPI:    http://localhost:${env.PORT}/api/openapi.json`);
             console.log(`🌍 Environment: ${env.NODE_ENV}`);
         });
     } catch (error) {
-        console.error('❌ FATAL EXPRESS STARTUP ERROR:', error);
+        console.error("❌ FATAL EXPRESS STARTUP ERROR:", error);
         process.exit(1);
     }
 }
@@ -71,9 +74,9 @@ async function startExpressServer(isNextJsEnabled: boolean, nextHandle?: ReturnT
 (async () => {
     try {
         validateEnv();
-        console.log('✅ Environment variables loaded and validated successfully');
+        console.log("✅ Environment variables loaded and validated successfully");
     } catch (error) {
-        console.error('❌ Environment validation failed:', error);
+        console.error("❌ Environment validation failed:", error);
         process.exit(1);
     }
 
@@ -87,7 +90,7 @@ async function startExpressServer(isNextJsEnabled: boolean, nextHandle?: ReturnT
                 await startExpressServer(true, () => handle);
             })
             .catch((err) => {
-                console.error('❌ Next.js Prepare Failed in DEV:', err);
+                console.error("❌ Next.js Prepare Failed in DEV:", err);
                 process.exit(1);
             });
     } else {

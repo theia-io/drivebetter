@@ -1,8 +1,9 @@
 "use client";
 
-import { Button } from "@/components/ui";
+import { Switch } from "@/components/ui/switch";
 import { apiPost } from "@/services/http";
 import { useAuthStore } from "@/stores";
+import { cn } from "@/utils/css";
 import { useEffect, useState } from "react";
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -18,17 +19,12 @@ function urlBase64ToUint8Array(base64String: string) {
     return outputArray;
 }
 
-export default function Notifications({ className }: { className?: string }) {
+export default function PushNotificationsSwitch({ className }: { className?: string }) {
     const { user } = useAuthStore();
     const [isSupported, setIsSupported] = useState(false);
     const [subscription, setSubscription] = useState<PushSubscription | null>(
         user?.subscriptions?.[0] || null
     );
-
-    console.log("USER", user);
-    console.log("SUBSCRIPTION", subscription);
-
-    const [message, setMessage] = useState("");
 
     useEffect(() => {
         if ("serviceWorker" in navigator && "PushManager" in window) {
@@ -43,33 +39,33 @@ export default function Notifications({ className }: { className?: string }) {
                 scope: "/",
                 updateViaCache: "none",
             });
-            console.log("[Notifications] Service worker registered:", registration);
+            console.log("[Push Notifications] Service worker registered:", registration);
 
             // Check if there's an existing subscription
             const sub = await registration.pushManager.getSubscription();
             if (sub) {
-                console.log("[Notifications] Existing subscription found:", sub);
+                console.log("[Push Notifications] Existing subscription found:", sub);
                 setSubscription(sub);
             } else {
-                console.log("[Notifications] No existing subscription");
+                console.log("[Push Notifications] No existing subscription");
             }
 
             // Listen for service worker updates
             registration.addEventListener("updatefound", () => {
-                console.log("[Notifications] Service worker update found");
+                console.log("[Push Notifications] Service worker update found");
                 const newWorker = registration.installing;
                 if (newWorker) {
                     newWorker.addEventListener("statechange", () => {
                         if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
                             console.log(
-                                "[Notifications] New service worker installed, reload to activate"
+                                "[Push Notifications] New service worker installed, reload to activate"
                             );
                         }
                     });
                 }
             });
         } catch (error) {
-            console.error("[Notifications] Error registering service worker:", error);
+            console.error("[Push Notifications] Error registering service worker:", error);
         }
     }
 
@@ -85,7 +81,7 @@ export default function Notifications({ className }: { className?: string }) {
 
             // Ensure service worker is registered and ready
             const registration = await navigator.serviceWorker.ready;
-            console.log("[Notifications] Service worker ready:", registration);
+            console.log("[Push Notifications] Service worker ready:", registration);
 
             // Subscribe to push notifications
             const sub = await registration.pushManager.subscribe({
@@ -95,70 +91,46 @@ export default function Notifications({ className }: { className?: string }) {
                 ),
             });
 
-            console.log("[Notifications] Push subscription created:", sub);
             setSubscription(sub);
 
             // Serialize subscription for sending to server
             const serializedSub = JSON.parse(JSON.stringify(sub));
-            console.log("[Notifications] Serialized subscription:", serializedSub);
-
+            console.log("[Push Notifications] Serialized subscription:", serializedSub);
             // Send subscription to server
-            await apiPost("/notifications/subscribe", { subscription: serializedSub });
-            console.log("[Notifications] Subscription saved to server");
+            await apiPost("/push-notifications/subscribe", { subscription: serializedSub });
+            console.log("[Push Notifications] Subscription saved to server");
         } catch (error) {
-            console.error("[Notifications] Error subscribing to push:", error);
+            console.error("[Push Notifications] Error subscribing to push:", error);
             alert("Failed to subscribe to push notifications: " + (error as Error).message);
         }
     }
 
     async function unsubscribeFromPush() {
-        console.log("unsubscribeFromPush", subscription);
         await subscription?.unsubscribe();
         setSubscription(null);
-
-        // await unsubscribeUser();
-        await apiPost("/notifications/unsubscribe");
-    }
-
-    async function sendTestNotification() {
-        if (subscription) {
-            // await sendNotification(message);
-            await apiPost("/notifications/send", {
-                body: message ?? "Interval test",
-                title: "Test Notification",
-            });
-            setMessage("");
-        }
+        await apiPost("/push-notifications/unsubscribe");
     }
 
     if (!isSupported) {
-        return <p>Push notifications are not supported in this browser.</p>;
+        return (
+            <p>
+                Push notifications are not supported in this browser. We support push-notifications
+                for installed applications only.
+            </p>
+        );
     }
 
     return (
-        <div className={className}>
-            {subscription ? (
-                <>
-                    <div className="flex items-center gap-2">
-                        <p>You are subscribed to push notifications.</p>
-                        <Button onClick={unsubscribeFromPush}>Unsubscribe</Button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="text"
-                            placeholder="Enter notification message"
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                        />
-                        <Button onClick={sendTestNotification}>Send Test</Button>
-                    </div>
-                </>
-            ) : (
-                <>
-                    <p>You are not subscribed to push notifications.</p>
-                    <Button onClick={subscribeToPush}>Subscribe</Button>
-                </>
-            )}
-        </div>
+        <Switch
+            className={cn(className)}
+            checked={subscription ? true : false}
+            onCheckedChange={(checked) => {
+                if (checked) {
+                    subscribeToPush();
+                } else {
+                    unsubscribeFromPush();
+                }
+            }}
+        />
     );
 }
