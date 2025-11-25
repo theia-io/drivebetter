@@ -1291,7 +1291,7 @@ router.post(
 
         try {
             const drivers = await User.find({
-                _id: { $in: driverIds?.map((id) => new Types.ObjectId(id)) },
+                _id: { $in: driverIds?.map((id: any) => new Types.ObjectId(id)) },
             });
             if (drivers.length > 0) {
                 await sendPushNotificationToUsers(drivers, {

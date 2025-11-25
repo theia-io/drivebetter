@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { Request, Response, Router } from "express";
 import { Types } from "mongoose";
 
-import { sendPushNotificationToUser, sendPushNotificationToUsers } from "@/lib/pushNotifications";
+import { sendPushNotificationToUser, sendPushNotificationToUsers } from "../lib/pushNotifications";
 import { pick } from "next/dist/lib/pick";
 import { requireAuth, requireRole } from "../lib/auth";
 import Group, { GroupType, GroupVisibility, IGroup } from "../models/group.model";

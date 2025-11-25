@@ -2,8 +2,8 @@ import { Router, Request, Response } from "express";
 import { Types } from "mongoose";
 import { requireAuth, requireRole } from "../lib/auth";
 import DriverReview, { recomputeDriverRating } from "../models/driverReview.model";
-import { sendPushNotificationToUser } from "@/lib/pushNotifications";
-import User from "@/models/user.model";
+import User from "../models/user.model";
+import { sendPushNotificationToUser } from "../lib/pushNotifications";
 
 /**
  * @openapi
@@ -87,10 +87,12 @@ router.post(
 
         try {
             const driver = await User.findById(driverId);
-            await sendPushNotificationToUser(driver, {
-                title: "New Driver Review",
-                body: `You have a new review from ${reviewerId} with rating ${rating}`,
-            });
+            if (driver) {
+                await sendPushNotificationToUser(driver, {
+                    title: "New Driver Review",
+                    body: `You have a new review from ${reviewerId} with rating ${rating}`,
+                });
+            }
         } catch (error) {
             console.error("[DriverReviews] Failed to send push notification to reviewer:", error);
         }
