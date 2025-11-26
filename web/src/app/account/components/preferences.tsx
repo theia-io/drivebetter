@@ -5,9 +5,15 @@ import { Switch } from "@/components/ui/switch";
 import { Bell, Car } from "lucide-react";
 import PushNotificationsSwitch from "../../../containers/notifications/push-notifications";
 import { usePWA } from "@/services/pwa";
+import { useAuthStore } from "@/stores";
 
 export default function Preferences() {
     const { isIOS, isStandalone } = usePWA();
+    const { user } = useAuthStore();
+
+    const subscriptions = user?.subscriptions?.sort(
+        (a, b) => new Date(b.subscribedAt).getTime() - new Date(a.subscribedAt).getTime()
+    );
 
     return (
         <Card variant="elevated">
@@ -30,12 +36,29 @@ export default function Preferences() {
                             <Typography variant="body2" className="text-gray-600">
                                 {isStandalone
                                     ? "Receive push notifications for new rides and updates"
-                                    : "We support push-notifications for installed applications only."}
+                                    : "We support push-notifications for installed applications only"}
                             </Typography>
                         </div>
 
                         {isStandalone && <PushNotificationsSwitch className="ml-auto" />}
                     </div>
+
+                    {subscriptions.length > 0 && (
+                        <div>
+                            <Typography variant="body1" className="font-medium text-gray-900">
+                                {subscriptions.length} device{subscriptions.length > 1 ? "s" : ""}{" "}
+                                subscribed
+                            </Typography>
+                            {subscriptions.map((subscription, index) => (
+                                <div key={subscription.endpoint + index}>
+                                    <Typography variant="body2" className="text-gray-600">
+                                        {subscription.deviceName} -{" "}
+                                        {new Date(subscription.subscribedAt).toLocaleString()}
+                                    </Typography>
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
                     <div className="flex items-center gap-4">
                         <div className="flex flex-col gap-1">

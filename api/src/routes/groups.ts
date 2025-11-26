@@ -2,9 +2,10 @@ import crypto from "crypto";
 import { Request, Response, Router } from "express";
 import { Types } from "mongoose";
 
-import { sendPushNotificationToUser, sendPushNotificationToUsers } from "../lib/pushNotifications";
 import { pick } from "next/dist/lib/pick";
 import { requireAuth, requireRole } from "../lib/auth";
+import { sendPushNotificationToUser, sendPushNotificationToUsers } from "../lib/pushNotifications";
+import { normalizeId } from "../lib/utils/db-types";
 import Group, { GroupType, GroupVisibility, IGroup } from "../models/group.model";
 import { GroupInvite } from "../models/groupInvite.model";
 import Ride from "../models/ride.model";
@@ -23,26 +24,6 @@ function parsePagination(q: Request["query"]) {
     const limit = Math.min(100, Math.max(1, Number(q.limit ?? 20)));
     const skip = (page - 1) * limit;
     return { page, limit, skip };
-}
-
-function normalizeId(id: any): Types.ObjectId {
-    if (!id) {
-        throw new Error("normalizeId: id is required");
-    }
-
-    if (id instanceof Types.ObjectId) {
-        return id;
-    }
-
-    if (typeof id === "string") {
-        return new Types.ObjectId(id);
-    }
-
-    if (typeof id === "object" && (id as any)._id) {
-        return normalizeId((id as any)._id);
-    }
-
-    throw new Error(`normalizeId: unsupported id value: ${JSON.stringify(id)}`);
 }
 
 function getCurrentUserId(req: Request): Types.ObjectId {

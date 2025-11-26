@@ -3,6 +3,7 @@ import { FilterQuery, Types } from "mongoose";
 import { requireAuth, requireRole } from "../lib/auth";
 import { sendPushNotificationToUser, sendPushNotificationToUsers } from "../lib/pushNotifications";
 import { assertCanAccessRide, rideScopeFilter } from "../lib/rideAuthz";
+import { normalizeId } from "../lib/utils/db-types";
 import Group from "../models/group.model";
 import Ride from "../models/ride.model";
 import { RideClaim } from "../models/rideClaim.model";
@@ -321,6 +322,7 @@ router.post(
     requireRole(["driver", "dispatcher", "admin"]),
     async (req: Request, res: Response) => {
         try {
+            const user = (req as any).user;
             const body = req.body || {};
 
             // resolve assignment
@@ -340,9 +342,11 @@ router.post(
             const type = body.type ?? (when.getTime() > Date.now() ? "reservation" : "asap");
             const status = body.status ?? (assignedDriverId ? "assigned" : "unassigned");
 
+            // Note @todo Once I guess we always want to choose body.creatorId if it exists, otherwise use user.id (?) especially  when we create from a client name (?)
+            const creatorId = normalizeId(user.id ?? body.creatorId);
+
             const doc = await Ride.create({
-                creatorId:
-                    body.creatorId && isObjectId(body.creatorId) ? body.creatorId : undefined,
+                creatorId,
                 customer: body.customer
                     ? {
                           name: String(body.customer.name || "").trim(),
@@ -403,7 +407,9 @@ router.get(
         try {
             assertCanAccessRide(user, ride);
         } catch (e: any) {
-            return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
+            return res
+                .status(e.status || 403)
+                .json({ error: (e.message || "Forbidden") + " dan test" });
         }
 
         if (!ride) return res.status(404).json({ error: "Ride not found" });

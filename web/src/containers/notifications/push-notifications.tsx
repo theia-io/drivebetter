@@ -4,6 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { apiPost } from "@/services/http";
 import { useAuthStore } from "@/stores";
 import { cn } from "@/utils/css";
+import { collectDeviceInfo, generateDeviceName } from "@/utils/deviceInfo";
 import { useEffect, useState } from "react";
 
 function urlBase64ToUint8Array(base64String: string) {
@@ -81,7 +82,6 @@ export default function PushNotificationsSwitch({ className }: { className?: str
 
             // Ensure service worker is registered and ready
             const registration = await navigator.serviceWorker.ready;
-            console.log("[Push Notifications] Service worker ready:", registration);
 
             // Subscribe to push notifications
             const sub = await registration.pushManager.subscribe({
@@ -91,13 +91,26 @@ export default function PushNotificationsSwitch({ className }: { className?: str
                 ),
             });
 
-            setSubscription(sub);
+            // Collect device information (privacy-compliant)
+            const deviceInfo = collectDeviceInfo();
+            const deviceName = generateDeviceName(deviceInfo);
 
-            // Serialize subscription for sending to server
+            // PushSubscription properties are readonly/getters and don't spread correctly
+            // Must serialize it first using JSON.parse/stringify to extract the properties
             const serializedSub = JSON.parse(JSON.stringify(sub));
-            console.log("[Push Notifications] Serialized subscription:", serializedSub);
+
+            // Build the complete subscription object with device info
+            const pushSubscription = {
+                ...serializedSub, // Contains endpoint, keys, expirationTime
+                deviceName,
+                deviceInfo,
+                subscribedAt: new Date().toISOString(),
+            };
+
+            setSubscription(sub); // Keep the original PushSubscription object for state (needed for unsubscribe)
+
             // Send subscription to server
-            await apiPost("/push-notifications/subscribe", { subscription: serializedSub });
+            await apiPost("/push-notifications/subscribe", pushSubscription);
             console.log("[Push Notifications] Subscription saved to server");
         } catch (error) {
             console.error("[Push Notifications] Error subscribing to push:", error);

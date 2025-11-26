@@ -32,6 +32,7 @@ export function assertCanAccessRide(user: any, ride: any) {
         err.status = 403;
         throw err;
     }
+
     const same =
         String(ride.creatorId._id) === String(user.id) ||
         String(ride.creatorId) === String(user.id);

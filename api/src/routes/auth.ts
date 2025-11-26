@@ -467,7 +467,7 @@ router.post("/reset-password", async (req: Request, res: Response) => {
  */
 router.get("/me", requireAuth, async (req: Request, res: Response) => {
     const authUser = (req as any).user as { id: string };
-    const user = await User.findById(authUser.id).select("email roles emailVerified name");
+    const user = await User.findById(authUser.id).select("email roles emailVerified name subscriptions");
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);
 });

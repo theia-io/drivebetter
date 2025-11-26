@@ -2,7 +2,7 @@ import { Request, Response, Router } from "express";
 import { PushSubscription } from "web-push";
 import { requireAuth } from "../lib/auth";
 import { sendPushNotificationToUser } from "../lib/pushNotifications";
-import User from "../models/user.model";
+import User, { Subscription } from "../models/user.model";
 
 const router = Router();
 
@@ -38,7 +38,7 @@ const router = Router();
  */
 router.post("/subscribe", requireAuth, async (req: Request, res: Response) => {
     const user = (req as any).user;
-    const subscription = req.body.subscription as PushSubscription;
+    const subscription = req.body as Subscription;
 
     if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
         return res.status(400).json({ error: "Invalid subscription data" });
@@ -49,24 +49,42 @@ router.post("/subscribe", requireAuth, async (req: Request, res: Response) => {
         return res.status(404).json({ error: "User not found" });
     }
 
+    // Ensure required fields are present
+    const subscriptionData: Subscription = {
+        endpoint: subscription.endpoint,
+        expirationTime: subscription.expirationTime || null,
+        keys: {
+            p256dh: subscription.keys.p256dh,
+            auth: subscription.keys.auth,
+        },
+        deviceName: subscription.deviceName || "Unknown Device",
+        subscribedAt: subscription.subscribedAt ? new Date(subscription.subscribedAt) : new Date(),
+        // Include device info if provided (optional, privacy-compliant)
+        deviceInfo: subscription.deviceInfo || undefined,
+    };
+
     // Check if subscription already exists (by endpoint)
     const existingIndex =
         dbUser.subscriptions?.findIndex((sub) => sub.endpoint === subscription.endpoint) ?? -1;
 
     if (existingIndex >= 0) {
-        // Update existing subscription
-        dbUser.subscriptions![existingIndex] = subscription;
+        // Update existing subscription (preserve device info if not provided in update)
+        const existing = dbUser.subscriptions![existingIndex];
+        dbUser.subscriptions![existingIndex] = {
+            ...subscriptionData,
+            deviceInfo: subscriptionData.deviceInfo || existing.deviceInfo,
+        };
     } else {
         // Add new subscription
         if (!dbUser.subscriptions) {
             dbUser.subscriptions = [];
         }
-        dbUser.subscriptions.push(subscription);
+        dbUser.subscriptions.push(subscriptionData);
     }
 
     await dbUser.save();
 
-    res.json({ ok: true, subscription });
+    res.json({ ok: true, subscription: subscriptionData });
 });
 
 /**
