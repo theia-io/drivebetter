@@ -407,6 +407,7 @@ router.get(
         try {
             assertCanAccessRide(user, ride);
         } catch (e: any) {
+            console.error("[getRide] Error asserting access:", e);
             return res
                 .status(e.status || 403)
                 .json({ error: (e.message || "Forbidden") + " dan test" });
@@ -537,6 +538,7 @@ router.put(
         try {
             assertCanAccessRide(user, set);
         } catch (e: any) {
+            console.error("[putRide] Error asserting access:", e);
             return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
         }
 
@@ -738,6 +740,7 @@ router.patch(
         try {
             assertCanAccessRide(user, set);
         } catch (e: any) {
+            console.error("[patchRide] Error asserting access:", e);
             return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
         }
         const ride = await Ride.findByIdAndUpdate(id, { $set: set }, { new: true });
@@ -771,6 +774,7 @@ router.delete(
         try {
             assertCanAccessRide(user, ride);
         } catch (e: any) {
+            console.error("[deleteRide] Error asserting access:", e);
             return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
         }
         const deleted = await Ride.findByIdAndDelete(req.params.id);
@@ -1381,6 +1385,7 @@ router.get(
         try {
             assertCanAccessRide(user, ride);
         } catch (e: any) {
+            console.error("[getRide/share] Error asserting access:", e);
             return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
         }
 

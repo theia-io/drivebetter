@@ -177,14 +177,20 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
         });
 
         if (!result.delivered && result.total === 0) {
+            console.error(
+                "[push-notifications/send] No subscription found for this user",
+                targetUserId
+            );
             return res.status(400).json({ error: "No subscription found for this user" });
         }
 
         return res.json(result);
     } catch (error: any) {
         if (error.message === "User not found") {
+            console.error("[push-notifications/send] User not found", targetUserId);
             return res.status(404).json({ error: "User not found" });
         }
+
         return res
             .status(500)
             .json({ error: "Failed to send notification", message: error.message });

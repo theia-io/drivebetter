@@ -8,8 +8,10 @@ import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
     CREATE_RIDE_ITEM,
+    GROUPS_ITEM,
     NAVIGATION_ITEMS,
     NavItem,
+    USERS_ITEM,
     getNavigationForUser,
     hasRequiredRole,
 } from "./data";
@@ -38,9 +40,9 @@ export default function DesktopMenu({ user, renderNavLabel, className }: Desktop
 
     const primaryItems = items.slice(0, width < 1024 ? 1 : undefined);
 
-    const dropdownItems = items.filter(
-        (item) => !primaryItems.some(({ name }) => name === item.name)
-    );
+    const dropdownItems = items
+        .concat([GROUPS_ITEM, USERS_ITEM])
+        .filter((item) => !primaryItems.some(({ name }) => name === item.name));
 
     return (
         <div className={cn("hidden md:flex items-center gap-4 w-full", className)}>

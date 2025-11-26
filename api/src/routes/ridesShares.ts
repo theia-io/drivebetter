@@ -109,8 +109,10 @@ router.get("/:shareId([0-9a-fA-F]{24})", requireAuth, requireRole(["driver"]), a
     }
     if (share.status !== "active") return res.status(404).json({ error: "Share inactive" });
 
-    if (!(await ensureAcl(share as any, driverId)))
+    if (!(await ensureAcl(share as any, driverId))) {
+        console.error("[getRideShare] Error ensuring ACL:", share, driverId);
         return res.status(403).json({ error: "Forbidden" });
+    }
 
     const ride = await Ride.findById(share.rideId).lean();
     if (!ride) return res.status(404).json({ error: "Ride not found" });
@@ -173,8 +175,10 @@ router.post(
         }
         if (share.status !== "active") return res.status(404).json({ error: "Share inactive" });
 
-        if (!(await ensureAcl(share as any, driverId)))
+        if (!(await ensureAcl(share as any, driverId))) {
+            console.error("[postRideShare/claim] Error ensuring ACL:", share, driverId);
             return res.status(403).json({ error: "Forbidden" });
+        }
 
         const ride = await Ride.findById(share.rideId).lean();
         if (!ride) return res.status(404).json({ error: "Ride not found" });

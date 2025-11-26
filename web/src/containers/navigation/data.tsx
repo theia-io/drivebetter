@@ -57,21 +57,11 @@ export const USERS_ITEM: NavItem = {
     icon: <UsersRound className="h-4 w-4" />,
 };
 
-export const ALL_RIDES_ITEM: NavItem = {
-    name: "All Rides",
-    href: "/rides",
-    requiredRoles: ["dispatcher", "admin"],
-    icon: <Route className="h-4 w-4" />,
-};
-
 export const NAVIGATION_ITEMS: NavItem[] = [
-    ALL_RIDES_ITEM,
     CALENDAR_ITEM,
     MY_CREATED_ITEM,
     MY_ASSIGNMENTS_ITEM,
     NEW_RIDES_ITEM,
-    GROUPS_ITEM,
-    USERS_ITEM,
 ];
 
 export const getNavigationForUser = (item: NavItem, userRoles?: string[]): NavItem => {

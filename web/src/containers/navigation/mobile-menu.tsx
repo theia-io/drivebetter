@@ -15,15 +15,17 @@ import { LogOut, Menu, Plus, UserIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
+import AppVersion from "../meta-info/app-version";
 import {
     CREATE_RIDE_ITEM,
     getNavigationForUser,
+    GROUPS_ITEM,
     hasRequiredRole,
     NAVIGATION_ITEMS,
     NavItem,
+    USERS_ITEM,
 } from "./data";
 import { isActive } from "./is-ative";
-import AppVersion from "../meta-info/app-version";
 
 interface MobileMenuProps {
     renderNavLabel: (item: NavItem) => React.ReactNode;
@@ -37,9 +39,9 @@ export default function MobileMenu({ renderNavLabel, user, logout, className }: 
     const userRoles = user?.roles;
 
     const mobileItems = useMemo(() => {
-        return NAVIGATION_ITEMS.filter((item) =>
-            hasRequiredRole(userRoles, item.requiredRoles)
-        ).map((item) => getNavigationForUser(item, userRoles));
+        return NAVIGATION_ITEMS.concat([GROUPS_ITEM, USERS_ITEM])
+            .filter((item) => hasRequiredRole(userRoles, item.requiredRoles))
+            .map((item) => getNavigationForUser(item, userRoles));
     }, [userRoles]);
 
     return (
