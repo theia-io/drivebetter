@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui";
+import { useWindowSize } from "@/hooks/useWindowSize";
 import { User } from "@/types";
 import { cn } from "@/utils/css";
 import { MoreHorizontal, Plus } from "lucide-react";
@@ -13,8 +15,6 @@ import {
 } from "./data";
 import { isActive } from "./is-ative";
 import UserMenu from "./user-menu";
-import { Button } from "@/components/ui";
-import { useWindowSize } from "@/hooks/useWindowSize";
 
 interface DesktopMenuProps {
     user: User;
@@ -38,15 +38,9 @@ export default function DesktopMenu({ user, renderNavLabel, className }: Desktop
 
     const primaryItems = items.slice(0, width < 1024 ? 1 : undefined);
 
-    console.log("width", width);
-    console.log("primaryItems", primaryItems);
-    console.log("items", items);
-
     const dropdownItems = items.filter(
         (item) => !primaryItems.some(({ name }) => name === item.name)
     );
-
-    console.log("dropdownItems", dropdownItems);
 
     return (
         <div className={cn("hidden md:flex items-center gap-4 w-full", className)}>

@@ -2,13 +2,13 @@
 
 import { Card, CardBody, CardHeader, Typography } from "@/components/ui";
 import { Switch } from "@/components/ui/switch";
-import { Bell, Car } from "lucide-react";
-import PushNotificationsSwitch from "../../../containers/notifications/push-notifications";
 import { usePWA } from "@/services/pwa";
 import { useAuthStore } from "@/stores";
+import { Bell, Car } from "lucide-react";
+import PushNotificationsSwitch from "../../../containers/notifications/push-notifications";
 
 export default function Preferences() {
-    const { isIOS, isStandalone } = usePWA();
+    const { isStandalone } = usePWA();
     const { user } = useAuthStore();
 
     const subscriptions = user?.subscriptions?.sort(
@@ -49,14 +49,26 @@ export default function Preferences() {
                                 {subscriptions.length} device{subscriptions.length > 1 ? "s" : ""}{" "}
                                 subscribed
                             </Typography>
-                            {subscriptions.map((subscription, index) => (
-                                <div key={subscription.endpoint + index}>
-                                    <Typography variant="body2" className="text-gray-600">
-                                        {subscription.deviceName} -{" "}
-                                        {new Date(subscription.subscribedAt).toLocaleString()}
-                                    </Typography>
-                                </div>
-                            ))}
+                            {subscriptions
+                                .filter((subscription) => !!subscription.deviceName)
+                                .map((subscription, index) => (
+                                    <div key={subscription.endpoint + index}>
+                                        <Typography variant="body2" className="text-gray-600">
+                                            <div>{subscription.deviceName}</div>
+                                            {!!subscription.subscribedAt && (
+                                                <div>
+                                                    {" "}
+                                                    <span className="text-gray-500">
+                                                        Subscribed at:{" "}
+                                                    </span>
+                                                    {new Date(
+                                                        subscription.subscribedAt
+                                                    ).toLocaleString()}
+                                                </div>
+                                            )}
+                                        </Typography>
+                                    </div>
+                                ))}
                         </div>
                     )}
 
