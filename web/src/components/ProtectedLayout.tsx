@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Navigation from "../containers/navigation/Navigation";
 import AppFooter from "@/components/layout/AppFooter";
+import AppVersion from "@/containers/meta-info/app-version";
 
 interface ProtectedLayoutProps {
     children: React.ReactNode;
@@ -35,10 +36,12 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen flex flex-col bg-gray-50">
             <Navigation />
+
             <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">{children}</main>
-            <AppFooter />
+
+            <AppVersion className="hidden md:block" />
         </div>
     );
 }

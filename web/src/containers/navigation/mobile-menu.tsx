@@ -9,6 +9,7 @@ import {
     DrawerTitle,
     DrawerTrigger,
 } from "@/components/ui/drawer";
+import { User } from "@/types/user";
 import { cn } from "@/utils/css";
 import { LogOut, Menu, Plus, UserIcon } from "lucide-react";
 import Link from "next/link";
@@ -22,7 +23,7 @@ import {
     NavItem,
 } from "./data";
 import { isActive } from "./is-ative";
-import { User } from "@/types/user";
+import AppVersion from "../meta-info/app-version";
 
 interface MobileMenuProps {
     renderNavLabel: (item: NavItem) => React.ReactNode;
@@ -36,10 +37,8 @@ export default function MobileMenu({ renderNavLabel, user, logout, className }: 
     const userRoles = user?.roles;
 
     const mobileItems = useMemo(() => {
-        return NAVIGATION_ITEMS.filter(
-            (item) =>
-                hasRequiredRole(userRoles, item.requiredRoles) &&
-                item.name !== CREATE_RIDE_ITEM.name
+        return NAVIGATION_ITEMS.filter((item) =>
+            hasRequiredRole(userRoles, item.requiredRoles)
         ).map((item) => getNavigationForUser(item, userRoles));
     }, [userRoles]);
 
@@ -121,6 +120,8 @@ export default function MobileMenu({ renderNavLabel, user, logout, className }: 
                             </Button>
                         </DrawerClose>
                     </DrawerFooter>
+
+                    <AppVersion className="justify-center" />
                 </DrawerContent>
             </Drawer>
         </div>

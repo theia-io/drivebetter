@@ -65,7 +65,6 @@ export const ALL_RIDES_ITEM: NavItem = {
 };
 
 export const NAVIGATION_ITEMS: NavItem[] = [
-    CREATE_RIDE_ITEM,
     ALL_RIDES_ITEM,
     CALENDAR_ITEM,
     MY_CREATED_ITEM,

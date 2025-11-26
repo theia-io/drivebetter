@@ -1,12 +1,20 @@
 import { User } from "@/types";
 import { cn } from "@/utils/css";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
-import { NAVIGATION_ITEMS, NavItem, getNavigationForUser, hasRequiredRole } from "./data";
+import {
+    CREATE_RIDE_ITEM,
+    NAVIGATION_ITEMS,
+    NavItem,
+    getNavigationForUser,
+    hasRequiredRole,
+} from "./data";
 import { isActive } from "./is-ative";
 import UserMenu from "./user-menu";
+import { Button } from "@/components/ui";
+import { useWindowSize } from "@/hooks/useWindowSize";
 
 interface DesktopMenuProps {
     user: User;
@@ -18,6 +26,7 @@ export default function DesktopMenu({ user, renderNavLabel, className }: Desktop
     const userRoles = user?.roles;
     const [moreOpen, setMoreOpen] = useState(false);
     const pathname = usePathname();
+    const { width } = useWindowSize();
 
     const items = useMemo(
         () =>
@@ -27,21 +36,17 @@ export default function DesktopMenu({ user, renderNavLabel, className }: Desktop
         [userRoles]
     );
 
-    const primaryNames: string[] = [
-        "New Rides",
-        "Calendar",
-        "My Assignments",
-        "My Created",
-        "Groups",
-    ];
+    const primaryItems = items.slice(0, width < 1024 ? 1 : undefined);
 
-    const primaryItems = items.filter(
-        (i) => primaryNames.includes(i.name) && i.name !== "Create Ride"
-    );
+    console.log("width", width);
+    console.log("primaryItems", primaryItems);
+    console.log("items", items);
 
     const dropdownItems = items.filter(
-        (i) => i.name !== "Create Ride" && !primaryNames.includes(i.name)
+        (item) => !primaryItems.some(({ name }) => name === item.name)
     );
+
+    console.log("dropdownItems", dropdownItems);
 
     return (
         <div className={cn("hidden md:flex items-center gap-4 w-full", className)}>
@@ -69,7 +74,7 @@ export default function DesktopMenu({ user, renderNavLabel, className }: Desktop
                         className={`inline-flex items-center gap-1 px-2 pt-1 border-b-2 text-sm font-medium transition-all duration-300 ${
                             dropdownItems.some((d) => isActive(d.href, pathname))
                                 ? "border-indigo-500 pb-2 font-semibold shadow-md rounded-md text-gray-900"
-                                : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 hover:shadow-md hover:rounded-md"
+                                : "border-transparent hover:pb-2 text-gray-500 hover:border-gray-300 hover:text-gray-700 hover:shadow-md hover:rounded-md"
                         }`}
                     >
                         <MoreHorizontal className="h-4 w-4" />
@@ -99,7 +104,21 @@ export default function DesktopMenu({ user, renderNavLabel, className }: Desktop
                 </div>
             )}
 
-            <UserMenu user={user} className="ml-auto" />
+            <div className="ml-auto flex items-center gap-2">
+                <Link href={CREATE_RIDE_ITEM.href}>
+                    <Button
+                        variant="solid"
+                        size="sm"
+                        className="flex items-center w-full bg-emerald-600 hover:bg-emerald-700 border border-emerald-600 text-white shadow-sm"
+                    >
+                        <Plus size={24} />
+                        <span className="xl:hidden">Ride</span>
+                        <span className="hidden xl:block">Create ride</span>
+                    </Button>
+                </Link>
+
+                <UserMenu user={user} />
+            </div>
         </div>
     );
 }
