@@ -1,19 +1,18 @@
 "use client";
-import { UserIcon, LogOut } from "lucide-react";
-import { useState } from "react";
-import { User } from "@/types/user";
 import { useAuthStore } from "@/stores";
-import { usePathname } from "next/navigation";
+import { User } from "@/types/user";
+import { cn } from "@/utils/css";
+import { LogOut, UserIcon } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 
-export default function UserMenu({ user }: { user: User }) {
+export default function UserMenu({ user, className }: { user: User; className?: string }) {
     const pathname = usePathname();
-
     const { logout } = useAuthStore();
     const [userMenuOpen, setUserMenuOpen] = useState(false);
-
     return (
-        <div className="relative">
+        <div className={cn("relative", className)}>
             <button
                 type="button"
                 onClick={() => setUserMenuOpen((prev) => !prev)}

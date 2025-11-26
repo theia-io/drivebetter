@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import { Info, MapPin, Clock, Share2, Check, Loader2, ArrowRight } from "lucide-react";
 import { useDriverInbox, useQueueRideClaim } from "@/stores/rideClaims";
+import { ArrowRight, Check, Clock, Info, Loader2, MapPin, Share2 } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
 
 export default function DriverSharedRidesPage() {
     const [tab, setTab] = useState<"available" | "claimed">("available");
