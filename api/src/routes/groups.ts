@@ -203,9 +203,6 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
     const { page, limit, skip } = parsePagination(req.query);
 
     const userId = getCurrentUserId(req);
-    if (!userId) {
-        return res.status(401).json({ error: "Unauthenticated" });
-    }
     const isAdmin = userHasAdminRole(req);
 
     const filter: any = {};
@@ -536,15 +533,15 @@ router.post(
     "/:id([0-9a-fA-F]{24})/participants",
     requireAuth,
     async (req: Request, res: Response) => {
-        const userId = getCurrentUserId(req);
-        if (!userId) return res.status(400).json({ error: "userId is required" });
-
         const group = await Group.findById(req.params.id);
         if (!group) return res.status(404).json({ error: "Group not found" });
 
         if (!canUserModerateGroup(group, req)) {
             return res.status(403).json({ error: "Access denied" });
         }
+
+        const userId: string = req.body.userId;
+        if (!userId) return res.status(400).json({ error: "userId is required" });
 
         const uid = new Types.ObjectId(userId);
 
@@ -655,7 +652,7 @@ router.post(
     "/:id([0-9a-fA-F]{24})/moderators",
     requireAuth,
     async (req: Request, res: Response) => {
-        const userId = getCurrentUserId(req);
+        const userId = normalizeId(req.body.userId);
         if (!userId) return res.status(400).json({ error: "userId is required" });
 
         const group = await Group.findById(req.params.id);
@@ -810,7 +807,7 @@ router.post("/:id([0-9a-fA-F]{24})/leave", requireAuth, async (req: Request, res
  *       - bearerAuth: []
  */
 router.post("/:id([0-9a-fA-F]{24})/owner", requireAuth, async (req: Request, res: Response) => {
-    const userId = getCurrentUserId(req);
+    const userId = normalizeId(req.body.userId);
     if (!userId) return res.status(400).json({ error: "userId is required" });
 
     const group = await Group.findById(req.params.id);
@@ -1023,9 +1020,6 @@ router.post("/join", requireAuth, async (req: Request, res: Response) => {
  */
 router.get("/:id([0-9a-fA-F]{24})/dashboard", requireAuth, async (req: Request, res: Response) => {
     const userId = getCurrentUserId(req);
-    if (!userId) {
-        return res.status(401).json({ error: "Unauthenticated" });
-    }
 
     const isAdmin = userHasAdminRole(req);
     const groupId = new Types.ObjectId(req.params.id);

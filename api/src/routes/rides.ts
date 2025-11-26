@@ -1244,6 +1244,7 @@ router.post(
             maxClaims,
             syncQueue = true,
         } = req.body || {};
+
         const ride = await Ride.findById(id).lean();
         if (!ride) return res.status(404).json({ error: "Ride not found" });
         if (["completed"].includes(ride.status)) {

@@ -41,6 +41,8 @@ export async function sendPushNotificationToUser(
     user: IUser,
     options: NotificationOptions
 ): Promise<SendNotificationResult> {
+    console.log("[sendPushNotificationToUser] user", user, options);
+
     if (!user.subscriptions || user.subscriptions.length === 0) {
         return {
             ok: true,
@@ -58,7 +60,7 @@ export async function sendPushNotificationToUser(
         icon: icon || "/drivebetter-192.png",
         badge: badge || "/drivebetter-192.png",
         tag: tag || "default",
-        url: url || "/rides",
+        url: url || "/",
     });
 
     const results: NotificationResult[] = [];
@@ -68,6 +70,8 @@ export async function sendPushNotificationToUser(
             await webpush.sendNotification(subscription as any, notificationPayload);
             results.push({ endpoint: subscription.endpoint, success: true });
         } catch (error: any) {
+            console.error("[sendPushNotificationToUser] Error sending push notification:", error);
+
             // If subscription is invalid, remove it
             if (error.statusCode === 410 || error.statusCode === 404) {
                 user.subscriptions = user.subscriptions!.filter(
@@ -84,6 +88,7 @@ export async function sendPushNotificationToUser(
     }
 
     const successCount = results.filter((r) => r.success).length;
+    console.log("[sendPushNotificationToUser] results", results, successCount);
 
     return {
         ok: true,

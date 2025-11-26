@@ -34,7 +34,7 @@ export function assertCanAccessRide(user: any, ride: any) {
     }
 
     const same =
-        String(ride.creatorId._id) === String(user.id) ||
+        String(ride.creatorId?._id) === String(user.id) ||
         String(ride.creatorId) === String(user.id);
     if (!same && !isPrivileged(user)) {
         const err: any = new Error("Forbidden");
