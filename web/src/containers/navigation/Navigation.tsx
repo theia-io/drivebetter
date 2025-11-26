@@ -8,22 +8,19 @@ import {
     CalendarDays,
     ChevronDown,
     ChevronUp,
-    LogOut,
-    Menu,
     MoreHorizontal,
     Plus,
     Route,
     Share2,
     UserCheck,
-    User as UserIcon,
     Users,
-    UsersRound,
-    X,
+    UsersRound
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ReactNode, useMemo, useState } from "react";
 import { Button } from "../../components/ui";
+import MobileMenu from "./mobile-menu";
 import UserMenu from "./user-menu";
 
 type NavItem = {
@@ -109,7 +106,6 @@ export default function Navigation() {
     const { data: inboxCountData } = useDriverInboxCount(isDriver ? "available" : undefined);
     const newRidesCount = inboxCountData?.count ?? 0;
 
-    const [mobileOpen, setMobileOpen] = useState(false);
     const [moreOpen, setMoreOpen] = useState(false);
     const [groupsMenuOpen, setGroupsMenuOpen] = useState(false);
 
@@ -326,130 +322,16 @@ export default function Navigation() {
                                 <UserMenu user={user} />
                             </div>
 
-                            <button
-                                type="button"
-                                className="sm:hidden inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:bg-gray-100"
-                                onClick={() => setMobileOpen((v) => !v)}
-                                aria-label="Toggle menu"
-                            >
-                                {mobileOpen ? (
-                                    <X className="h-5 w-5" />
-                                ) : (
-                                    <Menu className="h-5 w-5" />
-                                )}
-                            </button>
+                            <MobileMenu
+                                createRideItem={createRideItem}
+                                mobileItems={mobileItems}
+                                renderNavLabel={renderNavLabel}
+                                user={user}
+                                logout={logout}
+                            />
                         </div>
                     </div>
                 </div>
-
-                {/* Mobile slide-down panel */}
-                {mobileOpen && (
-                    <div className="sm:hidden border-t bg-white">
-                        {/* Create ride primary button (same style as desktop, full width) */}
-                        {createRideItem && (
-                            <div className="px-4 pt-3 pb-2">
-                                <Link
-                                    href={createRideItem.href}
-                                    onClick={() => setMobileOpen(false)}
-                                >
-                                    <Button
-                                        variant="solid"
-                                        size="sm"
-                                        className="w-full bg-emerald-600 hover:bg-emerald-700 border border-emerald-600 text-white shadow-sm"
-                                    >
-                                        <Plus className="h-4 w-4 mr-1" />
-                                        <span>Create ride</span>
-                                    </Button>
-                                </Link>
-                            </div>
-                        )}
-
-                        {/* Other nav items */}
-                        <div className="pt-1 pb-3 space-y-1">
-                            {mobileItems.map((item) => {
-                                if (item.name === "Groups") {
-                                    return (
-                                        <div key="Groups-block" className="space-y-1 border-t pt-3">
-                                            <Link
-                                                href="/groups"
-                                                onClick={() => setMobileOpen(false)}
-                                                className={`flex items-center justify-between pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-                                                    isActive("/groups")
-                                                        ? "bg-indigo-50 border-indigo-500 text-indigo-700"
-                                                        : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300"
-                                                }`}
-                                            >
-                                                <span className="inline-flex items-center gap-2">
-                                                    <Users className="h-4 w-4" />
-                                                    <span>Groups</span>
-                                                </span>
-                                            </Link>
-                                            <Link
-                                                href="/groups/new"
-                                                onClick={() => setMobileOpen(false)}
-                                                className={`flex items-center justify-between pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-                                                    isActive("/groups/new")
-                                                        ? "bg-indigo-50 border-indigo-500 text-indigo-700"
-                                                        : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300"
-                                                }`}
-                                            >
-                                                <span className="inline-flex items-center gap-2">
-                                                    <Plus className="h-4 w-4" />
-                                                    <span>New group</span>
-                                                </span>
-                                            </Link>
-                                        </div>
-                                    );
-                                }
-
-                                return (
-                                    <Link
-                                        key={item.name}
-                                        href={item.href}
-                                        onClick={() => setMobileOpen(false)}
-                                        className={`flex items-center justify-between pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-                                            isActive(item.href)
-                                                ? "bg-indigo-50 border-indigo-500 text-indigo-700"
-                                                : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300"
-                                        }`}
-                                    >
-                                        <span className="inline-flex items-center gap-2">
-                                            {renderNavLabel(item)}
-                                        </span>
-                                    </Link>
-                                );
-                            })}
-                        </div>
-
-                        <div className="border-t px-4 py-3 space-y-3">
-                            <div className="flex items-center gap-2">
-                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
-                                    <UserIcon className="h-4 w-4" />
-                                </span>
-                                <Link
-                                    href="/account"
-                                    onClick={() => setMobileOpen(false)}
-                                    className="block text-sm font-medium text-gray-900 hover:underline"
-                                >
-                                    {user?.name || "Account"}
-                                </Link>
-                            </div>
-                            <div className="border-t pt-3">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setMobileOpen(false);
-                                        logout();
-                                    }}
-                                    className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                >
-                                    <LogOut className="h-4 w-4" />
-                                    <span>Logout</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </nav>
 
             {/* BOTTOM NAV (mobile only, Flowbite-style application bar) */}
