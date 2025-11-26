@@ -19,3 +19,7 @@ export function normalizeId(id: any): Types.ObjectId {
 
     throw new Error(`normalizeId: unsupported id value: ${JSON.stringify(id)}`);
 }
+
+export function compareIds(id1: any, id2: any): boolean {
+    return normalizeId(id1).equals(normalizeId(id2));
+}

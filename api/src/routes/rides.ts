@@ -3,7 +3,7 @@ import { FilterQuery, Types } from "mongoose";
 import { requireAuth, requireRole } from "../lib/auth";
 import { sendPushNotificationToUser, sendPushNotificationToUsers } from "../lib/pushNotifications";
 import { assertCanAccessRide, rideScopeFilter } from "../lib/rideAuthz";
-import { normalizeId } from "../lib/utils/db-types";
+import { compareIds, normalizeId } from "../lib/utils/db-types";
 import Group from "../models/group.model";
 import Ride from "../models/ride.model";
 import { RideClaim } from "../models/rideClaim.model";
@@ -925,6 +925,7 @@ router.post(
         try {
             const driver = await User.findById(claim.driverId);
             if (!driver) return res.status(404).json({ error: "Driver not found" });
+
             await sendPushNotificationToUser(driver, {
                 title: "Ride Claim Approved",
                 body: `Your ride claim has been approved! Ride: ${ride.from} → ${ride.to}`,
@@ -1164,9 +1165,9 @@ router.post(
         const currentUser = (req as any).user;
 
         // Send push notification to assigned driver if status changed by someone else
-        if (assignedDriver && assignedDriver.id !== currentUser.id) {
+        if (assignedDriver && !compareIds(assignedDriver.id, currentUser.id)) {
             try {
-                await sendPushNotificationToUser(assignedDriver.id, {
+                await sendPushNotificationToUser(assignedDriver, {
                     title: "Ride Status Updated",
                     body: `Your ride status has been updated to ${status}`,
                     url: `/rides/${ride._id}`,
@@ -1298,8 +1299,9 @@ router.post(
 
         try {
             const drivers = await User.find({
-                _id: { $in: driverIds?.map((id: any) => new Types.ObjectId(id)) },
+                _id: { $in: driverIds?.map(normalizeId) },
             });
+
             if (drivers.length > 0) {
                 await sendPushNotificationToUsers(drivers, {
                     title: "New Ride Share",
