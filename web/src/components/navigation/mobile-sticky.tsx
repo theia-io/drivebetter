@@ -11,7 +11,7 @@ import {
     MY_CREATED_ITEM,
     NEW_RIDES_ITEM,
 } from "./data";
-import { isActive } from "./is-ative";
+import { isActive } from "./is-active";
 
 export default function MobileSticky() {
     const pathname = usePathname();

@@ -1,3 +1,4 @@
+// components/ProtectedLayout.tsx
 "use client";
 
 import AppVersion from "@/components/meta-info/app-version";
@@ -35,10 +36,14 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
     }
 
     return (
-        <div className="min-h-screen flex flex-col bg-gray-50">
+        <div className="min-h-screen bg-gray-50">
+            {/* fixed top + bottom nav live inside Navigation */}
             <Navigation />
 
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">{children}</main>
+            {/* reserve space: 4rem top bar, ~4rem bottom bar on mobile */}
+            <main className="max-w-7xl mx-auto pt-16 pb-16 px-4 sm:px-6 lg:px-8">
+                {children}
+            </main>
 
             <AppVersion className="hidden md:block" />
         </div>

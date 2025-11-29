@@ -25,7 +25,7 @@ import {
     NavItem,
     USERS_ITEM,
 } from "./data";
-import { isActive } from "./is-ative";
+import { isActive } from "./is-active";
 
 interface MobileMenuProps {
     renderNavLabel: (item: NavItem) => React.ReactNode;

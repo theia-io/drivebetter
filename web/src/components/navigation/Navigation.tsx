@@ -1,3 +1,4 @@
+// components/navigation/Navigation.tsx
 "use client";
 
 import { useAuthStore } from "@/stores/auth";
@@ -10,27 +11,32 @@ import MobileSticky from "./mobile-sticky";
 export default function Navigation() {
     const { user, logout } = useAuthStore();
 
-    const renderNavLabel = (item: NavItem) => {
-        return (
-            <span className="inline-flex items-center gap-1.5">
-                {item.icon ? <span aria-hidden="true">{item.icon}</span> : null}
-                <span>{item.name}</span>
-            </span>
-        );
-    };
+    const renderNavLabel = (item: NavItem) => (
+        <span className="inline-flex items-center gap-1.5">
+            {item.icon ? <span aria-hidden="true">{item.icon}</span> : null}
+            <span>{item.name}</span>
+        </span>
+    );
 
     return (
         <>
-            {/* TOP NAVBAR */}
-            <nav className="bg-white shadow-sm border-b md:sticky md:top-0 md:z-40">
+            {/* fixed top nav on all breakpoints */}
+            <nav className="fixed top-0 inset-x-0 z-40 bg-white shadow-sm border-b">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center">
-                        {/* Left: brand + desktop main links */}
+                        {/* brand */}
                         <h1 className="text-xl font-bold text-gray-900">
                             <Link href="/">DriveBetter</Link>
                         </h1>
 
-                        <DesktopMenu className="ml-6" user={user} renderNavLabel={renderNavLabel} />
+                        {/* desktop menu */}
+                        <DesktopMenu
+                            className="ml-6"
+                            user={user}
+                            renderNavLabel={renderNavLabel}
+                        />
+
+                        {/* mobile menu trigger + modal/drawer (keep as is) */}
                         <MobileMenu
                             className="ml-auto"
                             renderNavLabel={renderNavLabel}
@@ -41,6 +47,7 @@ export default function Navigation() {
                 </div>
             </nav>
 
+            {/* bottom nav (mobile) */}
             <MobileSticky />
         </>
     );

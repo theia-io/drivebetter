@@ -15,7 +15,7 @@ import {
     getNavigationForUser,
     hasRequiredRole,
 } from "./data";
-import { isActive } from "./is-ative";
+import { isActive } from "./is-active";
 import UserMenu from "./user-menu";
 
 interface DesktopMenuProps {
