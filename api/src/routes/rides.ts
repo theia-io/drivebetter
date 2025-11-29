@@ -4,7 +4,7 @@ import { requireAuth, requireRole } from "../lib/auth";
 import { sendPushNotificationToUser, sendPushNotificationToUsers } from "../lib/pushNotifications";
 import { assertCanAccessRide, rideScopeFilter } from "../lib/rideAuthz";
 import { compareIds, normalizeId } from "../lib/utils/db-types";
-import Group from "../models/group.model";
+import {Group} from "../models/group.model";
 import Ride from "../models/ride.model";
 import { RideClaim } from "../models/rideClaim.model";
 import { RideShare } from "../models/rideShare.model";

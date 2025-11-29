@@ -8,7 +8,7 @@ import { withDb } from "../db";
 
 // MODELS
 import DriverDetails from "../../models/driverDetails.model";
-import Group from "../../models/group.model";
+import {Group} from "../../models/group.model";
 import Ride from "../../models/ride.model";
 import { RideClaim } from "../../models/rideClaim.model";
 import RideGroupShare from "../../models/rideGroupShare.model";

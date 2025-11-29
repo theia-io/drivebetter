@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { hashPassword } from "../lib/crypto";
 import { Types } from "mongoose";
 import { requireAuth } from "../lib/auth";
-import Group from "../models/group.model";
+import {Group} from "../models/group.model";
 
 const router = Router();
 
