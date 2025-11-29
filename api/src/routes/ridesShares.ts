@@ -60,7 +60,7 @@ async function ensureAcl(share: IRideShare, driverId: string) {
     }
     const count = await Group.countDocuments({
         _id: { $in: share.groupIds || [] },
-        members: { $in: [driverId] },
+        participants: { $in: [driverId] },
     });
     return count > 0;
 }
@@ -399,7 +399,7 @@ router.get("/inbox", requireAuth, requireRole(["driver"]), async (req: Request, 
     const now = new Date();
 
     // groups the driver belongs to
-    const groupIds = await Group.find({ members: driverId }).select("_id").lean();
+    const groupIds = await Group.find({ participants: driverId }).select("_id").lean();
     const groupIdList = groupIds.map((g) => g._id);
 
     if (tab === "available") {
@@ -570,7 +570,7 @@ router.get(
         const tab = (req.query.tab as "available" | "claimed") ?? "available";
         const now = new Date();
 
-        const groups = await Group.find({ members: driverId }).select("_id").lean();
+        const groups = await Group.find({ participants: driverId }).select("_id").lean();
         const groupIds = groups.map((g) => g._id);
 
         if (tab === "claimed") {

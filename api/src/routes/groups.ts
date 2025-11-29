@@ -24,7 +24,6 @@ function parsePagination(query: any) {
     return { page, limit, skip };
 }
 
-// membership based on ownerId / moderators / participants ONLY
 function userInGroupDoc(doc: any, userId: Types.ObjectId): boolean {
     const uid = userId.toString();
 
@@ -782,11 +781,8 @@ router.post(
         }
 
         const newOwnerId = new Types.ObjectId(rawUserId);
-
-        // set new owner
         group.ownerId = newOwnerId;
 
-        // ensure new owner is at least a participant in the new model (no members field)
         const alreadyParticipant = group.participants.some(
             (p: any) => String(p) === newOwnerId.toString(),
         );
@@ -931,7 +927,6 @@ router.post("/join", requireAuth, async (req: Request, res: Response) => {
     }
     const userId = new Types.ObjectId(rawUserId);
 
-    // new model: only participants, no members
     const alreadyParticipant = group.participants.some(
         (p: any) => String(p) === userId.toString(),
     );
