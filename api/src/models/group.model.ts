@@ -1,28 +1,25 @@
-import mongoose, { Schema, Document, Model, Types } from "mongoose";
+import mongoose, {Schema, model, Types, Document, Model} from "mongoose";
 
-export type GroupVisibility = "public" | "private" | "restricted";
+export type GroupVisibility = "public" | "private";
 export type GroupType = "fleet" | "coop" | "airport" | "city" | "custom" | "global";
 
 export interface IGroup extends Document {
     name: string;
-    description?: string;
     type: GroupType;
     city?: string;
     location?: string;
+    visibility: GroupVisibility;
+    isInviteOnly: boolean;
 
-    visibility: GroupVisibility;    // discoverability
-    isInviteOnly: boolean;          // join policy
-    tags?: string[];                // free-form labels
-
-    ownerId: Types.ObjectId;        // creator / owner of the group
-    moderators: Types.ObjectId[];   // can manage group, approve stuff
-    participants: Types.ObjectId[]; // normal members
-
-    // denormalised union of all members = owner + moderators + participants
-    members: Types.ObjectId[];
-
-    // group rules text to show in UI, forum-style
+    description?: string;
     rules?: string;
+    tags: string[];
+
+    ownerId: Types.ObjectId;
+    moderators: Types.ObjectId[];
+    participants: Types.ObjectId[];
+
+    createdBy?: Types.ObjectId;
 
     createdAt: Date;
     updatedAt: Date;
@@ -30,28 +27,46 @@ export interface IGroup extends Document {
 
 const GroupSchema = new Schema<IGroup>(
     {
-        name: { type: String, required: true, trim: true },
-        description: { type: String, trim: true },
+        name: {
+            type: String,
+            required: true,
+            trim: true,
+        },
         type: {
             type: String,
             enum: ["fleet", "coop", "airport", "city", "custom", "global"],
             default: "custom",
-            required: true,
         },
-        city: { type: String, trim: true },
-        location: { type: String, trim: true },
-
+        city: {
+            type: String,
+            trim: true,
+        },
+        location: {
+            type: String,
+            trim: true,
+        },
         visibility: {
             type: String,
-            enum: ["public", "private", "restricted"],
+            enum: ["public", "private"],
             default: "private",
-            required: true,
         },
         isInviteOnly: {
             type: Boolean,
             default: true,
         },
-        tags: [{ type: String, trim: true }],
+
+        description: {
+            type: String,
+            trim: true,
+        },
+        rules: {
+            type: String,
+            trim: true,
+        },
+        tags: {
+            type: [String],
+            default: [],
+        },
 
         ownerId: {
             type: Schema.Types.ObjectId,
@@ -63,17 +78,10 @@ const GroupSchema = new Schema<IGroup>(
             {
                 type: Schema.Types.ObjectId,
                 ref: "User",
+                index: true,
             },
         ],
         participants: [
-            {
-                type: Schema.Types.ObjectId,
-                ref: "User",
-            },
-        ],
-
-        // denormalised “flattened” membership used for access control / queries
-        members: [
             {
                 type: Schema.Types.ObjectId,
                 ref: "User",
@@ -81,50 +89,21 @@ const GroupSchema = new Schema<IGroup>(
             },
         ],
 
-        rules: {
-            type: String,
-            default: "",
+        createdBy: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
         },
     },
-    { timestamps: true }
+    {
+        timestamps: true,
+    },
 );
 
-// keep `members` in sync = owner + moderators + participants (unique)
-GroupSchema.pre("save", function (next) {
-    const self = this as IGroup;
-
-    const ids: Types.ObjectId[] = [];
-
-    if (self.ownerId) ids.push(self.ownerId);
-    if (Array.isArray(self.moderators)) ids.push(...self.moderators);
-    if (Array.isArray(self.participants)) ids.push(...self.participants);
-
-    const uniqueMap = new Map<string, Types.ObjectId>();
-    for (const id of ids) {
-        if (!id) continue;
-        uniqueMap.set(String(id), id);
-    }
-
-    self.members = Array.from(uniqueMap.values());
-
-    next();
-});
-
-// text search
 GroupSchema.index({
     name: "text",
-    description: "text",
     city: "text",
-    location: "text",
     tags: "text",
 });
 
-// filters
-GroupSchema.index({ visibility: 1, isInviteOnly: 1, type: 1, city: 1 });
-GroupSchema.index({ members: 1 });
-GroupSchema.index({ ownerId: 1 });
-
-const Group: Model<IGroup> =
-    mongoose.models.Group || mongoose.model<IGroup>("Group", GroupSchema);
-
-export default Group;
+export const Group: Model<IGroup> =
+    mongoose.models.IGroup || mongoose.model<IGroup>("Group", GroupSchema);

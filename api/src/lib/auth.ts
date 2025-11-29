@@ -22,6 +22,19 @@ function getBearerToken(req: Request): string | null {
     return null;
 }
 
+export function userHasAdminRole(req: Request): boolean {
+    const { roles } = getCurrentUser(req);
+    return roles.includes("admin") || roles.includes("dispatcher");
+}
+
+export function getCurrentUser(req: Request): { id: string | null; roles: string[] } {
+    const u: any = (req as any).user;
+    if (!u) return { id: null, roles: [] };
+    const id = u._id || u.id || null;
+    const roles: string[] = Array.isArray(u.roles) ? u.roles : u.roles ? [u.roles] : [];
+    return { id: id ? String(id) : null, roles };
+}
+
 // Auth guard: verifies access token and attaches user payload to req
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
     try {

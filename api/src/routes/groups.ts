@@ -3,11 +3,10 @@ import { Request, Response, Router } from "express";
 import { Types } from "mongoose";
 
 import { pick } from "next/dist/lib/pick";
-import { requireAuth, requireRole } from "../lib/auth";
+import {getCurrentUser, requireAuth, requireRole, userHasAdminRole} from "../lib/auth";
 import { sendPushNotificationToUser, sendPushNotificationToUsers } from "../lib/pushNotifications";
-import { normalizeId } from "../lib/utils/db-types";
-import Group, { GroupType, GroupVisibility, IGroup } from "../models/group.model";
 import { GroupInvite } from "../models/groupInvite.model";
+import { Group } from "../models/group.model";
 import Ride from "../models/ride.model";
 import { RideClaim } from "../models/rideClaim.model";
 import { RideShare } from "../models/rideShare.model";
@@ -18,24 +17,14 @@ const router = Router();
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
-
-function parsePagination(q: Request["query"]) {
-    const page = Math.max(1, Number(q.page ?? 1));
-    const limit = Math.min(100, Math.max(1, Number(q.limit ?? 20)));
+function parsePagination(query: any) {
+    const page = Math.max(parseInt(query.page as string, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(query.limit as string, 10) || 20, 1), 100);
     const skip = (page - 1) * limit;
     return { page, limit, skip };
 }
 
-function getCurrentUserId(req: Request): Types.ObjectId {
-    let rawId = (req as any).user?.id;
-    return new Types.ObjectId(rawId);
-}
-
-function userHasAdminRole(req: Request): boolean {
-    const roles: string[] = (req as any).user?.roles ?? [];
-    return roles.includes("admin") || roles.includes("dispatcher");
-}
-
+// membership based on ownerId / moderators / participants ONLY
 function userInGroupDoc(doc: any, userId: Types.ObjectId): boolean {
     const uid = userId.toString();
 
@@ -49,112 +38,28 @@ function userInGroupDoc(doc: any, userId: Types.ObjectId): boolean {
         return true;
     }
 
-    if (Array.isArray(doc.members) && doc.members.some((id: any) => String(id) === uid)) {
-        return true;
-    }
-
     return false;
 }
 
-function userIsOwner(group: IGroup, userId: Types.ObjectId | string): boolean {
-    const uid = normalizeId(userId);
-    return normalizeId(group.ownerId).equals(uid);
-}
-
-function userIsModerator(group: IGroup, userId: Types.ObjectId | string): boolean {
-    const uid = normalizeId(userId);
-    return (group.moderators ?? []).some((m) => normalizeId(m).equals(uid));
-}
-
-function userInGroup(group: any, userId: Types.ObjectId | string): boolean {
-    const uid = normalizeId(userId);
-
-    if (group.ownerId && normalizeId(group.ownerId).equals(uid)) return true;
-
-    if (
-        Array.isArray(group.moderators) &&
-        group.moderators.some((m: any) => normalizeId(m).equals(uid))
-    ) {
-        return true;
-    }
-
-    if (
-        Array.isArray(group.participants) &&
-        group.participants.some((p: any) => normalizeId(p).equals(uid))
-    ) {
-        return true;
-    }
-
-    // compatibility with old data
-    if (
-        Array.isArray(group.members) &&
-        group.members.some((m: any) => normalizeId(m).equals(uid))
-    ) {
-        return true;
-    }
-
-    return false;
-}
-
-/**
- * canUserManageGroup:
- *  - admin or dispatcher
- *  - OR group owner
- *
- * hard admin:
- *  - delete group
- *  - manage moderators
- *  - transfer ownership
- */
-function canUserManageGroup(group: IGroup, req: Request): boolean {
-    const userId = (req as any).user?.id;
-    if (!userId) return false;
+function canUserManageGroup(req: Request, group: any): boolean {
+    const { id: rawUserId } = getCurrentUser(req);
+    if (!rawUserId) return false;
+    const uid = String(rawUserId);
     if (userHasAdminRole(req)) return true;
-
-    return userIsOwner(group, userId);
+    return group.ownerId && String(group.ownerId) === uid;
 }
 
-/**
- * canUserModerateGroup:
- *  - admin or dispatcher
- *  - OR owner
- *  - OR moderator
- *
- * soft admin:
- *  - edit group info
- *  - manage participants
- *  - create invites
- */
-function canUserModerateGroup(group: IGroup, req: Request): boolean {
-    const userId = (req as any).user?.id;
-    if (!userId) return false;
+function canUserModerateGroup(req: Request, group: any): boolean {
+    const { id: rawUserId } = getCurrentUser(req);
+    if (!rawUserId) return false;
+    const uid = String(rawUserId);
     if (userHasAdminRole(req)) return true;
-    if (userIsOwner(group, userId)) return true;
-    if (userIsModerator(group, userId)) return true;
+    if (group.ownerId && String(group.ownerId) === uid) return true;
+    if (Array.isArray(group.moderators) && group.moderators.some((id: any) => String(id) === uid)) {
+        return true;
+    }
     return false;
 }
-
-/* -------------------------------------------------------------------------- */
-/* Types                                                                      */
-/* -------------------------------------------------------------------------- */
-
-type CreateGroupBody = {
-    name: string;
-    description?: string;
-    type?: GroupType;
-    city?: string;
-    location?: string;
-    visibility?: GroupVisibility;
-    isInviteOnly?: boolean;
-    tags?: string[];
-    rules?: string;
-};
-
-type UpdateGroupBody = Partial<CreateGroupBody>;
-
-/* -------------------------------------------------------------------------- */
-/* List groups                                                                */
-/* -------------------------------------------------------------------------- */
 
 /**
  * @openapi
@@ -202,19 +107,20 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
     >;
     const { page, limit, skip } = parsePagination(req.query);
 
-    const userId = getCurrentUserId(req);
+    const { id: rawUserId } = getCurrentUser(req);
+    if (!rawUserId) {
+        return res.status(401).json({ error: "Unauthenticated" });
+    }
+    const userId = new Types.ObjectId(rawUserId);
     const isAdmin = userHasAdminRole(req);
 
     const filter: any = {};
 
-    // Admin/dispatcher: see all groups
-    // Non-admin: only groups where user is owner/mod/participant/legacy member
     if (!isAdmin) {
         filter.$or = [
             { ownerId: userId },
             { moderators: userId },
             { participants: userId },
-            { members: userId }, // legacy
         ];
     }
 
@@ -231,7 +137,11 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
     }
 
     const [items, total] = await Promise.all([
-        Group.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+        Group.find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean(),
         Group.countDocuments(filter),
     ]);
 
@@ -278,44 +188,47 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
  *     security:
  *       - bearerAuth: []
  */
-router.post(
-    "/",
-    requireAuth,
-    requireRole(["admin", "dispatcher", "driver"]),
-    async (req: Request, res: Response) => {
-        try {
-            const body = req.body as CreateGroupBody;
-            if (!body.name || typeof body.name !== "string") {
-                return res.status(400).json({ error: "name is required" });
-            }
-
-            const userId = getCurrentUserId(req);
-
-            const group = await Group.create({
-                name: body.name.trim(),
-                description: body.description?.trim() || undefined,
-                type: body.type ?? "custom",
-                city: body.city?.trim() || undefined,
-                location: body.location?.trim() || undefined,
-                visibility: body.visibility ?? "private",
-                isInviteOnly: typeof body.isInviteOnly === "boolean" ? body.isInviteOnly : true,
-                tags: body.tags ?? [],
-                rules: body.rules ?? "",
-                ownerId: userId,
-                moderators: [],
-                participants: [userId],
-            });
-
-            res.status(201).json(group);
-        } catch (err: any) {
-            res.status(400).json({ error: err.message });
-        }
+router.post("/", requireAuth, async (req: Request, res: Response) => {
+    const { id: rawUserId } = getCurrentUser(req);
+    if (!rawUserId) {
+        return res.status(401).json({ error: "Unauthenticated" });
     }
-);
+    const userId = new Types.ObjectId(rawUserId);
 
-/* -------------------------------------------------------------------------- */
-/* Get group                                                                  */
-/* -------------------------------------------------------------------------- */
+    const {
+        name,
+        type,
+        city,
+        location,
+        visibility = "private",
+        isInviteOnly = true,
+        description,
+        rules,
+        tags,
+    } = req.body || {};
+
+    if (!name || typeof name !== "string") {
+        return res.status(400).json({ error: "name is required" });
+    }
+
+    const group = await Group.create({
+        name: name.trim(),
+        type: type || "custom",
+        city: city || undefined,
+        location: location || undefined,
+        visibility,
+        isInviteOnly,
+        description: description || undefined,
+        rules: rules || undefined,
+        tags: Array.isArray(tags) ? tags : [],
+        ownerId: userId,
+        moderators: [],
+        participants: [userId],
+        createdBy: userId,
+    });
+
+    res.status(201).json(group);
+});
 
 /**
  * @openapi
@@ -336,13 +249,22 @@ router.post(
  *       - bearerAuth: []
  */
 router.get("/:id([0-9a-fA-F]{24})", requireAuth, async (req: Request, res: Response) => {
-    const group = await Group.findById(req.params.id).lean<IGroup | null>();
-    if (!group) return res.status(404).json({ error: "Group not found" });
+    const { id: rawUserId } = getCurrentUser(req);
+    if (!rawUserId) {
+        return res.status(401).json({ error: "Unauthenticated" });
+    }
+    const userId = new Types.ObjectId(rawUserId);
+    const isAdmin = userHasAdminRole(req);
 
-    const userId = getCurrentUserId(req);
-    // Invite-only: only members can access
-    if (!canUserManageGroup(group, req) && (!userId || !userInGroup(group, userId))) {
-        return res.status(403).json({ error: "Access denied: invite only group" });
+    const groupId = new Types.ObjectId(req.params.id);
+
+    const group = await Group.findById(groupId).lean();
+    if (!group) {
+        return res.status(404).json({ error: "Not found" });
+    }
+
+    if (!isAdmin && !userInGroupDoc(group, userId)) {
+        return res.status(403).json({ error: "forbidden" });
     }
 
     res.json(group);
@@ -393,30 +315,43 @@ router.get("/:id([0-9a-fA-F]{24})", requireAuth, async (req: Request, res: Respo
  *       - bearerAuth: []
  */
 router.patch("/:id([0-9a-fA-F]{24})", requireAuth, async (req: Request, res: Response) => {
-    try {
-        const body = req.body as UpdateGroupBody;
-        const group = await Group.findById(req.params.id);
-        if (!group) return res.status(404).json({ error: "Group not found" });
-
-        if (!canUserModerateGroup(group, req)) {
-            return res.status(403).json({ error: "Access denied" });
-        }
-
-        if (body.name !== undefined) group.name = body.name.trim();
-        if (body.description !== undefined) group.description = body.description.trim();
-        if (body.type !== undefined) group.type = body.type;
-        if (body.city !== undefined) group.city = body.city.trim();
-        if (body.location !== undefined) group.location = body.location.trim();
-        if (body.visibility !== undefined) group.visibility = body.visibility;
-        if (body.isInviteOnly !== undefined) group.isInviteOnly = body.isInviteOnly;
-        if (body.tags !== undefined) group.tags = body.tags;
-        if (body.rules !== undefined) group.rules = body.rules;
-
-        await group.save();
-        res.json(group);
-    } catch (err: any) {
-        res.status(400).json({ error: err.message });
+    const groupId = new Types.ObjectId(req.params.id);
+    const group = await Group.findById(groupId);
+    if (!group) {
+        return res.status(404).json({ error: "Not found" });
     }
+
+    if (!canUserModerateGroup(req, group)) {
+        return res.status(403).json({ error: "forbidden" });
+    }
+
+    const {
+        name,
+        type,
+        city,
+        location,
+        visibility,
+        isInviteOnly,
+        description,
+        rules,
+        tags,
+    } = req.body || {};
+
+    if (name !== undefined) group.name = String(name).trim();
+    if (type !== undefined) group.type = type;
+    if (city !== undefined) group.city = city || undefined;
+    if (location !== undefined) group.location = location || undefined;
+    if (visibility !== undefined) group.visibility = visibility;
+    if (isInviteOnly !== undefined) group.isInviteOnly = !!isInviteOnly;
+    if (description !== undefined) group.description = description || undefined;
+    if (rules !== undefined) group.rules = rules || undefined;
+    if (tags !== undefined) {
+        group.tags = Array.isArray(tags) ? tags : [];
+    }
+
+    await group.save();
+
+    res.json(group.toObject());
 });
 
 /* -------------------------------------------------------------------------- */
@@ -442,25 +377,19 @@ router.patch("/:id([0-9a-fA-F]{24})", requireAuth, async (req: Request, res: Res
  *       - bearerAuth: []
  */
 router.delete("/:id([0-9a-fA-F]{24})", requireAuth, async (req: Request, res: Response) => {
-    const group = await Group.findById(req.params.id);
-    if (!group) return res.status(404).json({ error: "Group not found" });
-
-    if (!canUserManageGroup(group, req)) {
-        return res.status(403).json({ error: "Only owner or admin/dispatcher can delete" });
+    const groupId = new Types.ObjectId(req.params.id);
+    const group = await Group.findById(groupId);
+    if (!group) {
+        return res.status(404).json({ error: "Not found" });
     }
 
-    try {
-        const groupMembers = await User.find({ _id: { $in: group.members } });
-        await sendPushNotificationToUsers(groupMembers, {
-            title: "Group Deleted",
-            body: `The group ${group.name} has been deleted`,
-        });
-    } catch (error) {
-        console.error("[Groups] Failed to send push notification to owner:", error);
+    if (!canUserManageGroup(req, group)) {
+        return res.status(403).json({ error: "forbidden" });
     }
 
     await group.deleteOne();
-    res.status(204).send();
+
+    res.json({ ok: true });
 });
 
 /* -------------------------------------------------------------------------- */
@@ -469,9 +398,9 @@ router.delete("/:id([0-9a-fA-F]{24})", requireAuth, async (req: Request, res: Re
 
 /**
  * @openapi
- * /groups/{id}/members:
+ * /groups/{id}/participants:
  *   get:
- *     summary: Get group membership info
+ *     summary: Get group participants info
  *     tags: [Groups]
  *     parameters:
  *       - in: path
@@ -485,27 +414,57 @@ router.delete("/:id([0-9a-fA-F]{24})", requireAuth, async (req: Request, res: Re
  *     security:
  *       - bearerAuth: []
  */
-router.get("/:id([0-9a-fA-F]{24})/members", requireAuth, async (req: Request, res: Response) => {
-    const group = await Group.findById(req.params.id)
-        .populate("ownerId", "name email")
-        .populate("moderators", "name email")
-        .populate("participants", "name email")
-        .lean<(IGroup & any) | null>();
+router.get(
+    "/:id([0-9a-fA-F]{24})/participants",
+    requireAuth,
+    async (req: Request, res: Response) => {
+        const { id: rawUserId } = getCurrentUser(req);
+        if (!rawUserId) {
+            return res.status(401).json({ error: "Unauthenticated" });
+        }
+        const userId = new Types.ObjectId(rawUserId);
+        const isAdmin = userHasAdminRole(req);
 
-    if (!group) return res.status(404).json({ error: "Group not found" });
+        const groupId = new Types.ObjectId(req.params.id);
+        const group = await Group.findById(groupId).lean();
+        if (!group) {
+            return res.status(404).json({ error: "Not found" });
+        }
 
-    const userId = getCurrentUserId(req);
-    // Only group members can see membership info
-    if (!canUserManageGroup(group, req) && (!userId || !userInGroup(group, userId))) {
-        return res.status(403).json({ error: "Access denied" });
-    }
+        if (!isAdmin && !userInGroupDoc(group, userId)) {
+            return res.status(403).json({ error: "forbidden" });
+        }
 
-    res.json({
-        owner: group.ownerId,
-        moderators: group.moderators,
-        participants: group.participants,
-    });
-});
+        const ownerId = group.ownerId ? new Types.ObjectId(group.ownerId) : null;
+        const moderatorIds = (group.moderators || []).map((id: any) => new Types.ObjectId(id));
+        const participantIds = (group.participants || []).map((id: any) => new Types.ObjectId(id));
+
+        const allIds = new Set<string>();
+        if (ownerId) allIds.add(ownerId.toString());
+        moderatorIds.forEach((id) => allIds.add(id.toString()));
+        participantIds.forEach((id) => allIds.add(id.toString()));
+
+        const userIds = Array.from(allIds).map((id) => new Types.ObjectId(id));
+
+        const users = userIds.length
+            ? await User.find(
+                { _id: { $in: userIds } },
+                { name: 1, email: 1 },
+            ).lean()
+            : [];
+
+        const userMap: Record<string, any> = {};
+        for (const u of users) {
+            userMap[String(u._id)] = u;
+        }
+
+        res.json({
+            owner: ownerId ? userMap[ownerId.toString()] || null : null,
+            moderators: moderatorIds.map((id) => userMap[id.toString()]).filter(Boolean),
+            participants: participantIds.map((id) => userMap[id.toString()]).filter(Boolean),
+        });
+    },
+);
 
 /**
  * @openapi
@@ -533,38 +492,31 @@ router.post(
     "/:id([0-9a-fA-F]{24})/participants",
     requireAuth,
     async (req: Request, res: Response) => {
-        const group = await Group.findById(req.params.id);
-        if (!group) return res.status(404).json({ error: "Group not found" });
-
-        if (!canUserModerateGroup(group, req)) {
-            return res.status(403).json({ error: "Access denied" });
+        const groupId = new Types.ObjectId(req.params.id);
+        const group = await Group.findById(groupId);
+        if (!group) {
+            return res.status(404).json({ error: "Not found" });
         }
 
-        const userId: string = req.body.userId;
-        if (!userId) return res.status(400).json({ error: "userId is required" });
+        if (!canUserModerateGroup(req, group)) {
+            return res.status(403).json({ error: "forbidden" });
+        }
+
+        const { userId } = req.body || {};
+        if (!userId) {
+            return res.status(400).json({ error: "userId is required" });
+        }
 
         const uid = new Types.ObjectId(userId);
 
-        // do not add owner as participant here
-        if (!group.participants.some((p) => p.equals(uid))) {
+        if (!group.participants.some((id) => String(id) === uid.toString())) {
             group.participants.push(uid);
         }
 
-        try {
-            const addedParticipant = await User.findById(uid);
-            if (addedParticipant) {
-                await sendPushNotificationToUser(addedParticipant, {
-                    title: "Participant Added",
-                    body: `You have been added to the group ${group.name}`,
-                });
-            }
-        } catch (error) {
-            console.error("[Groups] Failed to send push notification to added participant:", error);
-        }
-
         await group.save();
-        res.json(group);
-    }
+
+        res.json(group.toObject());
+    },
 );
 
 /**
@@ -593,37 +545,42 @@ router.delete(
     "/:id([0-9a-fA-F]{24})/participants/:userId([0-9a-fA-F]{24})",
     requireAuth,
     async (req: Request, res: Response) => {
-        const group = await Group.findById(req.params.id);
-        if (!group) return res.status(404).json({ error: "Group not found" });
-
-        if (!canUserModerateGroup(group, req)) {
-            return res.status(403).json({ error: "Access denied" });
+        const groupId = new Types.ObjectId(req.params.id);
+        const group = await Group.findById(groupId);
+        if (!group) {
+            return res.status(404).json({ error: "Not found" });
         }
 
+        const { id: rawUserId } = getCurrentUser(req);
+        if (!rawUserId) {
+            return res.status(401).json({ error: "Unauthenticated" });
+        }
+
+        const uid = new Types.ObjectId(rawUserId);
         const targetId = new Types.ObjectId(req.params.userId);
-        // cannot remove owner here
-        if (normalizeId(group.ownerId).equals(targetId)) {
-            return res.status(400).json({ error: "Cannot remove owner as participant" });
+        const isSelf = uid.toString() === targetId.toString();
+
+        if (!isSelf && !canUserModerateGroup(req, group)) {
+            return res.status(403).json({ error: "forbidden" });
         }
 
-        group.participants = group.participants.filter((p) => !normalizeId(p).equals(targetId));
+        if (group.ownerId && String(group.ownerId) === targetId.toString()) {
+            return res.status(400).json({ error: "cannot remove owner from participants" });
+        }
+
+        group.participants = group.participants.filter(
+            (id: any) => String(id) !== targetId.toString(),
+        );
+
+        // also drop moderator role if present
+        group.moderators = group.moderators.filter(
+            (id: any) => String(id) !== targetId.toString(),
+        );
 
         await group.save();
 
-        try {
-            const removedParticipant = await User.findById(targetId);
-            if (removedParticipant) {
-                await sendPushNotificationToUser(removedParticipant, {
-                    title: "Participant Removed",
-                    body: `You have been removed from the group ${group.name}`,
-                });
-            }
-        } catch (error) {
-            console.error("[Groups] Failed to send push notification to participants:", error);
-        }
-
-        res.json(group);
-    }
+        res.json(group.toObject());
+    },
 );
 
 /**
@@ -652,43 +609,34 @@ router.post(
     "/:id([0-9a-fA-F]{24})/moderators",
     requireAuth,
     async (req: Request, res: Response) => {
-        const userId = normalizeId(req.body.userId);
-        if (!userId) return res.status(400).json({ error: "userId is required" });
-
-        const group = await Group.findById(req.params.id);
-        if (!group) return res.status(404).json({ error: "Group not found" });
-
-        if (!canUserManageGroup(group, req)) {
-            return res.status(403).json({
-                error: "Only owner or admin/dispatcher can manage moderators",
-            });
+        const groupId = new Types.ObjectId(req.params.id);
+        const group = await Group.findById(groupId);
+        if (!group) {
+            return res.status(404).json({ error: "Not found" });
         }
 
+        if (!canUserManageGroup(req, group)) {
+            return res.status(403).json({ error: "forbidden" });
+        }
+
+        const { userId } = req.body || {};
+        if (!userId) {
+            return res.status(400).json({ error: "userId is required" });
+        }
         const uid = new Types.ObjectId(userId);
 
-        // owner is top-level; don't add owner as moderator
-        if (!normalizeId(group.ownerId).equals(uid)) {
-            if (!group.moderators.some((m) => m.equals(uid))) {
-                group.moderators.push(uid);
-            }
+        if (!group.participants.some((id) => String(id) === uid.toString())) {
+            group.participants.push(uid);
+        }
+
+        if (!group.moderators.some((id) => String(id) === uid.toString())) {
+            group.moderators.push(uid);
         }
 
         await group.save();
 
-        try {
-            const addedModerator = await User.findById(uid);
-            if (addedModerator) {
-                await sendPushNotificationToUser(addedModerator, {
-                    title: "Moderator Added",
-                    body: `You have been added as a moderator to the group ${group.name}`,
-                });
-            }
-        } catch (error) {
-            console.error("[Groups] Failed to send push notification to added moderator:", error);
-        }
-
-        res.json(group);
-    }
+        res.json(group.toObject());
+    },
 );
 
 /**
@@ -717,39 +665,30 @@ router.delete(
     "/:id([0-9a-fA-F]{24})/moderators/:userId([0-9a-fA-F]{24})",
     requireAuth,
     async (req: Request, res: Response) => {
-        const group = await Group.findById(req.params.id);
-        if (!group) return res.status(404).json({ error: "Group not found" });
+        const groupId = new Types.ObjectId(req.params.id);
+        const group = await Group.findById(groupId);
+        if (!group) {
+            return res.status(404).json({ error: "Not found" });
+        }
 
-        if (!canUserManageGroup(group, req)) {
-            return res.status(403).json({
-                error: "Only owner or admin/dispatcher can manage moderators",
-            });
+        if (!canUserManageGroup(req, group)) {
+            return res.status(403).json({ error: "forbidden" });
         }
 
         const targetId = new Types.ObjectId(req.params.userId);
-        // cannot remove owner as moderator (owner is separate)
-        if (normalizeId(group.ownerId).equals(targetId)) {
-            return res.status(400).json({ error: "Owner is not a removable moderator" });
+
+        if (group.ownerId && String(group.ownerId) === targetId.toString()) {
+            return res.status(400).json({ error: "cannot remove owner moderator role" });
         }
 
-        group.moderators = group.moderators.filter((m) => !normalizeId(m).equals(targetId));
+        group.moderators = group.moderators.filter(
+            (id: any) => String(id) !== targetId.toString(),
+        );
 
         await group.save();
 
-        try {
-            const removedModerator = await User.findById(targetId);
-            if (removedModerator) {
-                await sendPushNotificationToUser(removedModerator, {
-                    title: "Moderator Removed",
-                    body: `You have been removed from the group ${group.name} as a moderator`,
-                });
-            }
-        } catch (error) {
-            console.error("[Groups] Failed to send push notification to moderators:", error);
-        }
-
-        res.json(group);
-    }
+        res.json(group.toObject());
+    },
 );
 
 /**
@@ -765,24 +704,38 @@ router.delete(
  *     security:
  *       - bearerAuth: []
  */
-router.post("/:id([0-9a-fA-F]{24})/leave", requireAuth, async (req: Request, res: Response) => {
-    const group = await Group.findById(req.params.id);
-    if (!group) return res.status(404).json({ error: "Group not found" });
+router.post(
+    "/:id([0-9a-fA-F]{24})/leave",
+    requireAuth,
+    async (req: Request, res: Response) => {
+        const groupId = new Types.ObjectId(req.params.id);
+        const group = await Group.findById(groupId);
+        if (!group) {
+            return res.status(404).json({ error: "Not found" });
+        }
 
-    const userId = getCurrentUserId(req);
+        const { id: rawUserId } = getCurrentUser(req);
+        if (!rawUserId) {
+            return res.status(401).json({ error: "Unauthenticated" });
+        }
+        const uid = new Types.ObjectId(rawUserId);
 
-    if (normalizeId(group.ownerId).equals(userId)) {
-        return res.status(400).json({
-            error: "Owner cannot leave the group. Transfer ownership or delete group.",
-        });
-    }
+        if (group.ownerId && String(group.ownerId) === uid.toString()) {
+            return res.status(400).json({ error: "owner cannot leave group" });
+        }
 
-    group.moderators = group.moderators.filter((m) => !normalizeId(m).equals(userId));
-    group.participants = group.participants.filter((p) => !normalizeId(p).equals(userId));
+        group.participants = group.participants.filter(
+            (id: any) => String(id) !== uid.toString(),
+        );
+        group.moderators = group.moderators.filter(
+            (id: any) => String(id) !== uid.toString(),
+        );
 
-    await group.save();
-    res.json({ ok: true });
-});
+        await group.save();
+
+        res.json(group.toObject());
+    },
+);
 
 /**
  * @openapi
@@ -806,43 +759,58 @@ router.post("/:id([0-9a-fA-F]{24})/leave", requireAuth, async (req: Request, res
  *     security:
  *       - bearerAuth: []
  */
-router.post("/:id([0-9a-fA-F]{24})/owner", requireAuth, async (req: Request, res: Response) => {
-    const userId = normalizeId(req.body.userId);
-    if (!userId) return res.status(400).json({ error: "userId is required" });
+router.post(
+    "/:id([0-9a-fA-F]{24})/owner",
+    requireAuth,
+    async (req: Request, res: Response) => {
+        const rawUserId = req.body?.userId as string | undefined;
+        if (!rawUserId || !Types.ObjectId.isValid(rawUserId)) {
+            return res.status(400).json({ error: "userId is required and must be valid ObjectId" });
+        }
 
-    const group = await Group.findById(req.params.id);
-    if (!group) return res.status(404).json({ error: "Group not found" });
+        const groupId = new Types.ObjectId(req.params.id);
+        const group = await Group.findById(groupId);
+        if (!group) {
+            return res.status(404).json({ error: "Group not found" });
+        }
 
-    if (!canUserManageGroup(group, req)) {
-        return res.status(403).json({
-            error: "Only owner or admin/dispatcher can transfer ownership",
-        });
-    }
-
-    const newOwnerId = new Types.ObjectId(userId);
-    group.ownerId = newOwnerId;
-
-    // Ensure new owner is at least a participant; pre-save hook will sync members
-    if (!group.participants.some((p) => p.equals(newOwnerId))) {
-        group.participants.push(newOwnerId);
-    }
-
-    await group.save();
-
-    try {
-        const newOwner = await User.findById(newOwnerId);
-        if (newOwner) {
-            await sendPushNotificationToUser(newOwner, {
-                title: "Group Ownership Transferred",
-                body: `You have been transferred the ownership of the group ${group.name}`,
+        // updated helper signature: (req, group)
+        if (!canUserManageGroup(req, group)) {
+            return res.status(403).json({
+                error: "Only owner or admin/dispatcher can transfer ownership",
             });
         }
-    } catch (error) {
-        console.error("[Groups] Failed to send push notification to new owner:", error);
-    }
 
-    res.json(group);
-});
+        const newOwnerId = new Types.ObjectId(rawUserId);
+
+        // set new owner
+        group.ownerId = newOwnerId;
+
+        // ensure new owner is at least a participant in the new model (no members field)
+        const alreadyParticipant = group.participants.some(
+            (p: any) => String(p) === newOwnerId.toString(),
+        );
+        if (!alreadyParticipant) {
+            group.participants.push(newOwnerId);
+        }
+
+        await group.save();
+
+        try {
+            const newOwner = await User.findById(newOwnerId);
+            if (newOwner) {
+                await sendPushNotificationToUser(newOwner, {
+                    title: "Group ownership transferred",
+                    body: `You have been transferred the ownership of the group ${group.name}`,
+                });
+            }
+        } catch (error) {
+            console.error("[Groups] Failed to send push notification to new owner:", error);
+        }
+
+        res.json(group.toObject());
+    },
+);
 
 /* -------------------------------------------------------------------------- */
 /* Invites                                                                    */
@@ -876,32 +844,42 @@ router.post("/:id([0-9a-fA-F]{24})/owner", requireAuth, async (req: Request, res
  *     security:
  *       - bearerAuth: []
  */
-router.post("/:id([0-9a-fA-F]{24})/invites", requireAuth, async (req: Request, res: Response) => {
-    const groupId = new Types.ObjectId(req.params.id);
-    const { expiresAt } = req.body as { expiresAt?: string };
+router.post(
+    "/:id([0-9a-fA-F]{24})/invites",
+    requireAuth,
+    async (req: Request, res: Response) => {
+        const groupId = new Types.ObjectId(req.params.id);
+        const { expiresAt } = req.body as { expiresAt?: string };
 
-    const group = await Group.findById(groupId);
-    if (!group) return res.status(404).json({ error: "Group not found" });
+        const group = await Group.findById(groupId);
+        if (!group) {
+            return res.status(404).json({ error: "Group not found" });
+        }
 
-    if (!canUserModerateGroup(group, req)) {
-        return res.status(403).json({ error: "Access denied" });
-    }
+        // updated helper signature: (req, group)
+        if (!canUserModerateGroup(req, group)) {
+            return res.status(403).json({ error: "Access denied" });
+        }
 
-    const code = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
+        const code = crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 
-    const invite = await GroupInvite.create({
-        groupId,
-        code,
-        createdBy: (req as any).user.id,
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
-    });
+        const { id: rawUserId } = getCurrentUser(req);
+        const createdBy = rawUserId ? new Types.ObjectId(rawUserId) : undefined;
 
-    res.status(201).json({
-        code: invite.code,
-        groupId: invite.groupId,
-        expiresAt: invite.expiresAt,
-    });
-});
+        const invite = await GroupInvite.create({
+            groupId,
+            code,
+            createdBy,
+            expiresAt: expiresAt ? new Date(expiresAt) : null,
+        });
+
+        res.status(201).json({
+            code: invite.code,
+            groupId: invite.groupId,
+            expiresAt: invite.expiresAt,
+        });
+    },
+);
 
 /**
  * @openapi
@@ -926,10 +904,14 @@ router.post("/:id([0-9a-fA-F]{24})/invites", requireAuth, async (req: Request, r
  */
 router.post("/join", requireAuth, async (req: Request, res: Response) => {
     const { code } = req.body as { code?: string };
-    if (!code) return res.status(400).json({ error: "Code is required" });
+    if (!code) {
+        return res.status(400).json({ error: "Code is required" });
+    }
 
     const invite = await GroupInvite.findOne({ code }).lean();
-    if (!invite) return res.status(400).json({ error: "Invalid invite" });
+    if (!invite) {
+        return res.status(400).json({ error: "Invalid invite" });
+    }
 
     if (invite.expiresAt && invite.expiresAt < new Date()) {
         return res.status(400).json({ error: "Invite expired" });
@@ -939,25 +921,35 @@ router.post("/join", requireAuth, async (req: Request, res: Response) => {
     }
 
     const group = await Group.findById(invite.groupId);
-    if (!group) return res.status(400).json({ error: "Group not found" });
+    if (!group) {
+        return res.status(400).json({ error: "Group not found" });
+    }
 
-    const userId = new Types.ObjectId((req as any).user.id);
+    const { id: rawUserId } = getCurrentUser(req);
+    if (!rawUserId) {
+        return res.status(401).json({ error: "Unauthenticated" });
+    }
+    const userId = new Types.ObjectId(rawUserId);
 
-    if (!group.participants.some((p) => p.equals(userId))) {
+    // new model: only participants, no members
+    const alreadyParticipant = group.participants.some(
+        (p: any) => String(p) === userId.toString(),
+    );
+    if (!alreadyParticipant) {
         group.participants.push(userId);
         await group.save();
     }
 
     await GroupInvite.updateOne(
         { _id: (invite as any)._id },
-        { $set: { usedBy: userId, usedAt: new Date() } }
+        { $set: { usedBy: userId, usedAt: new Date() } },
     );
 
     try {
         const owner = await User.findById(group.ownerId);
         if (owner) {
             await sendPushNotificationToUser(owner, {
-                title: "New Member Joined",
+                title: "New member joined",
                 body: `User ${userId.toString()} has joined the group ${group.name}`,
             });
         }
@@ -1018,134 +1010,158 @@ router.post("/join", requireAuth, async (req: Request, res: Response) => {
  *                 shares:
  *                   type: array
  */
-router.get("/:id([0-9a-fA-F]{24})/dashboard", requireAuth, async (req: Request, res: Response) => {
-    const userId = getCurrentUserId(req);
-
-    const isAdmin = userHasAdminRole(req);
-    const groupId = new Types.ObjectId(req.params.id);
-
-    const group = await Group.findById(groupId).lean();
-    if (!group) {
-        return res.status(404).json({ error: "Not found" });
-    }
-
-    if (!isAdmin && !userInGroupDoc(group, userId)) {
-        return res.status(403).json({ error: "forbidden" });
-    }
-
-    // 1) All group-targeted ride shares (newest first)
-    const shares = await RideShare.find({
-        visibility: "groups",
-        groupIds: groupId,
-        status: { $in: ["active", "revoked", "expired", "closed"] },
-    })
-        .sort({ createdAt: -1 })
-        .limit(100)
-        .lean();
-
-    const rideIds = Array.from(new Set(shares.map((s: any) => String(s.rideId)))).map(
-        (id) => new Types.ObjectId(id)
-    );
-
-    const shareCreatorIds = Array.from(
-        new Set(shares.map((s: any) => s.createdBy && String(s.createdBy)).filter(Boolean))
-    ).map((id) => new Types.ObjectId(id));
-
-    // 2) Load rides, share creators, and claims
-    const [rides, shareCreators, rideClaims] = await Promise.all([
-        rideIds.length
-            ? Ride.find(
-                  { _id: { $in: rideIds } },
-                  {
-                      from: 1,
-                      to: 1,
-                      status: 1,
-                      datetime: 1,
-                      assignedDriverId: 1,
-                  }
-              ).lean()
-            : [],
-        shareCreatorIds.length
-            ? User.find({ _id: { $in: shareCreatorIds } }, { name: 1, email: 1 }).lean()
-            : [],
-        rideIds.length ? RideClaim.find({ rideId: { $in: rideIds } }).lean() : [],
-    ]);
-
-    const rideMap: Record<string, any> = {};
-    for (const r of rides) {
-        rideMap[String(r._id)] = r;
-    }
-
-    const shareCreatorMap: Record<string, any> = {};
-    for (const u of shareCreators) {
-        shareCreatorMap[String(u._id)] = u;
-    }
-
-    const activeAssigned: any[] = [];
-    const activeUnassigned: any[] = [];
-    const history: any[] = [];
-
-    const doneStatuses = ["clear", "completed", "cancelled"];
-
-    for (const ride of rides) {
-        const status = ride.status;
-        if (doneStatuses.includes(status)) {
-            history.push(ride);
-        } else if (ride.assignedDriverId) {
-            activeAssigned.push(ride);
-        } else {
-            activeUnassigned.push(ride);
+router.get(
+    "/:id([0-9a-fA-F]{24})/dashboard",
+    requireAuth,
+    async (req: Request, res: Response) => {
+        const { id: rawUserId } = getCurrentUser(req);
+        if (!rawUserId) {
+            return res.status(401).json({ error: "Unauthenticated" });
         }
-    }
 
-    // 4) Decorate shares with ride + user
-    const sharesWithDetails = shares.map((s: any) => ({
-        _id: s._id,
-        rideId: s.rideId,
-        visibility: s.visibility,
-        status: s.status,
-        groupIds: s.groupIds,
-        driverIds: s.driverIds,
-        expiresAt: s.expiresAt,
-        maxClaims: s.maxClaims,
-        claimsCount: s.claimsCount,
-        createdAt: s.createdAt,
-        ride: rideMap[String(s.rideId)] || null,
-        sharedBy: s.createdBy ? shareCreatorMap[String(s.createdBy)] || null : null,
-    }));
+        const userId = new Types.ObjectId(rawUserId);
+        const isAdmin = userHasAdminRole(req);
+        const groupId = new Types.ObjectId(req.params.id);
 
-    // 5) Driver profiles (assigned drivers in these rides)
-    const driverIds = Array.from(
-        new Set(
-            rides.map((r: any) => r.assignedDriverId && String(r.assignedDriverId)).filter(Boolean)
-        )
-    ).map((id) => new Types.ObjectId(id));
+        const group = await Group.findById(groupId).lean();
+        if (!group) {
+            return res.status(404).json({ error: "Not found" });
+        }
 
-    const drivers = driverIds.length
-        ? await User.find({ _id: { $in: driverIds } }, { name: 1, email: 1 }).lean()
-        : [];
+        if (!isAdmin && !userInGroupDoc(group, userId)) {
+            return res.status(403).json({ error: "forbidden" });
+        }
 
-    res.json({
-        group: pick(group as any, [
-            "_id",
-            "name",
-            "type",
-            "city",
-            "visibility",
-            "isInviteOnly",
-            "tags",
-            "rules",
-            "ownerId",
-        ]),
-        drivers,
-        rides: {
-            activeAssigned,
-            activeUnassigned,
-            history,
-        },
-        rideRequests: rideClaims,
-        shares: sharesWithDetails,
-    });
-});
+        // 1) All group-targeted ride shares (newest first)
+        const shares = await RideShare.find({
+            visibility: "groups",
+            groupIds: groupId,
+            status: { $in: ["active", "revoked", "expired", "closed"] },
+        })
+            .sort({ createdAt: -1 })
+            .limit(100)
+            .lean();
+
+        const rideIds = Array.from(
+            new Set(shares.map((s: any) => String(s.rideId))),
+        ).map((id) => new Types.ObjectId(id));
+
+        const shareCreatorIds = Array.from(
+            new Set(
+                shares
+                    .map((s: any) => s.createdBy && String(s.createdBy))
+                    .filter(Boolean),
+            ),
+        ).map((id) => new Types.ObjectId(id));
+
+        // 2) Load rides, share creators, and claims
+        const [rides, shareCreators, rideClaims] = await Promise.all([
+            rideIds.length
+                ? Ride.find(
+                    { _id: { $in: rideIds } },
+                    {
+                        from: 1,
+                        to: 1,
+                        status: 1,
+                        datetime: 1,
+                        assignedDriverId: 1,
+                    },
+                ).lean()
+                : [],
+            shareCreatorIds.length
+                ? User.find(
+                    { _id: { $in: shareCreatorIds } },
+                    { name: 1, email: 1 },
+                ).lean()
+                : [],
+            rideIds.length
+                ? RideClaim.find({ rideId: { $in: rideIds } }).lean()
+                : [],
+        ]);
+
+        // plain object maps
+        const rideMap: Record<string, any> = {};
+        for (const r of rides) {
+            rideMap[String(r._id)] = r;
+        }
+
+        const shareCreatorMap: Record<string, any> = {};
+        for (const u of shareCreators) {
+            shareCreatorMap[String(u._id)] = u;
+        }
+
+        // 3) Bucket rides: activeAssigned / activeUnassigned / history
+        const activeAssigned: any[] = [];
+        const activeUnassigned: any[] = [];
+        const history: any[] = [];
+
+        const doneStatuses = ["clear", "completed", "cancelled"];
+
+        for (const ride of rides) {
+            const status = ride.status;
+            if (doneStatuses.includes(status)) {
+                history.push(ride);
+            } else if (ride.assignedDriverId) {
+                activeAssigned.push(ride);
+            } else {
+                activeUnassigned.push(ride);
+            }
+        }
+
+        // 4) Decorate shares with ride + user
+        const sharesWithDetails = shares.map((s: any) => ({
+            _id: s._id,
+            rideId: s.rideId,
+            visibility: s.visibility,
+            status: s.status,
+            groupIds: s.groupIds,
+            driverIds: s.driverIds,
+            expiresAt: s.expiresAt,
+            maxClaims: s.maxClaims,
+            claimsCount: s.claimsCount,
+            createdAt: s.createdAt,
+            ride: rideMap[String(s.rideId)] || null,
+            sharedBy: s.createdBy ? shareCreatorMap[String(s.createdBy)] || null : null,
+        }));
+
+        // 5) Driver profiles (assigned drivers in these rides)
+        const driverIds = Array.from(
+            new Set(
+                rides
+                    .map((r: any) => r.assignedDriverId && String(r.assignedDriverId))
+                    .filter(Boolean),
+            ),
+        ).map((id) => new Types.ObjectId(id));
+
+        const drivers = driverIds.length
+            ? await User.find(
+                { _id: { $in: driverIds } },
+                { name: 1, email: 1 },
+            ).lean()
+            : [];
+
+        res.json({
+            group: pick(group as any, [
+                "_id",
+                "name",
+                "type",
+                "city",
+                "visibility",
+                "isInviteOnly",
+                "tags",
+                "rules",
+                "ownerId",
+            ]),
+            drivers,
+            rides: {
+                activeAssigned,
+                activeUnassigned,
+                history,
+            },
+            rideRequests: rideClaims,
+            shares: sharesWithDetails,
+        });
+    },
+);
 
 export default router;

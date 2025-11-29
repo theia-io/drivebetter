@@ -26,14 +26,13 @@ import { dt } from "@/components/ui/commmon";
 import {
     useGroup,
     useGroupDashboard,
-    useGroupMembers,
     updateGroup,
     deleteGroup,
     leaveGroup,
     addGroupParticipant,
     removeGroupParticipant,
     addGroupModerator,
-    removeGroupModerator,
+    removeGroupModerator, useGroupParticipants,
 } from "@/stores/groups";
 
 import {
@@ -57,10 +56,10 @@ export default function GroupDetailsPage() {
     } = useGroup(id);
 
     const {
-        data: members,
-        isLoading: membersLoading,
-        mutate: mutateMembers,
-    } = useGroupMembers(id);
+        data: participants,
+        isLoading: participantsLoading,
+        mutate: mutateParticipants,
+    } = useGroupParticipants(id);
 
     const {
         data: dashboard,
@@ -97,24 +96,24 @@ export default function GroupDetailsPage() {
 
     // role detection based on members payload (authoritative)
     const isOwner = useMemo(
-        () => !!members && !!userId && members.owner?._id === userId,
-        [members, userId],
+        () => !!participants && !!userId && participants.owner?._id === userId,
+        [participants, userId],
     );
 
     const isModerator = useMemo(
         () =>
-            !!members &&
+            !!participants &&
             !!userId &&
-            (members.moderators ?? []).some((m: any) => m._id === userId),
-        [members, userId],
+            (participants.moderators ?? []).some((m: any) => m._id === userId),
+        [participants, userId],
     );
 
     const isParticipant = useMemo(
         () =>
-            !!members &&
+            !!participants &&
             !!userId &&
-            (members.participants ?? []).some((p: any) => p._id === userId),
-        [members, userId],
+            (participants.participants ?? []).some((p: any) => p._id === userId),
+        [participants, userId],
     );
 
     const isMember = isOwner || isModerator || isParticipant;
@@ -130,27 +129,27 @@ export default function GroupDetailsPage() {
     const memberRoleLabel =
         isOwner ? "Owner" : isModerator ? "Moderator" : isParticipant ? "Participant" : undefined;
 
-    const ownerUser = members?.owner || null;
+    const ownerUser = participants?.owner || null;
 
     const moderatorsUsers = useMemo(() => {
-        if (!members) return [];
-        const ownerId = members.owner?._id;
-        const mods = members.moderators ?? [];
+        if (!participants) return [];
+        const ownerId = participants.owner?._id;
+        const mods = participants.moderators ?? [];
         return mods.filter((m: any) => m._id !== ownerId);
-    }, [members]);
+    }, [participants]);
 
     const participantsUsers = useMemo(() => {
-        if (!members) return [];
-        const ownerId = members.owner?._id;
-        const moderatorIds = new Set((members.moderators ?? []).map((m: any) => m._id));
-        return (members.participants ?? []).filter(
+        if (!participants) return [];
+        const ownerId = participants.owner?._id;
+        const moderatorIds = new Set((participants.moderators ?? []).map((m: any) => m._id));
+        return (participants.participants ?? []).filter(
             (p: any) => p._id !== ownerId && !moderatorIds.has(p._id),
         );
-    }, [members]);
+    }, [participants]);
 
     const membersCount = useMemo(() => {
         if (!group) return 0;
-        if (Array.isArray(group.members) && group.members.length) return group.members.length;
+        if (Array.isArray(group.participants) && group.participants.length) return group.participants.length;
         const base = 0 + (group.ownerId ? 1 : 0);
         return base + (group.moderators?.length ?? 0) + (group.participants?.length ?? 0);
     }, [group]);
@@ -232,43 +231,38 @@ export default function GroupDetailsPage() {
         if (!id || drivers.length === 0) return;
         await Promise.all(drivers.map((d) => addGroupParticipant(id, d.id)));
         setNewParticipants([]);
-        await Promise.all([mutateMembers(), mutateGroup()]);
+        await Promise.all([mutateParticipants(), mutateGroup()]);
     }
 
     async function handleRemoveParticipant(userIdToRemove: string) {
         if (!id) return;
         await removeGroupParticipant(id, userIdToRemove);
-        await Promise.all([mutateMembers(), mutateGroup()]);
+        await Promise.all([mutateParticipants(), mutateGroup()]);
     }
 
     async function handleAddModerator(userIdToPromote: string) {
         if (!id) return;
         await addGroupModerator(id, userIdToPromote);
-        await Promise.all([mutateMembers(), mutateGroup()]);
+        await Promise.all([mutateParticipants(), mutateGroup()]);
     }
 
     async function handleRemoveModerator(userIdToDemote: string) {
         if (!id) return;
         await removeGroupModerator(id, userIdToDemote);
-        await Promise.all([mutateMembers(), mutateGroup()]);
+        await Promise.all([mutateParticipants(), mutateGroup()]);
     }
 
-    // Remove user completely from group (for owner/admin):
-    //  - drop moderator role (if any)
-    //  - drop participant membership
     async function handleRemoveMemberCompletely(userIdToRemove: string) {
         if (!id) return;
         try {
             await removeGroupModerator(id, userIdToRemove);
         } catch {
-            // ignore if not moderator / no permission
         }
         try {
             await removeGroupParticipant(id, userIdToRemove);
         } catch {
-            // ignore if not participant
         }
-        await Promise.all([mutateMembers(), mutateGroup()]);
+        await Promise.all([mutateParticipants(), mutateGroup()]);
     }
 
     if (groupLoading && !group) {
@@ -626,7 +620,7 @@ export default function GroupDetailsPage() {
                                             onChange={setNewParticipants}
                                             actionLabel="Add selected to group"
                                             actionHint="Selected drivers will be added as participants."
-                                            actionDisabled={groupLoading || membersLoading}
+                                            actionDisabled={groupLoading || participantsLoading}
                                             onAction={handleAddParticipants}
                                         />
                                     </div>

@@ -25,7 +25,6 @@ export interface Group {
     ownerId: string;
     moderators: string[];
     participants: string[];
-    members: string[];
 
     // meta
     description?: string;
@@ -70,7 +69,7 @@ export interface GroupMemberUser {
     email?: string;
 }
 
-export interface GroupMembersPayload {
+export interface GroupParticipantsPayload {
     owner: GroupMemberUser | null;
     moderators: GroupMemberUser[];
     participants: GroupMemberUser[];

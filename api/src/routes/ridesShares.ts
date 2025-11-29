@@ -3,7 +3,7 @@ import mongoose, { Types } from "mongoose";
 import Ride from "../models/ride.model";
 import { requireAuth, requireRole } from "../lib/auth";
 import { hasRideExpired, IRideShare, RideShare } from "../models/rideShare.model";
-import Group from "../models/group.model";
+import { Group }from "../models/group.model";
 import { RideClaim } from "../models/rideClaim.model";
 
 const router = Router();

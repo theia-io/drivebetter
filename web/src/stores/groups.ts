@@ -6,10 +6,9 @@ import type {
     CreateGroupRequest,
     UpdateGroupRequest,
     GroupDashboard,
-    GroupMembersPayload,
     GroupInviteResponse,
     JoinGroupResponse,
-    GroupActivity,
+    GroupActivity, GroupParticipantsPayload,
 } from "@/types/group";
 import type { PageResp } from "@/types";
 
@@ -67,8 +66,8 @@ export async function deleteGroup(id: string) {
 
 /* ----------------------- membership / roles -------------------------- */
 
-export async function getGroupMembers(id: string) {
-    return apiGet<GroupMembersPayload>(`/groups/${id}/members`);
+export async function getGroupParticipants(id: string) {
+    return apiGet<GroupParticipantsPayload>(`/groups/${id}/participants`);
 }
 
 export async function addGroupParticipant(groupId: string, userId: string) {
@@ -140,10 +139,10 @@ export function useGroupDashboard(id?: string) {
     );
 }
 
-export function useGroupMembers(id?: string) {
-    const key = id ? `/groups/${id}/members` : null;
-    return useSWR<GroupMembersPayload | undefined>(key, () =>
-        id ? getGroupMembers(id) : undefined
+export function useGroupParticipants(id?: string) {
+    const key = id ? `/groups/${id}/participants` : null;
+    return useSWR<GroupParticipantsPayload | undefined>(key, () =>
+        id ? getGroupParticipants(id) : undefined
     );
 }
 
