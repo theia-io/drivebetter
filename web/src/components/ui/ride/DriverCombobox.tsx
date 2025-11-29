@@ -13,7 +13,6 @@ export type SimpleDriver = {
 
 const toStr = (v: any) => String(v ?? "");
 
-// Common props
 type BaseProps = {
     id?: string;
     label?: string;
@@ -21,7 +20,6 @@ type BaseProps = {
     error?: string;
     className?: string;
     disabled?: boolean;
-    // Optional action button under dropdown
     actionLabel?: string;
     actionHint?: string;
     onAction?: (drivers: SimpleDriver[]) => void;

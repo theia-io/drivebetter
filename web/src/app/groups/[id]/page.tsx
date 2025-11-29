@@ -794,7 +794,7 @@ export default function GroupDetailsPage() {
                                                         drivers.filter((d) => !existingMemberIds.has(d.id)),
                                                     )
                                                 }
-                                                excludeIds={[...existingMemberIds]} // <- key line
+                                                excludeIds={Array.from(existingMemberIds)}
                                                 actionLabel="Add selected"
                                                 actionHint="Existing members are ignored."
                                                 actionDisabled={groupLoading || participantsLoading}
