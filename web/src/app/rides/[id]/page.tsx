@@ -555,7 +555,7 @@ export default function RideDetailsPage() {
                                         Ride Shares
                                     </Typography>
                                 </div>
-                                <RideShareQuickPanel rideId={ride._id} className="w-full" />
+                                <RideShareQuickPanel rideId={ride._id} className="w-full z-1100" />
                             </CardBody>
                         </Card>
                     )}
@@ -565,7 +565,7 @@ export default function RideDetailsPage() {
                         <Card variant="elevated">
                             <CardBody className="p-3 sm:p-4">
                                 <LeafletMap
-                                    heightClass="h-64 sm:h-80"
+                                    heightClass="h-64 sm:h-80 z-10"
                                     markerA={
                                         hasA
                                             ? (ride!.fromLocation!.coordinates as [number, number])

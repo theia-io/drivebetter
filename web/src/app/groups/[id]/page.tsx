@@ -764,14 +764,32 @@ export default function GroupDetailsPage() {
                                             <div className="space-y-2">
                                                 {activeShares.map((s: any) => {
                                                     const ride = s.ride || {};
+
+                                                    // find *this driver’s* latest claim for this ride/share
+                                                    const myClaimForShare = userId
+                                                        ? rideRequests
+                                                            .filter((r: any) => {
+                                                                const sameRide =
+                                                                    String(r.rideId) === String(s.rideId ?? ride._id);
+                                                                const sameDriver =
+                                                                    String(r.driverId) === String(userId);
+                                                                // optional: if your model has shareId, tighten filter:
+                                                                // const sameShare = !r.shareId || String(r.shareId) === String(s._id);
+                                                                // return sameRide && sameDriver && sameShare;
+                                                                return sameRide && sameDriver;
+                                                            })
+                                                            .sort(
+                                                                (a: any, b: any) =>
+                                                                    new Date(a.createdAt).getTime() -
+                                                                    new Date(b.createdAt).getTime(),
+                                                            )
+                                                            .at(-1)
+                                                        : null;
+
                                                     const item = {
                                                         ride: {
-                                                            _id: String(
-                                                                ride._id || s.rideId,
-                                                            ),
-                                                            from: String(
-                                                                ride.from ?? "",
-                                                            ),
+                                                            _id: String(ride._id || s.rideId),
+                                                            from: String(ride.from ?? ""),
                                                             to: String(ride.to ?? ""),
                                                             datetime:
                                                                 ride.datetime ||
@@ -783,7 +801,14 @@ export default function GroupDetailsPage() {
                                                         visibility: s.visibility,
                                                         maxClaims: s.maxClaims,
                                                         expiresAt: s.expiresAt,
+                                                        myClaim: myClaimForShare
+                                                            ? {
+                                                                status: myClaimForShare.status,
+                                                                createdAt: myClaimForShare.createdAt,
+                                                            }
+                                                            : undefined,
                                                     };
+
                                                     return (
                                                         <SharedRideRequestCard
                                                             key={String(s._id)}
@@ -798,6 +823,7 @@ export default function GroupDetailsPage() {
                                             </div>
                                         </SectionBlock>
                                     )}
+
 
                                     {/* Active rides */}
                                     {activeRides.length > 0 && (
