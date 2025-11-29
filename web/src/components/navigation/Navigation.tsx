@@ -22,7 +22,7 @@ export default function Navigation() {
     return (
         <>
             {/* TOP NAVBAR */}
-            <nav className="bg-white shadow-sm border-b">
+            <nav className="bg-white shadow-sm border-b md:sticky md:top-0 md:z-40">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center">
                         {/* Left: brand + desktop main links */}
