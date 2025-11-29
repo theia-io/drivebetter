@@ -191,7 +191,7 @@ export default function AssignDriverSelect({
     return (
         <div
             ref={rootRef}
-            className={["relative z-[1000] flex items-start gap-2", className].join(" ")}
+            className={["relative flex items-start gap-2", className].join(" ")}
         >
             <div className="flex h-10 items-center gap-1">
                 <span className="inline-flex items-center gap-1 text-xs sm:text-sm text-gray-700">
