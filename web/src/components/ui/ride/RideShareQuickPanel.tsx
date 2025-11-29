@@ -62,7 +62,7 @@ export default function RideShareQuickPanel({ rideId, className = "" }: RideShar
         const res = { public: 0, groups: 0 };
         for (const s of activeShares) {
             if (s.visibility === "public") res.public += 1;
-            if (s.visibility === "groups") res.groups += 1;
+            if (s.visibility === "groups") res.groups = s.groupIds.length;
         }
         return res;
     }, [activeShares]);

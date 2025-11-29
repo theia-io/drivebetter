@@ -10,16 +10,15 @@ import {
     Plus,
     Loader2,
     MapPin,
-    ListFilter,
-    Tag,
-    Lock,
+    ListFilter
 } from "lucide-react";
 
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { useGroups } from "@/stores/groups";
-import type { Group, GroupType } from "@/types/group";
+import {formatGroupType, Group, GroupType} from "@/types/group";
 import { GROUP_TYPE_OPTIONS } from "@/types/group";
+import GroupCard from "@/components/ui/group/GroupCard";
 
 type FilterState = {
     q: string;
@@ -74,7 +73,8 @@ export default function GroupsPage() {
                                     Groups
                                 </Typography>
                                 <p className="text-xs sm:text-sm text-gray-500">
-                                    Organise drivers and rides into private groups. Membership is invite-only.
+                                    Organise drivers and rides into private groups. Membership is
+                                    invite-only.
                                 </p>
                             </div>
                         </div>
@@ -182,6 +182,24 @@ export default function GroupsPage() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Summary row */}
+                            <div className="flex items-center justify-between text-xs text-gray-500 px-0.5">
+                                <span>{total} groups</span>
+                                {Boolean(
+                                    filters.q || filters.city || filters.type,
+                                ) && (
+                                    <button
+                                        type="button"
+                                        className="text-[11px] font-medium text-indigo-600 hover:underline"
+                                        onClick={() =>
+                                            setFilters(INITIAL_FILTERS)
+                                        }
+                                    >
+                                        Clear filters
+                                    </button>
+                                )}
+                            </div>
                         </CardBody>
                     </Card>
 
@@ -224,10 +242,6 @@ export default function GroupsPage() {
                                 </Card>
                             ) : (
                                 <div className="space-y-2">
-                                    <div className="flex items-center justify-between text-xs text-gray-500 px-0.5">
-                                        <span>{total} groups</span>
-                                    </div>
-
                                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                         {groups.map((g) => (
                                             <GroupCard key={g._id} group={g} />
@@ -241,158 +255,4 @@ export default function GroupsPage() {
             </Container>
         </ProtectedLayout>
     );
-}
-
-/* ------------------------------------------------------------------ */
-/* Card                                                               */
-/* ------------------------------------------------------------------ */
-
-function GroupCard({ group }: { group: Group }) {
-    const membersCount =
-        typeof group.membersCount === "number"
-            ? group.membersCount
-            : group.members?.length ?? 0;
-
-    const tags = Array.isArray(group.tags) ? group.tags : [];
-    const shownTags = tags.slice(0, 3);
-    const extraTags = tags.length - shownTags.length;
-
-    const hasRidesStats =
-        typeof group.activeRides === "number" ||
-        typeof group.totalRides === "number";
-
-    return (
-        <Card className="h-full flex flex-col">
-            <CardBody className="p-4 sm:p-5 flex flex-col gap-3">
-                {/* Title + description */}
-                <div className="flex items-start justify-between gap-2">
-                    <div className="space-y-1 min-w-0">
-                        <Link
-                            href={`/groups/${group._id}`}
-                            className="text-sm sm:text-base font-semibold text-gray-900 hover:underline break-words"
-                        >
-                            {group.name}
-                        </Link>
-                        {group.description && (
-                            <p className="text-xs sm:text-sm text-gray-500 line-clamp-2">
-                                {group.description}
-                            </p>
-                        )}
-                    </div>
-                </div>
-
-                {/* Meta pills: type, city, visibility, invite-only */}
-                <div className="flex flex-wrap items-center gap-2 text-[11px] sm:text-xs">
-                    <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-indigo-700 border border-indigo-100">
-                        {formatGroupType(group.type)}
-                    </span>
-
-                    {group.city && (
-                        <span className="inline-flex items-center rounded-full bg-gray-50 px-2 py-0.5 text-gray-600 border border-gray-100">
-                            <MapPin className="h-3 w-3 mr-1" />
-                            {group.city}
-                        </span>
-                    )}
-
-                    {group.visibility && (
-                        <span className="inline-flex items-center rounded-full bg-gray-50 px-2 py-0.5 text-gray-600 border border-gray-100">
-                            {group.visibility}
-                        </span>
-                    )}
-
-                    {group.isInviteOnly && (
-                        <span className="inline-flex items-center rounded-full bg-gray-900 px-2 py-0.5 text-gray-100 border border-gray-900">
-                            <Lock className="h-3 w-3 mr-1" />
-                            invite-only
-                        </span>
-                    )}
-
-                    {group.isActive !== undefined && (
-                        <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 border ${
-                                group.isActive
-                                    ? "border-emerald-100 bg-emerald-50 text-emerald-700"
-                                    : "border-gray-200 bg-gray-50 text-gray-500"
-                            }`}
-                        >
-                            {group.isActive ? "Active" : "Inactive"}
-                        </span>
-                    )}
-                </div>
-
-                {/* Tags */}
-                {tags.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs">
-                        <span className="inline-flex items-center text-gray-500">
-                            <Tag className="h-3 w-3 mr-1" />
-                            Tags:
-                        </span>
-                        {shownTags.map((t) => (
-                            <span
-                                key={t}
-                                className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-gray-700"
-                            >
-                                #{t}
-                            </span>
-                        ))}
-                        {extraTags > 0 && (
-                            <span className="text-gray-500">+{extraTags} more</span>
-                        )}
-                    </div>
-                )}
-
-                {/* Stats row */}
-                <div className="mt-1 flex items-center justify-between text-[11px] sm:text-xs text-gray-500">
-                    <div className="inline-flex items-center gap-1.5">
-                        <Users className="h-3.5 w-3.5" />
-                        <span>{membersCount} members</span>
-                    </div>
-
-                    {hasRidesStats && (
-                        <div className="inline-flex items-center gap-2">
-                            {typeof group.activeRides === "number" && (
-                                <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-amber-700 border border-amber-100">
-                                    {group.activeRides} active
-                                </span>
-                            )}
-                            {typeof group.totalRides === "number" && (
-                                <span>{group.totalRides} total rides</span>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {/* Actions */}
-                <div className="pt-2 flex justify-end">
-                    <Link href={`/groups/${group._id}`}>
-                        <Button variant="outline" size="sm">
-                            Open
-                        </Button>
-                    </Link>
-                </div>
-            </CardBody>
-        </Card>
-    );
-}
-
-/* ------------------------------------------------------------------ */
-
-function formatGroupType(t: GroupType | undefined): string {
-    if (!t) return "Custom";
-    switch (t) {
-        case "fleet":
-            return "Fleet";
-        case "coop":
-            return "Co-op";
-        case "airport":
-            return "Airport";
-        case "city":
-            return "City";
-        case "custom":
-            return "Custom";
-        case "global":
-            return "Global";
-        default:
-            return t;
-    }
 }

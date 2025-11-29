@@ -146,7 +146,36 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 
     const pages = Math.max(1, Math.ceil(total / limit));
 
-    res.json({ items, page, limit, total, pages });
+    const groupIds = items.map((g: any) => g._id as Types.ObjectId);
+    let activeShareGroups = new Set<string>();
+
+    if (groupIds.length > 0) {
+        const shares = await RideShare.find(
+            {
+                visibility: "groups",
+                status: "active",
+                groupIds: { $in: groupIds },
+            },
+            { groupIds: 1 },
+        ).lean();
+
+        activeShareGroups = new Set<string>();
+        for (const s of shares) {
+            const gids: any[] = Array.isArray((s as any).groupIds)
+                ? (s as any).groupIds
+                : [];
+            for (const gid of gids) {
+                if (gid) activeShareGroups.add(String(gid));
+            }
+        }
+    }
+
+    const itemsWithFlags = items.map((g: any) => ({
+        ...g,
+        hasActiveShares: activeShareGroups.has(String(g._id)),
+    }));
+
+    res.json({ items: itemsWithFlags, page, limit, total, pages });
 });
 
 /* -------------------------------------------------------------------------- */

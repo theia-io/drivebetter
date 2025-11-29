@@ -128,3 +128,23 @@ export interface GroupActivity {
     time: string;
     description: string;
 }
+
+export function formatGroupType(t: GroupType | undefined): string {
+    if (!t) return "Custom";
+    switch (t) {
+        case "fleet":
+            return "Fleet";
+        case "coop":
+            return "Co-op";
+        case "airport":
+            return "Airport";
+        case "city":
+            return "City";
+        case "custom":
+            return "Custom";
+        case "global":
+            return "Global";
+        default:
+            return t;
+    }
+}
