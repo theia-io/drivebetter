@@ -791,17 +791,13 @@ export default function GroupDetailsPage() {
                                                 values={newParticipants}
                                                 onChange={(drivers) =>
                                                     setNewParticipants(
-                                                        drivers.filter(
-                                                            (d) =>
-                                                                !existingMemberIds.has(d.id),
-                                                        ),
+                                                        drivers.filter((d) => !existingMemberIds.has(d.id)),
                                                     )
                                                 }
+                                                excludeIds={[...existingMemberIds]} // <- key line
                                                 actionLabel="Add selected"
                                                 actionHint="Existing members are ignored."
-                                                actionDisabled={
-                                                    groupLoading || participantsLoading
-                                                }
+                                                actionDisabled={groupLoading || participantsLoading}
                                                 onAction={handleAddParticipants}
                                             />
                                         </div>

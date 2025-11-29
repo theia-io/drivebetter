@@ -1,4 +1,3 @@
-// components/ui/ride/DriverCombobox.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -27,6 +26,11 @@ type BaseProps = {
     actionHint?: string;
     onAction?: (drivers: SimpleDriver[]) => void;
     actionDisabled?: boolean;
+    /**
+     * Drivers whose ids should NOT appear in the list at all.
+     * E.g. members already in the group.
+     */
+    excludeIds?: string[];
 };
 
 type SingleProps = BaseProps & {
@@ -57,6 +61,7 @@ export function DriverCombobox(props: DriverComboboxProps) {
         actionHint,
         onAction,
         actionDisabled,
+        excludeIds,
     } = props;
 
     const isMulti = props.mode === "multi";
@@ -64,14 +69,21 @@ export function DriverCombobox(props: DriverComboboxProps) {
     const { data: driversData = [], isLoading } = useDriversPublic();
     const drivers = driversData as DriverPublic[];
 
+    const excludeSet = useMemo(
+        () => new Set((excludeIds ?? []).map((v) => String(v))),
+        [excludeIds],
+    );
+
     const items: SimpleDriver[] = useMemo(
         () =>
-            drivers.map((d: any) => ({
-                id: toStr(d._id || d.id || d.userId),
-                name: d.name,
-                email: d.email,
-            })),
-        [drivers]
+            drivers
+                .map((d: any) => ({
+                    id: toStr(d._id || d.id || d.userId),
+                    name: d.name,
+                    email: d.email,
+                }))
+                .filter((it) => !excludeSet.has(it.id)),
+        [drivers, excludeSet],
     );
 
     const itemsById = useMemo(() => {
@@ -105,8 +117,8 @@ export function DriverCombobox(props: DriverComboboxProps) {
         selectedCount === 0
             ? placeholder
             : isMulti
-              ? `${selectedCount} driver${selectedCount > 1 ? "s" : ""} selected`
-              : selectedDrivers[0]?.name || selectedDrivers[0]?.email || placeholder;
+                ? `${selectedCount} driver${selectedCount > 1 ? "s" : ""} selected`
+                : selectedDrivers[0]?.name || selectedDrivers[0]?.email || placeholder;
 
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
@@ -239,9 +251,7 @@ export function DriverCombobox(props: DriverComboboxProps) {
 
                             {!isLoading &&
                                 filtered.map((d) => {
-                                    const id = toStr(
-                                        (d as any)._id || (d as any).id || (d as any).userId
-                                    );
+                                    const id = d.id;
                                     const isSelected = selectedIds.has(id);
 
                                     return (
