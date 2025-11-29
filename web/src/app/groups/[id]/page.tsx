@@ -9,30 +9,33 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 
 import {
+    Activity,
     ArrowLeft,
+    ChevronDown,
+    Crown,
+    Edit3,
+    Info,
+    LogOut,
+    Shield,
     Trash2,
     Users,
-    Shield,
-    Edit3,
     X,
-    Crown,
-    Activity,
-    LogOut,
 } from "lucide-react";
 
 import { useAuthStore } from "@/stores/auth";
-import { dt } from "@/components/ui/commmon";
+import {dt, inputClass} from "@/components/ui/commmon";
 
 import {
     useGroup,
     useGroupDashboard,
+    useGroupParticipants,
     updateGroup,
     deleteGroup,
     leaveGroup,
     addGroupParticipant,
     removeGroupParticipant,
     addGroupModerator,
-    removeGroupModerator, useGroupParticipants,
+    removeGroupModerator,
 } from "@/stores/groups";
 
 import {
@@ -41,6 +44,7 @@ import {
 } from "@/components/ui/ride/DriverCombobox";
 
 import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
+import SharedRideRequestCard from "@/components/ui/ride/SharedRideRequestCard";
 
 import type { GroupType } from "@/types/group";
 
@@ -67,7 +71,6 @@ export default function GroupDetailsPage() {
         mutate: mutateDashboard,
     } = useGroupDashboard(id);
 
-    // meta editing: description, rules, tags
     const [isEditingMeta, setIsEditingMeta] = useState(false);
     const [meta, setMeta] = useState({
         description: "",
@@ -75,7 +78,6 @@ export default function GroupDetailsPage() {
         tags: "",
     });
 
-    // participants add via driver combobox
     const [newParticipants, setNewParticipants] = useState<SimpleDriver[]>([]);
     const [savingMeta, setSavingMeta] = useState(false);
     const [deleting, setDeleting] = useState(false);
@@ -94,7 +96,6 @@ export default function GroupDetailsPage() {
     const roles = user?.roles ?? [];
     const isAdmin = roles.includes("admin") || roles.includes("dispatcher");
 
-    // role detection based on members payload (authoritative)
     const isOwner = useMemo(
         () => !!participants && !!userId && participants.owner?._id === userId,
         [participants, userId],
@@ -118,13 +119,10 @@ export default function GroupDetailsPage() {
 
     const isMember = isOwner || isModerator || isParticipant;
 
-    // high-level powers
-    const canManage = !!group && (isAdmin || isOwner); // delete, manage moderators, transfer ownership
-    const canModerate = !!group && (isAdmin || isOwner || isModerator); // edit meta, participants, invites
-
-    // fine-grained capabilities
-    const canManageModerators = canManage; // admin + owner
-    const canManageParticipants = canModerate; // admin + owner + moderator
+    const canManage = !!group && (isAdmin || isOwner);
+    const canModerate = !!group && (isAdmin || isOwner || isModerator);
+    const canManageModerators = canManage;
+    const canManageParticipants = canModerate;
 
     const memberRoleLabel =
         isOwner ? "Owner" : isModerator ? "Moderator" : isParticipant ? "Participant" : undefined;
@@ -147,14 +145,49 @@ export default function GroupDetailsPage() {
         );
     }, [participants]);
 
+    const existingMemberIds = useMemo(() => {
+        const set = new Set<string>();
+        if (ownerUser?._id) set.add(ownerUser._id);
+        moderatorsUsers.forEach((u: any) => set.add(u._id));
+        participantsUsers.forEach((u: any) => set.add(u._id));
+        return set;
+    }, [ownerUser, moderatorsUsers, participantsUsers]);
+
+    useEffect(() => {
+        if (!participants) return;
+        setNewParticipants((prev) =>
+            prev.filter((d) => !existingMemberIds.has(d.id)),
+        );
+    }, [participants, existingMemberIds]);
+
     const membersCount = useMemo(() => {
         if (!group) return 0;
-        if (Array.isArray(group.participants) && group.participants.length) return group.participants.length;
+        if (Array.isArray(group.participants) && group.participants.length)
+            return group.participants.length;
         const base = 0 + (group.ownerId ? 1 : 0);
         return base + (group.moderators?.length ?? 0) + (group.participants?.length ?? 0);
     }, [group]);
 
     const shares: any[] = (dashboard as any)?.shares ?? [];
+    const rideRequests: any[] = (dashboard as any)?.rideRequests ?? [];
+    const driversForDashboard: any[] = (dashboard as any)?.drivers ?? [];
+
+    const driverMap = useMemo(() => {
+        const m: Record<string, any> = {};
+        driversForDashboard.forEach((d: any) => {
+            m[String(d._id)] = d;
+        });
+        return m;
+    }, [driversForDashboard]);
+
+    const activeShares = useMemo(
+        () => shares.filter((s) => s.status === "active"),
+        [shares],
+    );
+    const historicalShares = useMemo(
+        () => shares.filter((s) => s.status !== "active"),
+        [shares],
+    );
 
     const activeRides: any[] = useMemo(() => {
         if (!dashboard || !dashboard.rides) return [];
@@ -229,7 +262,14 @@ export default function GroupDetailsPage() {
 
     async function handleAddParticipants(drivers: SimpleDriver[]) {
         if (!id || drivers.length === 0) return;
-        await Promise.all(drivers.map((d) => addGroupParticipant(id, d.id)));
+
+        const uniqueToAdd = drivers.filter((d) => !existingMemberIds.has(d.id));
+        if (uniqueToAdd.length === 0) {
+            setNewParticipants([]);
+            return;
+        }
+
+        await Promise.all(uniqueToAdd.map((d) => addGroupParticipant(id, d.id)));
         setNewParticipants([]);
         await Promise.all([mutateParticipants(), mutateGroup()]);
     }
@@ -256,12 +296,10 @@ export default function GroupDetailsPage() {
         if (!id) return;
         try {
             await removeGroupModerator(id, userIdToRemove);
-        } catch {
-        }
+        } catch {}
         try {
             await removeGroupParticipant(id, userIdToRemove);
-        } catch {
-        }
+        } catch {}
         await Promise.all([mutateParticipants(), mutateGroup()]);
     }
 
@@ -362,10 +400,15 @@ export default function GroupDetailsPage() {
                         </div>
                     </div>
 
-                    {/* Group meta: description, rules, tags, basic info */}
-                    <Card variant="elevated">
-                        <CardBody className="p-4 sm:p-6 space-y-4">
-                            {/* Basic info */}
+                    {/* Flowbite-style accordion wrapper */}
+                    <div id="accordion-group-details" className="space-y-3">
+                        {/* Group details accordion item */}
+                        <AccordionItem
+                            id="group-details"
+                            title="Group details"
+                            defaultOpen
+                            icon={<Info className="w-4 h-4 text-indigo-600" />}
+                        >
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                 <div className="space-y-2">
                                     <MetaRow label="Name" value={group.name} />
@@ -401,8 +444,7 @@ export default function GroupDetailsPage() {
                                 </div>
                             </div>
 
-                            {/* Editable details */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pt-2 border-t border-gray-100">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pt-3 border-t border-gray-100">
                                 {/* Description */}
                                 <div className="space-y-2">
                                     <Typography className="text-sm font-semibold text-gray-900">
@@ -454,8 +496,7 @@ export default function GroupDetailsPage() {
                                 </div>
                             </div>
 
-                            {/* Tags */}
-                            <div className="pt-2 border-t border-gray-100 space-y-2">
+                            <div className="pt-3 border-t border-gray-100 space-y-2">
                                 <Typography className="text-sm font-semibold text-gray-900">
                                     Tags
                                 </Typography>
@@ -521,320 +562,318 @@ export default function GroupDetailsPage() {
                                     </Button>
                                 </div>
                             )}
-                        </CardBody>
-                    </Card>
+                        </AccordionItem>
 
-                    {/* Members + roles */}
-                    <Card variant="elevated">
-                        <CardBody className="p-4 sm:p-6 space-y-4">
-                            <div className="flex items-center justify-between gap-2">
-                                <Typography className="text-sm font-semibold text-gray-900">
-                                    Members
-                                </Typography>
-                                <span className="text-xs text-gray-500">
-                                    {membersCount} total
-                                </span>
-                            </div>
-
-                            {/* Owner */}
-                            <div className="space-y-2">
-                                <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                    Owner
-                                </Typography>
-                                <div className="flex flex-wrap gap-2">
-                                    {ownerUser ? (
-                                        <UserChip
-                                            user={ownerUser}
-                                            badge="Owner"
-                                            badgeColor="indigo"
-                                            link
-                                            canRemove={false}
-                                        />
-                                    ) : (
-                                        <span className="text-sm text-gray-600">
-                                            No owner data loaded.
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Moderators */}
-                            <div className="space-y-2">
-                                <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                    Moderators
-                                </Typography>
-                                <div className="flex flex-wrap gap-2">
-                                    {moderatorsUsers.length === 0 && (
-                                        <span className="text-sm text-gray-600">
-                                            No moderators.
-                                        </span>
-                                    )}
-                                    {moderatorsUsers.map((u: any) => (
-                                        <UserChip
-                                            key={u._id}
-                                            user={u}
-                                            badge="Moderator"
-                                            badgeColor="emerald"
-                                            link
-                                            canRemove={
-                                                canManageModerators &&
-                                                u._id !== ownerUser?._id
-                                            }
-                                            onRemove={() =>
-                                                handleRemoveMemberCompletely(u._id)
-                                            }
-                                            extraActions={
-                                                canManageModerators &&
-                                                u._id !== ownerUser?._id && (
-                                                    <button
-                                                        type="button"
-                                                        className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:underline"
-                                                        onClick={() =>
-                                                            handleRemoveModerator(u._id)
-                                                        }
-                                                    >
-                                                        Remove moderator role
-                                                    </button>
-                                                )
-                                            }
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Participants */}
-                            <div className="space-y-3">
-                                <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                    Participants
-                                </Typography>
-
-                                {/* Add participants (only moderators/owner/admin) */}
-                                {canModerate && (
-                                    <div className="max-w-xl">
-                                        <DriverCombobox
-                                            id="add-participants"
-                                            mode="multi"
-                                            label="Add participants"
-                                            placeholder="Select drivers to add"
-                                            values={newParticipants}
-                                            onChange={setNewParticipants}
-                                            actionLabel="Add selected to group"
-                                            actionHint="Selected drivers will be added as participants."
-                                            actionDisabled={groupLoading || participantsLoading}
-                                            onAction={handleAddParticipants}
-                                        />
+                        {/* Members accordion item */}
+                        <AccordionItem
+                            id="group-members"
+                            title={`Members (${membersCount})`}
+                            icon={<Users className="w-4 h-4 text-indigo-600" />}
+                            defaultOpen
+                        >
+                            <div className="space-y-4">
+                                {/* Owner */}
+                                <div className="space-y-2">
+                                    <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                        Owner
+                                    </Typography>
+                                    <div className="flex flex-col gap-2">
+                                        {ownerUser ? (
+                                            <UserChip
+                                                user={ownerUser}
+                                                badge="Owner"
+                                                badgeColor="indigo"
+                                                link
+                                                canRemove={false}
+                                            />
+                                        ) : (
+                                            <span className="text-sm text-gray-600">
+                                                No owner data loaded.
+                                            </span>
+                                        )}
                                     </div>
-                                )}
+                                </div>
 
-                                <div className="flex flex-wrap gap-2">
-                                    {participantsUsers.length === 0 && (
-                                        <span className="text-sm text-gray-600">
-                                            No participants.
-                                        </span>
+                                {/* Moderators */}
+                                <div className="space-y-2">
+                                    <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                        Moderators
+                                    </Typography>
+                                    <div className="flex flex-col gap-2">
+                                        {moderatorsUsers.length === 0 && (
+                                            <span className="text-sm text-gray-600">
+                                                No moderators.
+                                            </span>
+                                        )}
+                                        {moderatorsUsers.map((u: any) => (
+                                            <UserChip
+                                                key={u._id}
+                                                user={u}
+                                                badge="Moderator"
+                                                badgeColor="emerald"
+                                                link
+                                                canRemove={
+                                                    canManageModerators &&
+                                                    u._id !== ownerUser?._id
+                                                }
+                                                onRemove={() =>
+                                                    handleRemoveMemberCompletely(u._id)
+                                                }
+                                                extraActions={
+                                                    canManageModerators &&
+                                                    u._id !== ownerUser?._id && (
+                                                        <button
+                                                            type="button"
+                                                            className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:underline"
+                                                            onClick={() =>
+                                                                handleRemoveModerator(u._id)
+                                                            }
+                                                        >
+                                                            Remove moderator
+                                                        </button>
+                                                    )
+                                                }
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Participants */}
+                                <div className="space-y-3">
+                                    <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                        Participants
+                                    </Typography>
+
+                                    {canModerate && (
+                                        <div className="max-w-xl">
+                                            <DriverCombobox
+                                                id="add-participants"
+                                                mode="multi"
+                                                label="Add participants"
+                                                placeholder="Select drivers to add"
+                                                values={newParticipants}
+                                                onChange={(drivers) =>
+                                                    setNewParticipants(
+                                                        drivers.filter(
+                                                            (d) =>
+                                                                !existingMemberIds.has(d.id),
+                                                        ),
+                                                    )
+                                                }
+                                                actionLabel="Add selected"
+                                                actionHint="Existing members are ignored."
+                                                actionDisabled={
+                                                    groupLoading || participantsLoading
+                                                }
+                                                onAction={handleAddParticipants}
+                                            />
+                                        </div>
                                     )}
-                                    {participantsUsers.map((u: any) => (
-                                        <UserChip
-                                            key={u._id}
-                                            user={u}
-                                            link
-                                            canRemove={
-                                                canManageParticipants &&
-                                                u._id !== ownerUser?._id
-                                            }
-                                            onRemove={() =>
-                                                handleRemoveParticipant(u._id)
-                                            }
-                                            extraActions={
-                                                canManageModerators &&
-                                                u._id !== ownerUser?._id &&
-                                                !moderatorsUsers.some(
-                                                    (m: any) => m._id === u._id,
-                                                ) && (
-                                                    <button
-                                                        type="button"
-                                                        className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:underline"
-                                                        onClick={() =>
-                                                            handleAddModerator(u._id)
-                                                        }
-                                                    >
-                                                        <Crown className="w-3 h-3" />
-                                                        Make moderator
-                                                    </button>
-                                                )
-                                            }
-                                        />
-                                    ))}
+
+                                    <div className="flex flex-col gap-2">
+                                        {participantsUsers.length === 0 && (
+                                            <span className="text-sm text-gray-600">
+                                                No participants.
+                                            </span>
+                                        )}
+                                        {participantsUsers.map((u: any) => (
+                                            <UserChip
+                                                key={u._id}
+                                                user={u}
+                                                link
+                                                canRemove={
+                                                    canManageParticipants &&
+                                                    u._id !== ownerUser?._id
+                                                }
+                                                onRemove={() =>
+                                                    handleRemoveParticipant(u._id)
+                                                }
+                                                extraActions={
+                                                    canManageModerators &&
+                                                    u._id !== ownerUser?._id &&
+                                                    !moderatorsUsers.some(
+                                                        (m: any) => m._id === u._id,
+                                                    ) && (
+                                                        <button
+                                                            type="button"
+                                                            className="inline-flex items-center gap-1 text-[11px] text-indigo-600 hover:underline"
+                                                            onClick={() =>
+                                                                handleAddModerator(u._id)
+                                                            }
+                                                        >
+                                                            <Crown className="w-3 h-3" />
+                                                            Make moderator
+                                                        </button>
+                                                    )
+                                                }
+                                            />
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
-                        </CardBody>
-                    </Card>
+                        </AccordionItem>
 
-                    {/* Rides / activity + shares */}
-                    {dashboard && (
-                        <Card variant="elevated">
-                            <CardBody className="p-4 sm:p-6 space-y-4">
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                        <Activity className="w-4 h-4 text-indigo-600" />
+                        {/* Rides / activity accordion item */}
+                        {dashboard && (
+                            <AccordionItem
+                                id="group-rides"
+                                title="Group rides & shares"
+                                icon={<Activity className="w-4 h-4 text-indigo-600" />}
+                                defaultOpen
+                            >
+                                <div className="space-y-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                         <Typography className="text-sm font-semibold text-gray-900">
                                             Group rides
                                         </Typography>
+                                        <span className="text-xs text-gray-500">
+                                            Drivers: {dashboard.drivers?.length ?? 0}
+                                        </span>
                                     </div>
-                                    <span className="text-xs text-gray-500">
-                                        Drivers: {dashboard.drivers?.length ?? 0}
-                                    </span>
+
+                                    {/* Stats */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                                        <StatBox
+                                            label="Active assigned"
+                                            value={
+                                                dashboard.rides?.activeAssigned?.length ??
+                                                0
+                                            }
+                                        />
+                                        <StatBox
+                                            label="Active unassigned"
+                                            value={
+                                                dashboard.rides?.activeUnassigned
+                                                    ?.length ?? 0
+                                            }
+                                        />
+                                        <StatBox
+                                            label="Completed"
+                                            value={
+                                                dashboard.rides?.history?.length ?? 0
+                                            }
+                                        />
+                                    </div>
+
+                                    {/* Active shared rides – uses SharedRideRequestCard */}
+                                    {activeShares.length > 0 && (
+                                        <SectionBlock
+                                            title="Active shared rides"
+                                            count={activeShares.length}
+                                        >
+                                            <div className="space-y-2">
+                                                {activeShares.map((s: any) => {
+                                                    const ride = s.ride || {};
+                                                    const item = {
+                                                        ride: {
+                                                            _id: String(
+                                                                ride._id || s.rideId,
+                                                            ),
+                                                            from: String(
+                                                                ride.from ?? "",
+                                                            ),
+                                                            to: String(ride.to ?? ""),
+                                                            datetime:
+                                                                ride.datetime ||
+                                                                ride.dateTime ||
+                                                                ride.when ||
+                                                                s.createdAt,
+                                                        },
+                                                        shareId: String(s._id),
+                                                        visibility: s.visibility,
+                                                        maxClaims: s.maxClaims,
+                                                        expiresAt: s.expiresAt,
+                                                    };
+                                                    return (
+                                                        <SharedRideRequestCard
+                                                            key={String(s._id)}
+                                                            item={item as any}
+                                                            context="available"
+                                                            onAfterRequest={async () => {
+                                                                await mutateDashboard();
+                                                            }}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                        </SectionBlock>
+                                    )}
+
+                                    {/* Active rides */}
+                                    {activeRides.length > 0 && (
+                                        <SectionBlock
+                                            title="Active rides"
+                                            count={activeRides.length}
+                                        >
+                                            <div className="space-y-2">
+                                                {activeRides.map((r: any) => (
+                                                    <RideSummaryCard
+                                                        key={String(r._id)}
+                                                        ride={r}
+                                                        variant="accordion"
+                                                        defaultExpanded={false}
+                                                        detailsHref={`/rides/${r._id}`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </SectionBlock>
+                                    )}
+
+                                    {/* Completed rides */}
+                                    {completedRides.length > 0 && (
+                                        <SectionBlock
+                                            title="Recent completed rides"
+                                            count={Math.min(
+                                                5,
+                                                completedRides.length,
+                                            )}
+                                        >
+                                            <div className="space-y-2">
+                                                {completedRides
+                                                    .slice(0, 5)
+                                                    .map((r: any) => (
+                                                        <RideSummaryCard
+                                                            key={String(r._id)}
+                                                            ride={r}
+                                                            variant="accordion"
+                                                            defaultExpanded={false}
+                                                            detailsHref={`/rides/${r._id}`}
+                                                        />
+                                                    ))}
+                                            </div>
+                                        </SectionBlock>
+                                    )}
+
+                                    {/* Share history – keep compact list */}
+                                    {historicalShares.length > 0 && (
+                                        <SectionBlock
+                                            title="Ride share history"
+                                            count={historicalShares.length}
+                                        >
+                                            <div className="space-y-1.5">
+                                                {historicalShares
+                                                    .slice(0, 20)
+                                                    .map((s: any) =>
+                                                        renderShareRow({
+                                                            share: s,
+                                                            router,
+                                                            groupId: String(
+                                                                group._id,
+                                                            ),
+                                                            driverMap,
+                                                            rideRequests,
+                                                            showRequestButton: false,
+                                                        }),
+                                                    )}
+                                            </div>
+                                        </SectionBlock>
+                                    )}
                                 </div>
+                            </AccordionItem>
+                        )}
+                    </div>
 
-                                {/* Stats */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                                    <StatBox
-                                        label="Active assigned"
-                                        value={dashboard.rides.activeAssigned.length}
-                                    />
-                                    <StatBox
-                                        label="Active unassigned"
-                                        value={dashboard.rides.activeUnassigned.length}
-                                    />
-                                    <StatBox
-                                        label="Completed"
-                                        value={dashboard.rides.history.length}
-                                    />
-                                </div>
-
-                                {/* Active rides with RideSummaryCard */}
-                                {activeRides.length > 0 && (
-                                    <div className="space-y-2 pt-2 border-t border-gray-100">
-                                        <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                            Active rides
-                                        </Typography>
-                                        <div className="space-y-2">
-                                            {activeRides.map((r: any) => (
-                                                <RideSummaryCard
-                                                    key={String(r._id)}
-                                                    ride={r}
-                                                    variant="accordion"
-                                                    defaultExpanded={false}
-                                                    detailsHref={`/rides/${r._id}`}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Completed rides with RideSummaryCard (recent) */}
-                                {completedRides.length > 0 && (
-                                    <div className="space-y-2 pt-2 border-t border-gray-100">
-                                        <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                            Recent completed rides
-                                        </Typography>
-                                        <div className="space-y-2">
-                                            {completedRides.slice(0, 5).map((r: any) => (
-                                                <RideSummaryCard
-                                                    key={String(r._id)}
-                                                    ride={r}
-                                                    variant="accordion"
-                                                    defaultExpanded={false}
-                                                    detailsHref={`/rides/${r._id}`}
-                                                    hideActions={false}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Ride shares history with actions */}
-                                {shares.length > 0 && (
-                                    <div className="space-y-2 pt-2 border-t border-gray-100">
-                                        <Typography className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                            Ride shares history
-                                        </Typography>
-                                        <div className="space-y-1.5">
-                                            {shares.slice(0, 10).map((s: any) => {
-                                                const ride = s.ride;
-                                                const from = ride?.from
-                                                    ? String(ride.from)
-                                                    : "From ?";
-                                                const to = ride?.to
-                                                    ? String(ride.to)
-                                                    : "To ?";
-                                                const sharedBy =
-                                                    s.sharedBy?.name ||
-                                                    s.sharedBy?.email ||
-                                                    (s.sharedBy
-                                                        ? `User ${String(
-                                                            s.sharedBy._id || s.sharedBy,
-                                                        ).slice(-6)}`
-                                                        : "Unknown");
-                                                const sharedAt = s.createdAt
-                                                    ? dt(s.createdAt)
-                                                    : undefined;
-                                                const isActiveShare =
-                                                    s.status === "active";
-
-                                                return (
-                                                    <div
-                                                        key={String(s._id)}
-                                                        className="flex flex-col gap-1.5 rounded-md border border-gray-200 bg-white p-2 text-xs"
-                                                    >
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <div className="min-w-0">
-                                                                <div className="text-gray-900 truncate">
-                                                                    {from} → {to}
-                                                                </div>
-                                                                <div className="text-[11px] text-gray-500 truncate">
-                                                                    Shared by {sharedBy}
-                                                                    {sharedAt &&
-                                                                        ` · ${sharedAt}`}
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 items-end sm:items-center">
-                                                                <span
-                                                                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border ${
-                                                                        isActiveShare
-                                                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                                                            : "bg-gray-50 text-gray-600 border-gray-200"
-                                                                    }`}
-                                                                >
-                                                                    {s.status || "unknown"}
-                                                                </span>
-                                                                {ride && (
-                                                                    <Button
-                                                                        size="xs"
-                                                                        variant="outline"
-                                                                        onClick={() =>
-                                                                            router.push(
-                                                                                `/rides/${ride._id}`,
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        View ride
-                                                                    </Button>
-                                                                )}
-                                                                {ride && isActiveShare && (
-                                                                    <Button
-                                                                        size="xs"
-                                                                        onClick={() =>
-                                                                            router.push(
-                                                                                `/rides/${ride._id}`,
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        Request this ride
-                                                                    </Button>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                )}
-                            </CardBody>
-                        </Card>
-                    )}
-
-                    {/* Membership actions – only show if there is something actionable */}
+                    {/* Membership actions */}
                     {(!isOwner || !isMember) && (
                         <Card>
                             <CardBody className="p-4 sm:p-5 space-y-3">
@@ -855,7 +894,8 @@ export default function GroupDetailsPage() {
                                     )}
                                     {!isMember && (
                                         <span className="text-xs text-gray-600">
-                                            This group is invite-only. Join with an invite link.
+                                            This group is invite-only. Join with an
+                                            invite link.
                                         </span>
                                     )}
                                 </div>
@@ -869,7 +909,7 @@ export default function GroupDetailsPage() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Small helpers                                                              */
+/* Helpers                                                                    */
 /* -------------------------------------------------------------------------- */
 
 function formatGroupType(t: GroupType | undefined): string {
@@ -890,14 +930,6 @@ function formatGroupType(t: GroupType | undefined): string {
         default:
             return t;
     }
-}
-
-function inputClass() {
-    return [
-        "w-full rounded-lg border px-3 py-2.5 text-sm sm:text-base",
-        "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500",
-        "border-gray-300",
-    ].join(" ");
 }
 
 function MetaRow({ label, value }: { label: string; value: string }) {
@@ -937,56 +969,247 @@ function UserChip({
                       onRemove,
                       extraActions,
                   }: UserChipProps) {
-    const displayName =
-        user.name || user.email || `User ${user._id.slice(-6)}`;
+    const displayName = user.name || user.email || `User ${user._id.slice(-6)}`;
 
     const badgeClass =
         badgeColor === "emerald"
             ? "bg-emerald-50 text-emerald-700 border-emerald-100"
             : "bg-indigo-50 text-indigo-700 border-indigo-100";
 
-    const content = (
-        <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-900 truncate max-w-[12rem]">
+    const nameContent = (
+        <span className="text-xs font-medium text-gray-900 break-words">
             {displayName}
         </span>
     );
 
     return (
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-xs">
-            <Users className="w-3.5 h-3.5 text-gray-500" />
-            {link ? (
-                <Link
-                    href={`/users/${user._id}`}
-                    className="hover:underline max-w-[12rem] truncate"
-                >
-                    {content}
-                </Link>
-            ) : (
-                content
-            )}
-            {user.email && (
-                <span className="text-[11px] text-gray-500 max-w-[10rem] truncate">
-                    • {user.email}
-                </span>
-            )}
-            {badge && (
-                <span
-                    className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] ${badgeClass}`}
-                >
-                    {badge}
-                </span>
-            )}
-            {canRemove && onRemove && (
+        <div className="w-full sm:max-w-xs rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs">
+            <div className="flex items-start gap-2">
+                <Users className="w-3.5 h-3.5 mt-[2px] text-gray-500 shrink-0" />
+                <div className="flex-1 min-w-0 space-y-0.5">
+                    {link ? (
+                        <Link
+                            href={`/users/${user._id}`}
+                            className="hover:underline break-words"
+                        >
+                            {nameContent}
+                        </Link>
+                    ) : (
+                        nameContent
+                    )}
+                    {user.email && (
+                        <div className="text-[11px] text-gray-500 break-all">
+                            {user.email}
+                        </div>
+                    )}
+                    {extraActions && (
+                        <div className="pt-1 border-t border-gray-100">
+                            {extraActions}
+                        </div>
+                    )}
+                </div>
+                <div className="flex flex-col items-end gap-1 ml-1">
+                    {badge && (
+                        <span
+                            className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] ${badgeClass}`}
+                        >
+                            {badge}
+                        </span>
+                    )}
+                    {canRemove && onRemove && (
+                        <button
+                            type="button"
+                            className="p-0.5 rounded hover:bg-gray-100"
+                            onClick={onRemove}
+                            aria-label={`Remove ${displayName}`}
+                        >
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+type AccordionItemProps = {
+    id: string;
+    title: string;
+    icon?: React.ReactNode;
+    defaultOpen?: boolean;
+    children: React.ReactNode;
+};
+
+function AccordionItem({
+                           id,
+                           title,
+                           icon,
+                           defaultOpen = false,
+                           children,
+                       }: AccordionItemProps) {
+    const [open, setOpen] = useState(defaultOpen);
+
+    return (
+        <div className="border border-gray-200 rounded-lg">
+            <h2 id={`accordion-heading-${id}`}>
                 <button
                     type="button"
-                    className="p-0.5 rounded hover:bg-gray-100"
-                    onClick={onRemove}
-                    aria-label={`Remove ${displayName}`}
+                    className="flex w-full items-center justify-between gap-3 p-4 sm:p-5 text-gray-900 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none"
+                    onClick={() => setOpen((v) => !v)}
+                    aria-expanded={open}
+                    aria-controls={`accordion-body-${id}`}
                 >
-                    <X className="w-3.5 h-3.5" />
+                    <span className="flex items-center gap-2">
+                        {icon}
+                        <span className="text-sm font-semibold">{title}</span>
+                    </span>
+                    <ChevronDown
+                        className={`w-4 h-4 text-gray-500 transition-transform ${
+                            open ? "rotate-180" : ""
+                        }`}
+                    />
                 </button>
-            )}
-            {extraActions}
+            </h2>
+            <div
+                id={`accordion-body-${id}`}
+                className={open ? "" : "hidden"}
+                aria-labelledby={`accordion-heading-${id}`}
+            >
+                <div className="p-4 sm:p-5 border-t border-gray-200">
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+type SectionBlockProps = {
+    title: string;
+    count?: number;
+    children: React.ReactNode;
+};
+
+function SectionBlock({ title, count, children }: SectionBlockProps) {
+    return (
+        <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs text-gray-600">
+                <span className="font-medium">{title}</span>
+                {typeof count === "number" && (
+                    <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-700">
+                        {count}
+                    </span>
+                )}
+            </div>
+            {children}
+        </div>
+    );
+}
+
+type ShareRowParams = {
+    share: any;
+    router: ReturnType<typeof useRouter>;
+    groupId: string;
+    driverMap: Record<string, any>;
+    rideRequests: any[];
+    showRequestButton: boolean;
+};
+
+function renderShareRow({
+                            share,
+                            router,
+                            groupId,
+                            driverMap,
+                            rideRequests,
+                            showRequestButton,
+                        }: ShareRowParams) {
+    const s = share;
+    const ride = s.ride;
+    const from = ride?.from ? String(ride.from) : "From ?";
+    const to = ride?.to ? String(ride.to) : "To ?";
+    const sharedBy =
+        s.sharedBy?.name ||
+        s.sharedBy?.email ||
+        (s.sharedBy
+            ? `User ${String(s.sharedBy._id || s.sharedBy).slice(-6)}`
+            : "Unknown");
+    const sharedAt = s.createdAt ? dt(s.createdAt) : undefined;
+    const isActiveShare = s.status === "active";
+
+    const requestsForRide = rideRequests.filter(
+        (r: any) => String(r.rideId) === String(s.rideId),
+    );
+    const lastRequest = requestsForRide.length
+        ? requestsForRide[requestsForRide.length - 1]
+        : null;
+    const lastRequestDriver =
+        lastRequest && lastRequest.driverId
+            ? driverMap[String(lastRequest.driverId)]
+            : null;
+
+    const requestedByText =
+        lastRequest && lastRequestDriver
+            ? `Requested by ${
+                lastRequestDriver.name ||
+                lastRequestDriver.email ||
+                `Driver ${String(lastRequestDriver._id).slice(-6)}`
+            } · ${dt(lastRequest.createdAt)}`
+            : lastRequest
+                ? `Requested · ${dt(lastRequest.createdAt)}`
+                : "No requests yet";
+
+    return (
+        <div
+            key={String(s._id)}
+            className="rounded-md border border-gray-200 bg-white p-2.5 text-xs space-y-1.5"
+        >
+            <div className="flex flex-col gap-1">
+                <div className="text-gray-900 truncate">
+                    {from} → {to}
+                </div>
+                <div className="text-[11px] text-gray-500">
+                    Shared by {sharedBy}
+                    {sharedAt && ` · ${sharedAt}`}
+                </div>
+                <div className="text-[11px] text-gray-500">
+                    {requestedByText}
+                    {requestsForRide.length > 1 &&
+                        ` · ${requestsForRide.length} requests`}
+                </div>
+            </div>
+            <div className="mt-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5">
+                <span
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium border ${
+                        isActiveShare
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-gray-50 text-gray-600 border-gray-200"
+                    }`}
+                >
+                    {s.status || "unknown"}
+                </span>
+                <div className="flex flex-wrap gap-1.5 sm:justify-end">
+                    {ride && (
+                        <Button
+                            size="xs"
+                            variant="outline"
+                            onClick={() => router.push(`/rides/${ride._id}`)}
+                        >
+                            View
+                        </Button>
+                    )}
+                    {ride && isActiveShare && showRequestButton && (
+                        <Button
+                            size="xs"
+                            onClick={() =>
+                                router.push(
+                                    `/rides/${ride._id}?fromGroup=${groupId}&shareId=${s._id}`,
+                                )
+                            }
+                        >
+                            Request
+                        </Button>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
