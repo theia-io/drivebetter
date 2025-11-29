@@ -121,3 +121,5 @@ jobs:
             docker compose pull web
             docker compose up -d --no-deps api web
             docker image prune -f
+            docker compose down nginx
+            docker compose up -d nginx
