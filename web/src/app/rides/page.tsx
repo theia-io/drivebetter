@@ -113,9 +113,9 @@ export default function RidesPage() {
                                 Browse and manage rides you work with
                             </Typography>
                         </div>
-                        <div className="shrink-0">
+                        <div className="shrink-0 p-4">
                             <Link href="/rides/new">
-                                <Button size="sm" className="inline-flex items-center gap-2">
+                                <Button size="sm" colorScheme={"success"} className="inline-flex items-center gap-2">
                                     <span className="text-sm font-semibold">+ Create ride</span>
                                 </Button>
                             </Link>

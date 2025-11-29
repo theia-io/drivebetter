@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 import ProtectedLayout from "@/components/ProtectedLayout";
@@ -11,7 +10,6 @@ import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import {
     Activity,
     ArrowLeft,
-    ChevronDown,
     Crown,
     Edit3,
     Info,
@@ -23,7 +21,7 @@ import {
 } from "lucide-react";
 
 import { useAuthStore } from "@/stores/auth";
-import {dt, inputClass} from "@/components/ui/commmon";
+import { dt, inputClass } from "@/components/ui/commmon";
 
 import {
     useGroup,
@@ -47,6 +45,8 @@ import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
 import SharedRideRequestCard from "@/components/ui/ride/SharedRideRequestCard";
 
 import type { GroupType } from "@/types/group";
+import {AccordionItem} from "@/components/ui/general/AccordionItem";
+import {UserChip} from "@/components/ui/general/UserChip";
 
 export default function GroupDetailsPage() {
     const { id } = useParams<{ id: string }>();
@@ -72,7 +72,19 @@ export default function GroupDetailsPage() {
     } = useGroupDashboard(id);
 
     const [isEditingMeta, setIsEditingMeta] = useState(false);
-    const [meta, setMeta] = useState({
+    const [meta, setMeta] = useState<{
+        name: string;
+        city: string;
+        type: GroupType | "" ;
+        visibility: string;
+        description: string;
+        rules: string;
+        tags: string;
+    }>({
+        name: "",
+        city: "",
+        type: "",
+        visibility: "",
         description: "",
         rules: "",
         tags: "",
@@ -86,6 +98,10 @@ export default function GroupDetailsPage() {
     useEffect(() => {
         if (!group) return;
         setMeta({
+            name: group.name ?? "",
+            city: group.city ?? "",
+            type: (group.type as GroupType) ?? "",
+            visibility: group.visibility ?? "",
             description: group.description ?? "",
             rules: group.rules ?? "",
             tags: Array.isArray(group.tags) ? group.tags.join(", ") : "",
@@ -248,6 +264,9 @@ export default function GroupDetailsPage() {
                 .filter(Boolean);
 
             await updateGroup(id, {
+                name: meta.name.trim() || group.name,
+                city: meta.city.trim() || undefined,
+                type: (meta.type || group.type) as GroupType,
                 description: meta.description.trim() || undefined,
                 rules: meta.rules.trim() || undefined,
                 tags: tags.length ? tags : [],
@@ -322,6 +341,15 @@ export default function GroupDetailsPage() {
             </ProtectedLayout>
         );
     }
+
+    const groupTypeOptions: { value: GroupType; label: string }[] = [
+        { value: "fleet", label: "Fleet" },
+        { value: "coop", label: "Co-op" },
+        { value: "airport", label: "Airport" },
+        { value: "city", label: "City" },
+        { value: "custom", label: "Custom" },
+        { value: "global", label: "Global" },
+    ];
 
     return (
         <ProtectedLayout>
@@ -410,38 +438,143 @@ export default function GroupDetailsPage() {
                             icon={<Info className="w-4 h-4 text-indigo-600" />}
                         >
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                                <div className="space-y-2">
-                                    <MetaRow label="Name" value={group.name} />
-                                    <MetaRow
-                                        label="Type"
-                                        value={formatGroupType(group.type)}
-                                    />
-                                    <MetaRow label="City" value={group.city || "—"} />
-                                    <MetaRow
-                                        label="Location"
-                                        value={group.location || "—"}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <MetaRow
-                                        label="Created"
-                                        value={group.createdAt ? dt(group.createdAt) : "—"}
-                                    />
-                                    <MetaRow
-                                        label="Updated"
-                                        value={group.updatedAt ? dt(group.updatedAt) : "—"}
-                                    />
-                                    <MetaRow
-                                        label="Members"
-                                        value={membersCount ? String(membersCount) : "0"}
-                                    />
-                                    <MetaRow
-                                        label="Visibility"
-                                        value={`${group.visibility}${
-                                            group.isInviteOnly ? " · invite only" : ""
-                                        }`}
-                                    />
-                                </div>
+                                {/* Left column: editable name/type/city, location readonly */}
+                                {isEditingMeta && canModerate ? (
+                                    <div className="space-y-3">
+                                        <div className="space-y-1.5">
+                                            <label className="block text-xs font-medium text-gray-600">
+                                                Name
+                                            </label>
+                                            <input
+                                                className={inputClass()}
+                                                value={meta.name}
+                                                onChange={(e) =>
+                                                    setMeta((prev) => ({
+                                                        ...prev,
+                                                        name: e.target.value,
+                                                    }))
+                                                }
+                                                placeholder="Group name"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="block text-xs font-medium text-gray-600">
+                                                Type
+                                            </label>
+                                            <select
+                                                className={inputClass()}
+                                                value={meta.type || ""}
+                                                onChange={(e) =>
+                                                    setMeta((prev) => ({
+                                                        ...prev,
+                                                        type: e.target
+                                                            .value as GroupType | "",
+                                                    }))
+                                                }
+                                            >
+                                                <option value="">
+                                                    Select type
+                                                </option>
+                                                {groupTypeOptions.map((opt) => (
+                                                    <option
+                                                        key={opt.value}
+                                                        value={opt.value}
+                                                    >
+                                                        {opt.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="block text-xs font-medium text-gray-600">
+                                                City
+                                            </label>
+                                            <input
+                                                className={inputClass()}
+                                                value={meta.city}
+                                                onChange={(e) =>
+                                                    setMeta((prev) => ({
+                                                        ...prev,
+                                                        city: e.target.value,
+                                                    }))
+                                                }
+                                                placeholder="City"
+                                            />
+                                        </div>
+                                        <MetaRow
+                                            label="Location"
+                                            value={group.location || "—"}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <MetaRow label="Name" value={group.name} />
+                                        <MetaRow
+                                            label="Type"
+                                            value={formatGroupType(group.type)}
+                                        />
+                                        <MetaRow label="City" value={group.city || "—"} />
+                                        <MetaRow
+                                            label="Location"
+                                            value={group.location || "—"}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Right column: created/updated/members + editable visibility */}
+                                {isEditingMeta && canModerate ? (
+                                    <div className="space-y-3">
+                                        <MetaRow
+                                            label="Created"
+                                            value={group.createdAt ? dt(group.createdAt) : "—"}
+                                        />
+                                        <MetaRow
+                                            label="Updated"
+                                            value={group.updatedAt ? dt(group.updatedAt) : "—"}
+                                        />
+                                        <MetaRow
+                                            label="Members"
+                                            value={membersCount ? String(membersCount) : "0"}
+                                        />
+                                        <div className="space-y-1.5">
+                                            <label className="block text-xs font-medium text-gray-600">
+                                                Visibility
+                                            </label>
+                                            <input
+                                                className={inputClass()}
+                                                value={meta.visibility}
+                                                onChange={(e) =>
+                                                    setMeta((prev) => ({
+                                                        ...prev,
+                                                        visibility: e.target.value,
+                                                    }))
+                                                }
+                                                placeholder="Visibility, e.g. public / private"
+                                            />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2">
+                                        <MetaRow
+                                            label="Created"
+                                            value={group.createdAt ? dt(group.createdAt) : "—"}
+                                        />
+                                        <MetaRow
+                                            label="Updated"
+                                            value={group.updatedAt ? dt(group.updatedAt) : "—"}
+                                        />
+                                        <MetaRow
+                                            label="Members"
+                                            value={membersCount ? String(membersCount) : "0"}
+                                        />
+                                        <MetaRow
+                                            label="Visibility"
+                                            value={`${group.visibility}${
+                                                group.isInviteOnly ? " · invite only" : ""
+                                            }`}
+                                        />
+                                    </div>
+                                )}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 pt-3 border-t border-gray-100">
@@ -549,6 +682,10 @@ export default function GroupDetailsPage() {
                                             setIsEditingMeta(false);
                                             if (group) {
                                                 setMeta({
+                                                    name: group.name ?? "",
+                                                    city: group.city ?? "",
+                                                    type: (group.type as GroupType) ?? "",
+                                                    visibility: group.visibility ?? "",
                                                     description: group.description ?? "",
                                                     rules: group.rules ?? "",
                                                     tags: Array.isArray(group.tags)
@@ -765,31 +902,40 @@ export default function GroupDetailsPage() {
                                                 {activeShares.map((s: any) => {
                                                     const ride = s.ride || {};
 
-                                                    // find *this driver’s* latest claim for this ride/share
+                                                    // this driver's latest claim for this ride
                                                     const myClaimForShare = userId
                                                         ? rideRequests
                                                             .filter((r: any) => {
                                                                 const sameRide =
-                                                                    String(r.rideId) === String(s.rideId ?? ride._id);
+                                                                    String(r.rideId) ===
+                                                                    String(
+                                                                        s.rideId ?? ride._id,
+                                                                    );
                                                                 const sameDriver =
-                                                                    String(r.driverId) === String(userId);
-                                                                // optional: if your model has shareId, tighten filter:
-                                                                // const sameShare = !r.shareId || String(r.shareId) === String(s._id);
-                                                                // return sameRide && sameDriver && sameShare;
+                                                                    String(r.driverId) ===
+                                                                    String(userId);
                                                                 return sameRide && sameDriver;
                                                             })
                                                             .sort(
                                                                 (a: any, b: any) =>
-                                                                    new Date(a.createdAt).getTime() -
-                                                                    new Date(b.createdAt).getTime(),
+                                                                    new Date(
+                                                                        a.createdAt,
+                                                                    ).getTime() -
+                                                                    new Date(
+                                                                        b.createdAt,
+                                                                    ).getTime(),
                                                             )
                                                             .at(-1)
                                                         : null;
 
                                                     const item = {
                                                         ride: {
-                                                            _id: String(ride._id || s.rideId),
-                                                            from: String(ride.from ?? ""),
+                                                            _id: String(
+                                                                ride._id || s.rideId,
+                                                            ),
+                                                            from: String(
+                                                                ride.from ?? "",
+                                                            ),
                                                             to: String(ride.to ?? ""),
                                                             datetime:
                                                                 ride.datetime ||
@@ -804,7 +950,8 @@ export default function GroupDetailsPage() {
                                                         myClaim: myClaimForShare
                                                             ? {
                                                                 status: myClaimForShare.status,
-                                                                createdAt: myClaimForShare.createdAt,
+                                                                createdAt:
+                                                                myClaimForShare.createdAt,
                                                             }
                                                             : undefined,
                                                     };
@@ -823,7 +970,6 @@ export default function GroupDetailsPage() {
                                             </div>
                                         </SectionBlock>
                                     )}
-
 
                                     {/* Active rides */}
                                     {activeRides.length > 0 && (
@@ -870,7 +1016,7 @@ export default function GroupDetailsPage() {
                                         </SectionBlock>
                                     )}
 
-                                    {/* Share history – keep compact list */}
+                                    {/* Share history – compact list */}
                                     {historicalShares.length > 0 && (
                                         <SectionBlock
                                             title="Ride share history"
@@ -972,139 +1118,6 @@ function StatBox({ label, value }: { label: string; value: number }) {
         <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
             <div className="text-[11px] text-gray-500">{label}</div>
             <div className="text-sm font-semibold text-gray-900">{value}</div>
-        </div>
-    );
-}
-
-type UserChipProps = {
-    user: { _id: string; name?: string; email?: string };
-    badge?: string;
-    badgeColor?: "indigo" | "emerald";
-    link?: boolean;
-    canRemove?: boolean;
-    onRemove?: () => void;
-    extraActions?: React.ReactNode;
-};
-
-function UserChip({
-                      user,
-                      badge,
-                      badgeColor = "indigo",
-                      link,
-                      canRemove,
-                      onRemove,
-                      extraActions,
-                  }: UserChipProps) {
-    const displayName = user.name || user.email || `User ${user._id.slice(-6)}`;
-
-    const badgeClass =
-        badgeColor === "emerald"
-            ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-            : "bg-indigo-50 text-indigo-700 border-indigo-100";
-
-    const nameContent = (
-        <span className="text-xs font-medium text-gray-900 break-words">
-            {displayName}
-        </span>
-    );
-
-    return (
-        <div className="w-full sm:max-w-xs rounded-lg border border-gray-200 bg-white px-2.5 py-2 text-xs">
-            <div className="flex items-start gap-2">
-                <Users className="w-3.5 h-3.5 mt-[2px] text-gray-500 shrink-0" />
-                <div className="flex-1 min-w-0 space-y-0.5">
-                    {link ? (
-                        <Link
-                            href={`/users/${user._id}`}
-                            className="hover:underline break-words"
-                        >
-                            {nameContent}
-                        </Link>
-                    ) : (
-                        nameContent
-                    )}
-                    {user.email && (
-                        <div className="text-[11px] text-gray-500 break-all">
-                            {user.email}
-                        </div>
-                    )}
-                    {extraActions && (
-                        <div className="pt-1 border-t border-gray-100">
-                            {extraActions}
-                        </div>
-                    )}
-                </div>
-                <div className="flex flex-col items-end gap-1 ml-1">
-                    {badge && (
-                        <span
-                            className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] ${badgeClass}`}
-                        >
-                            {badge}
-                        </span>
-                    )}
-                    {canRemove && onRemove && (
-                        <button
-                            type="button"
-                            className="p-0.5 rounded hover:bg-gray-100"
-                            onClick={onRemove}
-                            aria-label={`Remove ${displayName}`}
-                        >
-                            <X className="w-3.5 h-3.5" />
-                        </button>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-type AccordionItemProps = {
-    id: string;
-    title: string;
-    icon?: React.ReactNode;
-    defaultOpen?: boolean;
-    children: React.ReactNode;
-};
-
-function AccordionItem({
-                           id,
-                           title,
-                           icon,
-                           defaultOpen = false,
-                           children,
-                       }: AccordionItemProps) {
-    const [open, setOpen] = useState(defaultOpen);
-
-    return (
-        <div className="border border-gray-200 rounded-lg">
-            <h2 id={`accordion-heading-${id}`}>
-                <button
-                    type="button"
-                    className="flex w-full items-center justify-between gap-3 p-4 sm:p-5 text-gray-900 text-left bg-gray-50 hover:bg-gray-100 focus:outline-none"
-                    onClick={() => setOpen((v) => !v)}
-                    aria-expanded={open}
-                    aria-controls={`accordion-body-${id}`}
-                >
-                    <span className="flex items-center gap-2">
-                        {icon}
-                        <span className="text-sm font-semibold">{title}</span>
-                    </span>
-                    <ChevronDown
-                        className={`w-4 h-4 text-gray-500 transition-transform ${
-                            open ? "rotate-180" : ""
-                        }`}
-                    />
-                </button>
-            </h2>
-            <div
-                id={`accordion-body-${id}`}
-                className={open ? "" : "hidden"}
-                aria-labelledby={`accordion-heading-${id}`}
-            >
-                <div className="p-4 sm:p-5 border-t border-gray-200">
-                    {children}
-                </div>
-            </div>
         </div>
     );
 }
