@@ -1,10 +1,10 @@
 "use client";
 
-import AppVersion from "@/containers/meta-info/app-version";
+import AppVersion from "@/components/meta-info/app-version";
 import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import Navigation from "../containers/navigation/Navigation";
+import Navigation from "./navigation/Navigation";
 
 interface ProtectedLayoutProps {
     children: React.ReactNode;

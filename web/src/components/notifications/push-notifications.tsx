@@ -2,7 +2,6 @@
 
 import { Switch } from "@/components/ui/switch";
 import { apiPost } from "@/services/http";
-import { useAuthStore } from "@/stores";
 import { cn } from "@/utils/css";
 import { collectDeviceInfo, generateDeviceName } from "@/utils/deviceInfo";
 import { useEffect, useState } from "react";
@@ -21,11 +20,8 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 export default function PushNotificationsSwitch({ className }: { className?: string }) {
-    const { user } = useAuthStore();
     const [isSupported, setIsSupported] = useState(false);
-    const [subscription, setSubscription] = useState<PushSubscription | null>(
-        user?.subscriptions?.[0] || null
-    );
+    const [subscription, setSubscription] = useState<PushSubscription | null>();
 
     useEffect(() => {
         if ("serviceWorker" in navigator && "PushManager" in window) {

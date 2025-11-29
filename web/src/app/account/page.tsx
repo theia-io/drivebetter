@@ -2,7 +2,7 @@
 
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import ProfileCard from "@/containers/profile-card/profile-card";
+import ProfileCard from "@/components/profile-card/profile-card";
 import { useAuthStore } from "@/stores/auth";
 import { Edit } from "lucide-react";
 import Link from "next/link";

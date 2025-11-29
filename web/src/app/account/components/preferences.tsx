@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { usePWA } from "@/services/pwa";
 import { useAuthStore } from "@/stores";
 import { Bell, Car } from "lucide-react";
-import PushNotificationsSwitch from "../../../containers/notifications/push-notifications";
+import PushNotificationsSwitch from "../../../components/notifications/push-notifications";
 
 export default function Preferences() {
     const { isStandalone } = usePWA();

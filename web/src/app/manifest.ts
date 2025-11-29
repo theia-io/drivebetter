@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: "BetterDriver",
-        short_name: "BetterDriver",
-        description: "BetterDriver is a platform for managing your rides and drivers",
+        name: "BetterDrive",
+        short_name: "BetterDrive",
+        description: "BetterDrive is a platform for managing your rides and drivers",
         start_url: "/",
         display: "standalone",
         background_color: "#ffffff",
