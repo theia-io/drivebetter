@@ -506,40 +506,48 @@ export default function RideDetailsPage() {
                                         <span className="font-medium mr-1">Distance:</span>
                                         {km(ride.distance)}
                                     </div>
-                                    <div className="flex items-center text-sm text-gray-700">
-                                        <User className="w-4 h-4 mr-2 text-gray-400" />
-                                        <span className="font-medium mr-1">Assigned driver:</span>
-                                        {ride.assignedDriverId ? (
-                                            <Link
-                                                href={`/users/${ride.assignedDriverId}`}
-                                                className="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/20 hover:bg-indigo-100 transition-colors truncate"
-                                            >
-                                                <span className="truncate">
-                                                    {driver?.name || "View driver"}
-                                                </span>
-                                                {driver?.email ? (
-                                                    <span className="ml-1 text-gray-600/80">
-                                                        {" "}
-                                                        • {driver.email}
-                                                    </span>
-                                                ) : null}
-                                            </Link>
-                                        ) : (
-                                            "—"
-                                        )}
-                                    </div>
+                                    <div className="space-y-1 text-sm text-gray-700">
+                                        <div className="flex items-center gap-2">
+                                            <User className="w-4 h-4 text-gray-400" />
+                                            <span className="font-medium">Assigned driver</span>
 
-                                    {ride.status === "unassigned" && canManage && (
-                                        <div className="pt-1">
-                                            <AssignDriverSelect
-                                                rideId={ride._id}
-                                                currentDriverId={ride.assignedDriverId || undefined}
-                                                onAssigned={() => {
-                                                    mutate();
-                                                }}
-                                            />
+                                            {ride.assignedDriverId && (
+                                                <Link
+                                                    href={`/users/${ride.assignedDriverId}`}
+                                                    className="ml-1 inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/20 hover:bg-indigo-100 transition-colors truncate"
+                                                >
+                <span className="truncate">
+                    {driver?.name || "View driver"}
+                </span>
+                                                    {driver?.email && (
+                                                        <span className="ml-1 text-gray-600/80">
+                        • {driver.email}
+                    </span>
+                                                    )}
+                                                </Link>
+                                            )}
                                         </div>
-                                    )}
+
+                                        {ride.status === "unassigned" && canManage && (
+                                            <div className="pl-6 w-full sm:max-w-xs">
+                                                <AssignDriverSelect
+                                                    rideId={ride._id}
+                                                    currentDriverId={ride.assignedDriverId || undefined}
+                                                    label={ride.assignedDriverId ? "Change driver" : "Choose a driver"}
+                                                    onAssigned={() => {
+                                                        mutate();
+                                                    }}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {!ride.assignedDriverId &&
+                                            (!canManage || ride.status !== "unassigned") && (
+                                                <div className="pl-6 text-xs text-gray-500">
+                                                    No driver assigned
+                                                </div>
+                                            )}
+                                    </div>
                                 </div>
                             </div>
                         </CardBody>

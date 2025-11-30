@@ -22,14 +22,14 @@ type DriverOption = {
 };
 
 export default function AssignDriverSelect({
-    rideId,
-    currentDriverId,
-    filters,
-    onAssigned,
-    className = "",
-    label = "Driver",
-    disabled,
-}: AssignDriverSelectProps) {
+                                               rideId,
+                                               currentDriverId,
+                                               filters,
+                                               onAssigned,
+                                               className = "",
+                                               label = "Driver",
+                                               disabled,
+                                           }: AssignDriverSelectProps) {
     const [drivers, setDrivers] = useState<EligibleDriver[]>([]);
     const [loading, setLoading] = useState(false);
     const [assigning, setAssigning] = useState(false);
@@ -43,6 +43,7 @@ export default function AssignDriverSelect({
 
     const rootRef = useRef<HTMLDivElement | null>(null);
 
+    // keep in sync with external currentDriverId
     useEffect(() => {
         setSelectedDriverId(currentDriverId ?? "");
         if (!currentDriverId) {
@@ -50,6 +51,7 @@ export default function AssignDriverSelect({
         }
     }, [currentDriverId]);
 
+    // close on outside click
     useEffect(() => {
         function handleClickOutside(e: MouseEvent) {
             if (!rootRef.current) return;
@@ -67,6 +69,7 @@ export default function AssignDriverSelect({
         };
     }, [open]);
 
+    // load eligible drivers
     useEffect(() => {
         if (disabled) return;
 
@@ -86,8 +89,8 @@ export default function AssignDriverSelect({
                 const list: EligibleDriver[] = Array.isArray(result)
                     ? result
                     : Array.isArray((result as any)?.data)
-                      ? (result as any).data
-                      : [];
+                        ? (result as any).data
+                        : [];
 
                 if (!cancelled) {
                     setDrivers(list);
@@ -115,13 +118,11 @@ export default function AssignDriverSelect({
             const v: any = (d as any).vehicle || {};
             const user = (d as any).user || {};
 
-            // main text: name / full name / fallback to id
             const main =
                 (user.name as string) ||
                 [user.firstName, user.lastName].filter(Boolean).join(" ") ||
                 ((d as any).userId as string);
 
-            // helper text: type, car, plate, rating
             const helperParts: string[] = [];
 
             if (v.type) helperParts.push(String(v.type).toUpperCase());
@@ -163,6 +164,7 @@ export default function AssignDriverSelect({
         return options.find((o) => o.id === selectedDriverId) || null;
     }, [options, selectedDriverId]);
 
+    // when opening, pre-select current driver
     useEffect(() => {
         if (!open) return;
         setPendingDriverId((prev) => prev || selectedDriverId || null);
@@ -191,13 +193,15 @@ export default function AssignDriverSelect({
     return (
         <div
             ref={rootRef}
-            className={["relative flex items-start gap-2", className].join(" ")}
+            className={[
+                "relative flex flex-col sm:flex-row items-stretch sm:items-start gap-1.5 sm:gap-2",
+                className,
+            ].join(" ")}
         >
-            <div className="flex h-10 items-center gap-1">
-                <span className="inline-flex items-center gap-1 text-xs sm:text-sm text-gray-700">
-                    <User className="h-3 w-3 text-gray-500" />
-                    {label}
-                </span>
+            {/* Label row – stacked on mobile, inline on desktop */}
+            <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-700">
+                {/*<User className="h-3 w-3 text-gray-500" />*/}
+                {/*<span>{label}</span>*/}
                 {loading && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
             </div>
 
@@ -215,7 +219,9 @@ export default function AssignDriverSelect({
                     ].join(" ")}
                 >
                     <span className="flex min-w-0 flex-col text-left">
-                        <span className="truncate">{selectedOption?.main || "Select driver"}</span>
+                        <span className="truncate">
+                            {selectedOption?.main || "Select driver"}
+                        </span>
                         {selectedOption?.helper && (
                             <span className="truncate text-[11px] text-gray-500">
                                 {selectedOption.helper}
@@ -226,7 +232,13 @@ export default function AssignDriverSelect({
                 </button>
 
                 {open && (
-                    <div className="absolute z-[1100] mt-2 w-72 origin-top-right rounded-lg border border-gray-100 bg-white shadow-lg">
+                    <div
+                        className={[
+                            // full-width under trigger on mobile, constrained on larger screens
+                            "absolute left-0 right-0 z-40 mt-2 w-full sm:max-w-md",
+                            "origin-top rounded-lg border border-gray-100 bg-white shadow-lg",
+                        ].join(" ")}
+                    >
                         {/* Search bar */}
                         <div className="border-b border-gray-100 p-3">
                             <label htmlFor={`driver-search-${rideId}`} className="sr-only">
@@ -287,14 +299,8 @@ export default function AssignDriverSelect({
                             })}
                         </div>
 
-                        {/* Footer with helper text + full-width Assign button */}
-                        <div className="border-t border-gray-100 px-3 py-2 space-y-2">
-                            <div className="text-[11px] text-gray-500">
-                                {pendingDriverId
-                                    ? "Driver selected. Click Assign to confirm."
-                                    : "Select a driver to assign."}
-                            </div>
-
+                        {/* Footer with full-width Assign button (no extra helper text) */}
+                        <div className="border-t border-gray-100 px-3 py-2">
                             <button
                                 type="button"
                                 onClick={handleAssign}
@@ -306,7 +312,9 @@ export default function AssignDriverSelect({
                                         : "bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500",
                                 ].join(" ")}
                             >
-                                {assigning && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {assigning && (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                )}
                                 Assign
                             </button>
                         </div>
