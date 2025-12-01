@@ -479,7 +479,7 @@ router.post("/register", async (req: Request, res: Response) => {
  *     description: |
  *       Returns the authenticated customer's user data, customer profile,
  *       and basic info about the inviter.
- *       Requires role `client`.
+ *       Requires role `customer`.
  *     tags: [Customers]
  *     security:
  *       - bearerAuth: []
@@ -545,7 +545,7 @@ router.get("/me", requireAuth, async (req: Request, res: Response) => {
  *     summary: Update current customer basic info
  *     description: |
  *       Allows the authenticated customer to update their basic information
- *       such as name, phone, and age. Requires role `client`.
+ *       such as name, phone, and age. Requires role `customer`.
  *     tags: [Customers]
  *     security:
  *       - bearerAuth: []

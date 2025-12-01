@@ -10,7 +10,6 @@ export default function Home() {
 
     useEffect(() => {
         if (isAuthenticated) {
-            useAuthStore().user.roles.includes("customer")
             router.push("/calendar");
         } else {
             router.push("/login");
