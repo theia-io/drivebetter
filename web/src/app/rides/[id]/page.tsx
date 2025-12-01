@@ -214,7 +214,7 @@ export default function RideDetailsPage() {
                                 {canChangeStatus && (
                                     <div
                                         className={[
-                                            "inline-flex flex-col @xl:flex-row @xl:items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
+                                            "inline-flex flex-col @3xl:flex-row @xl:items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
                                             statusPillClasses,
                                         ].join(" ")}
                                     >
