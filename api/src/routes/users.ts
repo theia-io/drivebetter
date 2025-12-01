@@ -324,13 +324,13 @@ router.get("/:id([0-9a-fA-F]{24})/groups", requireAuth, async (req: Request, res
     const me = (req as any).user as { id: string; roles: string[] };
 
     const isSelf = me?.id === targetUserId;
-    const isPrivileged = me?.roles?.some((r) => r === "admin" || r === "dispatcher");
+    const isPrivileged = me?.roles?.some((r) => r === "admin" || r === "dispatcher" || r === "driver");
     if (!isSelf && !isPrivileged) {
         console.error("[getUsers/groups] Error ensuring ACL:", targetUserId, me);
         return res.status(403).json({ error: "Forbidden" });
     }
 
-    const groups = await Group.find({ members: targetUserId })
+    const groups = await Group.find({ participants: targetUserId })
         .select({
             _id: 1,
             name: 1,
