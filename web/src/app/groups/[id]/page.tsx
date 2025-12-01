@@ -121,7 +121,7 @@ export default function GroupDetailsPage() {
         () =>
             !!participants &&
             !!userId &&
-            (participants.moderators ?? []).some((m: any) => m._id === userId),
+            (participants.moderators ?? []).some((m: any) => m === userId),
         [participants, userId],
     );
 
