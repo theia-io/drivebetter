@@ -5,6 +5,8 @@ import { hashPassword } from "../lib/crypto";
 import { Types } from "mongoose";
 import { requireAuth } from "../lib/auth";
 import {Group} from "../models/group.model";
+import Ride from "../models/ride.model";
+import DriverDetails from "../models/driverDetails.model";
 
 const router = Router();
 
@@ -679,6 +681,308 @@ router.delete("/:id([0-9a-fA-F]{24})", async (req: Request, res: Response) => {
     if (!r) return res.status(404).json({ error: "User not found" });
     res.json({ ok: true });
 });
+
+/**
+ * @openapi
+ * /users/{id}/groups:
+ *   get:
+ *     summary: List groups a user belongs to
+ *     description: >
+ *       Returns groups where the user is an owner, moderator, or participant.
+ *       The caller must be the same user or have the `admin` or `dispatcher` role.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *         description: User ID
+ *     responses:
+ *       200:
+ *         description: List of groups with membership role
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   _id:          { type: string }
+ *                   name:         { type: string }
+ *                   description:  { type: string }
+ *                   type:
+ *                     type: string
+ *                     enum: ["fleet", "coop", "airport", "city", "custom", "global"]
+ *                   city:         { type: string }
+ *                   location:     { type: string }
+ *                   visibility:
+ *                     type: string
+ *                     enum: ["public", "private"]
+ *                   isInviteOnly: { type: boolean }
+ *                   tags:
+ *                     type: array
+ *                     items: { type: string }
+ *                   membershipRole:
+ *                     type: string
+ *                     enum: ["owner", "moderator", "participant"]
+ *                   createdAt:    { type: string, format: date-time }
+ *                   updatedAt:    { type: string, format: date-time }
+ *       401:
+ *         description: Unauthorized (missing/invalid token)
+ *       403:
+ *         description: Forbidden (not the same user and lacks admin/dispatcher)
+ */
+router.get(
+    "/:id([0-9a-fA-F]{24})/groups",
+    requireAuth,
+    async (req: Request, res: Response) => {
+        const targetUserId = req.params.id;
+        const me = (req as any).user as { id: string; roles: string[] };
+
+        const isSelf = me?.id === targetUserId;
+        const isPrivileged = me?.roles?.some((r) => r === "admin" || r === "dispatcher");
+        if (!isSelf && !isPrivileged) {
+            console.error("[getUsers/groups] Error ensuring ACL:", targetUserId, me);
+            return res.status(403).json({ error: "Forbidden" });
+        }
+
+        const userObjectId = new Types.ObjectId(targetUserId);
+
+        const rawGroups = await Group.find({
+            $or: [
+                { ownerId: userObjectId },
+                { moderators: userObjectId },
+                { participants: userObjectId },
+            ],
+        })
+            .select({
+                _id: 1,
+                name: 1,
+                description: 1,
+                type: 1,
+                city: 1,
+                location: 1,
+                visibility: 1,
+                isInviteOnly: 1,
+                tags: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                ownerId: 1,
+                moderators: 1,
+                participants: 1,
+            })
+            .lean();
+
+        const items = rawGroups.map((g: any) => {
+            let membershipRole: "owner" | "moderator" | "participant" = "participant";
+
+            if (g.ownerId && String(g.ownerId) === targetUserId) {
+                membershipRole = "owner";
+            } else if (
+                Array.isArray(g.moderators) &&
+                g.moderators.some((id: any) => String(id) === targetUserId)
+            ) {
+                membershipRole = "moderator";
+            }
+
+            return {
+                _id: g._id,
+                name: g.name,
+                description: g.description,
+                type: g.type,
+                city: g.city,
+                location: g.location,
+                visibility: g.visibility,
+                isInviteOnly: g.isInviteOnly,
+                tags: g.tags,
+                membershipRole,
+                createdAt: g.createdAt,
+                updatedAt: g.updatedAt,
+            };
+        });
+
+        res.json(items);
+    },
+);
+
+
+/**
+ * @openapi
+ * /users/me/stats:
+ *   get:
+ *     summary: Get aggregate account stats for the authenticated user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Aggregated stats for rides, groups, and driver profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 userId: { type: string }
+ *                 rides:
+ *                   type: object
+ *                   properties:
+ *                     createdTotal:   { type: integer }
+ *                     assignedTotal:  { type: integer }
+ *                     completedTotal: { type: integer }
+ *                 groups:
+ *                   type: object
+ *                   properties:
+ *                     ownerTotal:       { type: integer }
+ *                     moderatorTotal:   { type: integer }
+ *                     participantTotal: { type: integer }
+ *                     total:            { type: integer }
+ *                 driver:
+ *                   type: object
+ *                   nullable: true
+ *                   properties:
+ *                     ratingAvg:      { type: number }
+ *                     ratingCount:    { type: integer }
+ *                     completedRides: { type: integer }
+ *                     cancellations:  { type: integer }
+ *                     lastActiveAt:   { type: string, format: date-time, nullable: true }
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/me/stats", requireAuth, async (req: Request, res: Response) => {
+    const me = (req as any).user as { id: string; roles: string[] };
+    const userId = new Types.ObjectId(me.id);
+
+    const [
+        createdRidesTotal,
+        assignedRidesTotal,
+        completedRidesTotal,
+        ownerTotal,
+        moderatorTotal,
+        participantTotal,
+        driverDetails,
+    ] = await Promise.all([
+        Ride.countDocuments({ creatorId: userId }),
+        Ride.countDocuments({ assignedDriverId: userId }),
+        Ride.countDocuments({ assignedDriverId: userId, status: "completed" }),
+        Group.countDocuments({ ownerId: userId }),
+        Group.countDocuments({ moderators: userId }),
+        Group.countDocuments({ participants: userId }),
+        DriverDetails.findOne({ userId }).select({ stats: 1 }).lean(),
+    ]);
+
+    const groupsTotal = ownerTotal + moderatorTotal + participantTotal;
+
+    const driverStats = driverDetails?.stats
+        ? {
+            ratingAvg: driverDetails.stats.ratingAvg ?? null,
+            ratingCount: driverDetails.stats.ratingCount ?? 0,
+            completedRides: driverDetails.stats.completedRides ?? 0,
+            cancellations: driverDetails.stats.cancellations ?? 0,
+            lastActiveAt: driverDetails.stats.lastActiveAt ?? null,
+        }
+        : null;
+
+    res.json({
+        userId: me.id,
+        rides: {
+            createdRidesTotal,
+            assignedRidesTotal,
+            completedRidesTotal,
+        },
+        groups: {
+            ownerTotal,
+            moderatorTotal,
+            participantTotal,
+            total: groupsTotal,
+        },
+        driver: driverStats,
+    });
+});
+
+/**
+ * @openapi
+ * /users/me/achievements:
+ *   get:
+ *     summary: List computed achievements for the authenticated user
+ *     description: >
+ *       Returns a derived list of simple achievements based on driver stats and group membership.
+ *       This implementation is purely computed; no persistent achievement storage is used.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of achievements
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:          { type: string }
+ *                   title:       { type: string }
+ *                   description: { type: string }
+ *                   unlocked:    { type: boolean }
+ *                   progress:
+ *                     type: number
+ *                     description: Value in range [0,1] indicating progress towards unlocking
+ *       401:
+ *         description: Unauthorized
+ */
+router.get("/me/achievements", requireAuth, async (req: Request, res: Response) => {
+    const me = (req as any).user as { id: string; roles: string[] };
+    const userId = new Types.ObjectId(me.id);
+
+    const [driverDetails, groupsCount] = await Promise.all([
+        DriverDetails.findOne({ userId }).select({ stats: 1 }).lean(),
+        Group.countDocuments({
+            $or: [{ ownerId: userId }, { moderators: userId }, { participants: userId }],
+        }),
+    ]);
+
+    const stats = driverDetails?.stats || {};
+    const completedRides = stats.completedRides ?? 0;
+    const ratingAvg = stats.ratingAvg ?? 0;
+    const ratingCount = stats.ratingCount ?? 0;
+
+    const achievements = [
+        {
+            id: "first_ride",
+            title: "First Ride",
+            description: "Complete your first ride as a driver.",
+            unlocked: completedRides >= 1,
+            progress: Math.min(1, completedRides / 1),
+        },
+        {
+            id: "ten_rides",
+            title: "On the Road",
+            description: "Complete 10 rides as a driver.",
+            unlocked: completedRides >= 10,
+            progress: Math.min(1, completedRides / 10),
+        },
+        {
+            id: "five_star_driver",
+            title: "Five-Star Driver",
+            description: "Maintain a 4.8+ rating with at least 10 reviews.",
+            unlocked: ratingAvg >= 4.8 && ratingCount >= 10,
+            progress: Math.min(1, ratingCount / 10),
+        },
+        {
+            id: "group_member",
+            title: "Community Member",
+            description: "Join at least one group.",
+            unlocked: groupsCount >= 1,
+            progress: Math.min(1, groupsCount / 1),
+        },
+    ];
+
+    res.json(achievements);
+});
+
+
 
 export default router;
 

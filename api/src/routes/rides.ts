@@ -1513,6 +1513,104 @@ router.get("/my-created", requireAuth, async (req: Request, res: Response) => {
 
 /**
  * @openapi
+ * /rides/my-assigned/stats:
+ *   get:
+ *     summary: Get aggregate stats for rides assigned to the authenticated driver
+ *     description: >
+ *       Returns aggregate counts for rides assigned to the current driver, optionally
+ *       filtered by datetime range. Useful for dashboards that only need totals instead
+ *       of full ride lists.
+ *     tags: [Rides]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: from
+ *         description: ISO date-time (inclusive) filter on `datetime` lower bound
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *       - in: query
+ *         name: to
+ *         description: ISO date-time (exclusive) filter on `datetime` upper bound
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *     responses:
+ *       200:
+ *         description: Aggregate stats for assigned rides
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 total:
+ *                   type: integer
+ *                   description: Total rides assigned to the driver in the given range
+ *                 byStatus:
+ *                   type: object
+ *                   additionalProperties:
+ *                     type: integer
+ *                   description: Map of RideStatus -> count
+ *       401:
+ *         description: Unauthorized
+ */
+router.get(
+    "/my-assigned/stats",
+    requireAuth,
+    async (req: Request, res: Response): Promise<void> => {
+        const me = (req as any).user as { id: string; roles: string[] };
+        const driverId = new Types.ObjectId(me.id);
+
+        const fromRaw = req.query.from as string | undefined;
+        const toRaw = req.query.to as string | undefined;
+
+        const match: any = {
+            assignedDriverId: driverId,
+        };
+
+        if (fromRaw) {
+            const from = new Date(fromRaw);
+            if (!Number.isNaN(from.getTime())) {
+                match.datetime = match.datetime || {};
+                match.datetime.$gte = from;
+            }
+        }
+
+        if (toRaw) {
+            const to = new Date(toRaw);
+            if (!Number.isNaN(to.getTime())) {
+                match.datetime = match.datetime || {};
+                match.datetime.$lt = to;
+            }
+        }
+
+        const agg = await Ride.aggregate([
+            { $match: match },
+            {
+                $group: {
+                    _id: "$status",
+                    count: { $sum: 1 },
+                },
+            },
+        ]);
+
+        const byStatus: Record<string, number> = {};
+        let total = 0;
+
+        for (const row of agg) {
+            const status = row._id as string;
+            const count = row.count as number;
+            byStatus[status] = count;
+            total += count;
+        }
+
+        res.json({ total, byStatus });
+    },
+);
+
+/**
+ * @openapi
  * /rides/my-assigned:
  *   get:
  *     summary: List rides assigned to the authenticated driver

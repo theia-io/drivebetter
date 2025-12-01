@@ -30,6 +30,16 @@ export type RidePage = {
     pages: number;
 };
 
+export type MyAssignedRideStats = {
+    total: number;
+    byStatus: Partial<Record<RideStatus, number>>;
+};
+
+export type MyAssignedRideStatsQuery = {
+    from?: string; // ISO date-time
+    to?: string;   // ISO date-time
+};
+
 const q = (params?: Record<string, any>) => {
     if (!params) return "";
     const sp = new URLSearchParams();
@@ -40,6 +50,15 @@ const q = (params?: Record<string, any>) => {
     const s = sp.toString();
     return s ? `?${s}` : "";
 };
+
+
+export const getMyAssignedRideStats = (params?: MyAssignedRideStatsQuery) =>
+    apiGet<MyAssignedRideStats>(`/rides/my-assigned/stats${q(params as any)}`);
+
+export function useMyAssignedRideStats(params?: MyAssignedRideStatsQuery) {
+    const key = `/rides/my-assigned/stats${q(params as any)}`;
+    return useSWR<MyAssignedRideStats>(key, () => getMyAssignedRideStats(params));
+}
 
 export const listMyRides = () => apiGet<RidePage>(`/rides/my-assigned`);
 

@@ -47,6 +47,49 @@ export type DriverPublic = {
     roles: string[];
 };
 
+export type MembershipRole = "owner" | "moderator" | "participant";
+
+export type GroupWithMembership = Group & {
+    membershipRole: MembershipRole;
+};
+
+export type UserStatsRides = {
+    createdTotal: number;
+    assignedTotal: number;
+    completedTotal: number;
+};
+
+export type UserStatsGroups = {
+    ownerTotal: number;
+    moderatorTotal: number;
+    participantTotal: number;
+    total: number;
+};
+
+export type UserStatsDriver = {
+    ratingAvg: number | null;
+    ratingCount: number;
+    completedRides: number;
+    cancellations: number;
+    lastActiveAt: string | null;
+} | null;
+
+export type UserStats = {
+    userId: string;
+    rides: UserStatsRides;
+    groups: UserStatsGroups;
+    driver: UserStatsDriver;
+};
+
+export type Achievement = {
+    id: string;
+    title: string;
+    description: string;
+    unlocked: boolean;
+    /** 0–1 */
+    progress: number;
+};
+
 /* ------------------------------ Helpers ------------------------------ */
 
 const qs = (params?: Record<string, any>) => {
@@ -80,12 +123,27 @@ export const getDriverByIdPublic = (id: string) => apiGet<DriverPublic>(`/users/
 
 export const listAllDriversPublic = () => apiGet<DriverPublic[]>(`/users/drivers`);
 
-export const getUserGroups = (id: string) => apiGet<Group[]>(`/users/${id}/groups`);
+export const getUserGroups = (id: string) => apiGet<GroupWithMembership[]>(`/users/${id}/groups`);
 
 export const listDriversPublicBatch = (ids: string[]) =>
     apiPost<DriverPublic[]>(`/users/drivers/batch`, { ids });
 
 /* -------------------------------- Hooks ------------------------------- */
+
+export const getMyStats = () => apiGet<UserStats>("/users/me/stats");
+
+export const getMyAchievements = () =>
+    apiGet<Achievement[]>("/users/me/achievements");
+
+export function useMyStats() {
+    const key = "/users/me/stats";
+    return useSWR<UserStats>(key, () => getMyStats());
+}
+
+export function useMyAchievements() {
+    const key = "/users/me/achievements";
+    return useSWR<Achievement[]>(key, () => getMyAchievements());
+}
 
 export function useUsers(params?: UsersListQuery) {
     const key = `/users${qs(params)}`;
@@ -99,7 +157,7 @@ export function useUser(id?: string) {
 
 export function useUserGroups(id?: string) {
     const key = id ? `/users/${id}/groups` : null;
-    return useSWR<Group[]>(key, () => getUserGroups(id as string));
+    return useSWR<GroupWithMembership[]>(key, () => getUserGroups(id as string));
 }
 
 export function useDriverByIdPublic(id?: string) {
