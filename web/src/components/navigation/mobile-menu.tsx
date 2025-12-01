@@ -59,7 +59,6 @@ export default function MobileMenu({ renderNavLabel, user, logout, className }: 
                     </DrawerHeader>
 
                     {/* Create ride primary button (same style as desktop, full width) */}
-
                     <div className="px-4 pt-3 pb-2">
                         <Link href={CREATE_RIDE_ITEM.href}>
                             <Button
@@ -109,7 +108,8 @@ export default function MobileMenu({ renderNavLabel, user, logout, className }: 
 
                         <hr className="my-2 border-gray-200" />
 
-                        <DrawerClose>
+                        {/* FIX: use asChild so DrawerClose doesn't render its own <button> */}
+                        <DrawerClose asChild>
                             <Button
                                 onClick={() => {
                                     logout();
