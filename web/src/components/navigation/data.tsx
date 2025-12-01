@@ -1,4 +1,4 @@
-import { Calendar, Plus, Route, Share2, UserCheck, Users, UsersRound } from "lucide-react";
+import {BookUserIcon, Calendar, Plus, Route, Share2, UserCheck, Users, UsersRound} from "lucide-react";
 import { ReactNode } from "react";
 
 export type NavItem = {
@@ -57,11 +57,19 @@ export const USERS_ITEM: NavItem = {
     icon: <UsersRound className="h-4 w-4" />,
 };
 
+export const CUSTOMERS_ITEM: NavItem = {
+    name: "Customers",
+    href: "/customers",
+    requiredRoles: ["admin", "dispatcher", "driver"],
+    icon: <BookUserIcon className="h-4 w-4" />,
+};
+
 export const NAVIGATION_ITEMS: NavItem[] = [
     CALENDAR_ITEM,
     MY_CREATED_ITEM,
     MY_ASSIGNMENTS_ITEM,
     NEW_RIDES_ITEM,
+    CUSTOMERS_ITEM,
 ];
 
 export const getNavigationForUser = (item: NavItem, userRoles?: string[]): NavItem => {

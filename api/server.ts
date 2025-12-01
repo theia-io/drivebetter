@@ -14,7 +14,7 @@ import authRoutes from "./src/routes/auth";
 import oauth from "./src/routes/oauth";
 import groupsRoutes from "./src/routes/groups";
 import calendarRoutes from "./src/routes/calendar";
-import clientsRoutes from "./src/routes/clients";
+import customersRoutes from "./src/routes/customers";
 import pushNotificationsRoutes from "./src/routes/push-notifications";
 import healthRoutes from "./src/routes/health";
 import geoRoutes from "./src/routes/geo";
@@ -47,7 +47,7 @@ async function startExpressServer(
         server.use("/api/v1/oauth", oauth);
         server.use("/api/v1/groups", groupsRoutes);
         server.use("/api/v1/calendar", calendarRoutes);
-        server.use("/api/v1/clients", clientsRoutes);
+        server.use("/api/v1/customers", customersRoutes);
         server.use("/api/v1/push-notifications", pushNotificationsRoutes);
         server.use("/api/v1/health", healthRoutes);
         server.use("/api/v1/geo", geoRoutes);

@@ -9,7 +9,7 @@ import {
     CREATE_RIDE_ITEM,
     MY_ASSIGNMENTS_ITEM,
     MY_CREATED_ITEM,
-    NEW_RIDES_ITEM,
+    NEW_RIDES_ITEM
 } from "./data";
 import { isActive } from "./is-active";
 
