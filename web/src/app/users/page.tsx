@@ -1,7 +1,7 @@
 // app/users/page.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
@@ -20,7 +20,7 @@ const qstring = (params: Record<string, any>) => {
     return s ? `?${s}` : "";
 };
 
-export default function UsersPage() {
+function UsersPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { user } = useAuthStore();
@@ -357,4 +357,20 @@ function Th({ children, className = "" }: { children: React.ReactNode; className
 }
 function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
     return <td className={`px-4 py-3 text-sm text-gray-900 ${className}`}>{children}</td>;
+}
+
+export default function UsersPage() {
+    return (
+        <Suspense fallback={
+            <ProtectedLayout>
+                <Container className="px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center justify-center py-12">
+                        <div className="text-gray-600">Loading...</div>
+                    </div>
+                </Container>
+            </ProtectedLayout>
+        }>
+            <UsersPageContent />
+        </Suspense>
+    );
 }

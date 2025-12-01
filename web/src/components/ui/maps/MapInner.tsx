@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
 import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { useEffect } from "react";
+import { MapContainer, Marker, Polyline, TileLayer, useMap } from "react-leaflet";
 
 import marker2x from "leaflet/dist/images/marker-icon-2x.png";
 import marker from "leaflet/dist/images/marker-icon.png";
@@ -32,6 +32,8 @@ function AutoView({
 }) {
     const map = useMap();
     useEffect(() => {
+        if (!map) return;
+
         const pts: [number, number][] = [];
         if (a) pts.push([a[1], a[0]]);
         if (b) pts.push([b[1], b[0]]);
@@ -81,6 +83,9 @@ export default function MapInner({
             center={[clat, clon]}
             zoom={zoom}
             className={`${heightClass} w-full rounded-xl border`}
+            preferCanvas={true}
+            zoomControl={true}
+            scrollWheelZoom={true}
         >
             <TileLayer
                 url={tilesUrl}

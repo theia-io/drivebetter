@@ -48,7 +48,7 @@ export default function MobileMenu({ renderNavLabel, user, logout, className }: 
         <div className={cn("md:hidden", className)}>
             <Drawer>
                 <DrawerTrigger>
-                    <Menu className="h-5 w-5" />
+                    <Menu size={32} className="h-5 w-5" />
                 </DrawerTrigger>
                 <DrawerContent>
                     <DrawerHeader>

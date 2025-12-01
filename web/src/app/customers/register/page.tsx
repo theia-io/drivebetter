@@ -1,7 +1,7 @@
 // app/customers/register/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
     Mail,
@@ -31,7 +31,7 @@ type FormState = {
     age: string;
 };
 
-export default function CustomerRegisterPage() {
+function CustomerRegisterForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const codeFromQuery = searchParams.get("code") || "";
@@ -492,5 +492,17 @@ export default function CustomerRegisterPage() {
                 </main>
             </div>
         </div>
+    );
+}
+
+export default function CustomerRegisterPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-gray-600">Loading...</div>
+            </div>
+        }>
+            <CustomerRegisterForm />
+        </Suspense>
     );
 }
