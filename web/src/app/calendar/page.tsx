@@ -2,7 +2,7 @@
 
 import { addDays, addMinutes, format, getDay, parse, startOfDay, startOfWeek } from "date-fns";
 import { enGB } from "date-fns/locale/en-GB";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     dateFnsLocalizer,
     Calendar as RBCalendar,
@@ -34,6 +34,8 @@ import {
     getStatusDotColor,
     getStatusIcon,
 } from "@/types/rideStatus";
+import { useWindowSize } from "@/hooks/useWindowSize";
+import { constrainedMemory } from "process";
 
 const locales = { "en-GB": enGB };
 
@@ -306,7 +308,7 @@ const CalendarEventRenderer = ({ event }: { event: RBCEvent }) => {
 // ---------- Main component ----------
 
 export default function CalendarPage() {
-    const [view, setView] = useState<View>("week");
+    const [view, setView] = useState<View>("day");
     const [currentDate, setCurrentDate] = useState<Date>(new Date());
     const [selectedRide, setSelectedRide] = useState<Ride | null>(null);
 
@@ -314,6 +316,8 @@ export default function CalendarPage() {
     const [listModal, setListModal] = useState<ListModalState | null>(null);
     const [listModalSelectedId, setListModalSelectedId] = useState<string | null>(null);
     const [listFilterStatus, setListFilterStatus] = useState<RideStatus | "all">("all");
+
+    const { isMobile, width } = useWindowSize();
 
     const [listSort, setListSort] = useState<"timeAsc" | "timeDesc" | "status" | "amountDesc">(
         "timeAsc"
@@ -323,6 +327,11 @@ export default function CalendarPage() {
 
     // local optimistic overrides by ride id
     const [rideOverrides, setRideOverrides] = useState<Record<string, Ride>>({});
+
+    useEffect(() => {
+        console.log("isMobile", isMobile, width);
+        setView(isMobile ? "day" : "week");
+    }, [isMobile]);
 
     // merge SWR data with local overrides
     const mergedRides: Ride[] = useMemo(() => {

@@ -1,45 +1,32 @@
 // app/rides/[id]/active/page.tsx
 "use client";
 
-import {useMemo} from "react";
-import {useParams, useRouter} from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
-import {Button, Typography} from "@/components/ui";
-import {
-    ArrowLeft,
-    Calendar,
-    Clock,
-    Loader2,
-    MapPin,
-    Navigation,
-    PhoneIcon,
-} from "lucide-react";
+import { Button, Typography } from "@/components/ui";
+import { ArrowLeft, Calendar, Clock, Loader2, MapPin, Navigation, PhoneIcon } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useMemo } from "react";
 
-import {useAuthStore} from "@/stores";
-import {useRide, useSetRideStatus} from "@/stores/rides";
-import {fmtDate, fmtTime} from "@/services/convertors";
+import RideStatusStepper from "@/components/ui/ride/RideStatusStepper";
+import { fmtDate, fmtTime } from "@/services/convertors";
+import { useAuthStore } from "@/stores";
+import { useRide, useSetRideStatus } from "@/stores/rides";
 import {
     getStatusColors,
-    getStatusLabel, getStatusShortCode,
-    type RideStatus, STATUS_FLOW, STATUS_OPTIONS,
+    getStatusLabel,
+    getStatusShortCode,
+    type RideStatus
 } from "@/types/rideStatus";
-import RideStatusStepper from "@/components/ui/ride/RideStatusStepper";
 
-const ACTIVE_MODE_FLOW: RideStatus[] = [
-    "assigned",
-    "on_my_way",
-    "on_location",
-    "pob",
-    "completed",
-];
+const ACTIVE_MODE_FLOW: RideStatus[] = ["assigned", "on_my_way", "on_location", "pob", "completed"];
 
 export default function RideActivePage() {
-    const {user} = useAuthStore();
-    const {id} = useParams<{ id: string }>();
+    const { user } = useAuthStore();
+    const { id } = useParams<{ id: string }>();
     const router = useRouter();
 
-    const {data: ride, isLoading, mutate} = useRide(id);
-    const {setRideStatus, isSettingStatus} = useSetRideStatus(id);
+    const { data: ride, isLoading, mutate } = useRide(id);
+    const { setRideStatus, isSettingStatus } = useSetRideStatus(id);
 
     const isAssignedDriver = useMemo(() => {
         if (!ride || !user?._id || !ride.assignedDriverId) return false;
@@ -50,16 +37,13 @@ export default function RideActivePage() {
 
     // Active mode is only for an assigned, in-progress ride
     const isActiveModeAvailable =
-        !!ride &&
-        isAssignedDriver &&
-        ride.status !== "unassigned" &&
-        ride.status !== "completed";
+        !!ride && isAssignedDriver && ride.status !== "unassigned" && ride.status !== "completed";
 
     async function handleStatusChange(next: RideStatus) {
         if (!ride || !isActiveModeAvailable) return;
         if (next === statusValue) return;
 
-        const res = await setRideStatus({status: next});
+        const res = await setRideStatus({ status: next });
         if (res?.ok) await mutate();
     }
 
@@ -69,7 +53,7 @@ export default function RideActivePage() {
             <ProtectedLayout>
                 <div className="fixed inset-0 z-40 flex items-center justify-center bg-gray-50">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Loader2 className="w-4 h-4 animate-spin"/>
+                        <Loader2 className="w-4 h-4 animate-spin" />
                         Loading ride…
                     </div>
                 </div>
@@ -92,7 +76,7 @@ export default function RideActivePage() {
                     <Button
                         variant="outline"
                         size="sm"
-                        leftIcon={<ArrowLeft className="w-4 h-4"/>}
+                        leftIcon={<ArrowLeft className="w-4 h-4" />}
                         onClick={() => router.push(`/rides/${id}`)}
                     >
                         Back to ride details
@@ -148,7 +132,7 @@ export default function RideActivePage() {
                                         href={`tel:${ride.customer.phone}`}
                                         className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-3 py-1 text-xs font-semibold text-white shadow-sm active:scale-[0.97]"
                                     >
-                                        <PhoneIcon className="w-3.5 h-3.5"/>
+                                        <PhoneIcon className="w-3.5 h-3.5" />
                                         Call
                                     </a>
                                 )}
@@ -156,22 +140,22 @@ export default function RideActivePage() {
 
                             <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-gray-700">
                                 <span className="inline-flex items-center gap-1.5">
-                                    <Calendar className="w-4 h-4 text-gray-400"/>
+                                    <Calendar className="w-4 h-4 text-gray-400" />
                                     {fmtDate(ride.datetime)}
                                 </span>
                                 <span className="inline-flex items-center gap-1.5">
-                                    <Clock className="w-4 h-4 text-gray-400"/>
+                                    <Clock className="w-4 h-4 text-gray-400" />
                                     {fmtTime(ride.datetime)}
                                 </span>
                                 <span className="inline-flex items-center gap-1.5">
-                                    <Navigation className="w-4 h-4 text-gray-400"/>
+                                    <Navigation className="w-4 h-4 text-gray-400" />
                                     {ride.type}
                                 </span>
                             </div>
 
                             <div className="mt-2 space-y-1 text-sm text-gray-800">
                                 <div className="flex items-start gap-2">
-                                    <MapPin className="w-4 h-4 mt-0.5 text-gray-400"/>
+                                    <MapPin className="w-4 h-4 mt-0.5 text-gray-400" />
                                     <div>
                                         <div className="text-[11px] uppercase tracking-wide text-gray-500">
                                             Pickup
@@ -180,7 +164,7 @@ export default function RideActivePage() {
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-2">
-                                    <MapPin className="w-4 h-4 mt-0.5 text-gray-400"/>
+                                    <MapPin className="w-4 h-4 mt-0.5 text-gray-400" />
                                     <div>
                                         <div className="text-[11px] uppercase tracking-wide text-gray-500">
                                             Drop-off
@@ -201,7 +185,7 @@ export default function RideActivePage() {
                                     {getStatusLabel(statusValue)}
                                 </span>
                             </div>
-                            <RideStatusStepper value={statusValue}/>
+                            <RideStatusStepper value={statusValue} />
                         </div>
                     </div>
 
@@ -213,7 +197,7 @@ export default function RideActivePage() {
 
                         <div className="flex flex-col gap-2">
                             {ACTIVE_MODE_FLOW.map((status) => {
-                                const {bg, border, text} = getStatusColors(status);
+                                const { bg, border, text } = getStatusColors(status);
                                 const isCurrent = status === statusValue;
                                 const shortCode = getStatusShortCode(status);
                                 const label = getStatusLabel(status);
@@ -234,18 +218,16 @@ export default function RideActivePage() {
                                         }}
                                     >
                                         <div className="flex flex-col items-center justify-center w-full">
-                                            <span
-                                                className="text-lg sm:text-2xl font-semibold capitalize leading-tight">
-                            {label}
-                        </span>
+                                            <span className="text-lg sm:text-2xl font-semibold capitalize leading-tight">
+                                                {label}
+                                            </span>
                                             {isCurrent && (
-                                                <span
-                                                    className="mt-1 text-[11px] font-semibold uppercase tracking-wide opacity-90">
-                                Active
-                            </span>
+                                                <span className="mt-1 text-[11px] font-semibold uppercase tracking-wide opacity-90">
+                                                    Active
+                                                </span>
                                             )}
                                             {isSettingStatus && status === statusValue && (
-                                                <Loader2 className="mt-1 w-5 h-5 animate-spin"/>
+                                                <Loader2 className="mt-1 w-5 h-5 animate-spin" />
                                             )}
                                         </div>
                                     </button>
@@ -253,7 +235,6 @@ export default function RideActivePage() {
                             })}
                         </div>
                     </div>
-
                 </div>
             </div>
         </ProtectedLayout>

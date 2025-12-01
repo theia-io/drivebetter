@@ -111,6 +111,10 @@ router.post("/unsubscribe", requireAuth, async (req: Request, res: Response) => 
     const user = (req as any).user;
     const endpoint = req.body?.endpoint as string | undefined;
 
+    if (!endpoint) {
+        return res.status(400).json({ error: "Subscription endpoint is required" });
+    }
+
     const dbUser = await User.findById(user.id);
     if (!dbUser) {
         return res.status(404).json({ error: "User not found" });

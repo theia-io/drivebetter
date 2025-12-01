@@ -41,7 +41,7 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
             <Navigation />
 
             {/* reserve space: 4rem top bar, ~4rem bottom bar on mobile */}
-            <main className="max-w-7xl mx-auto pt-16 pb-16 px-4 sm:px-6 lg:px-8">
+            <main className="max-w-7xl mx-auto pt-16 pb-16 mt-4 px-4 sm:px-6 lg:px-8">
                 {children}
             </main>
 

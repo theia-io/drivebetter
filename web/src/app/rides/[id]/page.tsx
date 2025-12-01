@@ -131,7 +131,7 @@ export default function RideDetailsPage() {
     if (!ride) {
         return (
             <ProtectedLayout>
-                <Container className="px-3 sm:px-6 lg:px-8">
+                <Container className="px-3 md:px-6 lg:px-8">
                     <div className="py-8 text-sm text-gray-600">Loading…</div>
                 </Container>
             </ProtectedLayout>
@@ -180,16 +180,18 @@ export default function RideDetailsPage() {
         });
     }
 
+    console.log("ride", ride);
+
     const isActiveModeAvailable =
         isAssignedDriver && ride.status !== "unassigned" && ride.status !== "completed";
 
     // --- Ride details view ---
     return (
         <ProtectedLayout>
-            <Container className="px-3 sm:px-6 lg:px-8">
-                <div className="space-y-4 sm:space-y-6">
+            <Container className="px-3 md:px-6 lg:px-8">
+                <div className="space-y-4 md:space-y-6">
                     {/* Toolbar */}
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between @container/toolbar">
                         <div className="flex items-center gap-2 min-w-0">
                             <Button
                                 variant="outline"
@@ -201,18 +203,18 @@ export default function RideDetailsPage() {
                             </Button>
                             <Typography
                                 variant="h1"
-                                className="text-base sm:text-2xl font-bold text-gray-900 whitespace-normal break-words hyphens-auto leading-tight"
+                                className="text-base md:text-2xl font-bold text-gray-900 whitespace-normal break-words hyphens-auto leading-tight"
                             >
                                 {header}
                             </Typography>
                         </div>
 
                         {(canChangeStatus || (canManage && hasQueuedClaims)) && (
-                            <div className="flex flex-col items-start sm:items-end gap-2">
+                            <div className="flex flex-col items-start md:items-end gap-2">
                                 {canChangeStatus && (
-                                    <span
+                                    <div
                                         className={[
-                                            "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
+                                            "inline-flex flex-col @xl:flex-row @xl:items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium",
                                             statusPillClasses,
                                         ].join(" ")}
                                     >
@@ -220,7 +222,7 @@ export default function RideDetailsPage() {
                                             Status
                                         </span>
                                         <span className="capitalize">{statusLabel}</span>
-                                    </span>
+                                    </div>
                                 )}
 
                                 {canManage && hasQueuedClaims && (
@@ -246,12 +248,12 @@ export default function RideDetailsPage() {
                     {/* Status / actions card */}
                     {canChangeStatus && (
                         <Card variant="elevated">
-                            <CardBody className="p-4 sm:p-5 space-y-4">
+                            <CardBody className="p-4 md:p-5 space-y-4">
                                 <div>
                                     <Typography className="text-sm font-semibold text-gray-900">
                                         Ride status
                                     </Typography>
-                                    <p className="mt-1 text-xs sm:text-sm text-gray-600 max-w-md">
+                                    <p className="mt-1 text-xs md:text-sm text-gray-600 max-w-md">
                                         Track and update the ride lifecycle: unassigned, assigned,
                                         on my way, on location, passenger on board, clear,
                                         completed.
@@ -266,9 +268,9 @@ export default function RideDetailsPage() {
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                                     <div
-                                        className="w-full sm:w-80"
+                                        className="w-full md:w-80"
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         <RideStatusDropdown
@@ -287,7 +289,7 @@ export default function RideDetailsPage() {
                                             leftIcon={<Trash2 className="w-4 h-4" />}
                                             onClick={onDelete}
                                             disabled={isDeleting}
-                                            className="w-full sm:w-auto"
+                                            className="w-full md:w-auto"
                                         >
                                             Delete ride
                                         </Button>
@@ -296,7 +298,7 @@ export default function RideDetailsPage() {
 
                                 {/* Floating Active Ride activator (driver only) */}
                                 {isActiveModeAvailable && (
-                                    <div className="fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-40">
+                                    <div className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-40">
                                         <div className="group relative flex flex-col items-end gap-1">
                                             <button
                                                 type="button"
@@ -307,11 +309,11 @@ export default function RideDetailsPage() {
                                                 <Play className="w-7 h-7" />
                                             </button>
                                             {/* Mobile-visible text under the FAB */}
-                                            <div className="rounded-md bg-gray-900 px-2 py-1 text-[11px] text-white sm:hidden">
+                                            <div className="rounded-md bg-gray-900 px-2 py-1 text-[11px] text-white md:hidden">
                                                 Active Ride mode
                                             </div>
                                             {/* Hover label on larger screens */}
-                                            <div className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 rounded-md bg-gray-900 px-2 py-1 text-[11px] text-white opacity-0 group-hover:opacity-100 hidden sm:block">
+                                            <div className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 rounded-md bg-gray-900 px-2 py-1 text-[11px] text-white opacity-0 group-hover:opacity-100 hidden md:block">
                                                 Open Active Ride mode
                                             </div>
                                         </div>
@@ -325,7 +327,7 @@ export default function RideDetailsPage() {
                     {canManage && (
                         <div ref={requestsRef}>
                             <Card variant="elevated">
-                                <CardBody className="p-4 sm:p-6 space-y-3">
+                                <CardBody className="p-4 md:p-6 space-y-3">
                                     <div className="flex items-center gap-2">
                                         <Users className="w-4 h-4 text-indigo-600" />
                                         <Typography className="font-semibold text-gray-900">
@@ -385,7 +387,7 @@ export default function RideDetailsPage() {
                                                                     {email || "—"}
                                                                 </div>
                                                                 {c.createdAt && (
-                                                                    <div className="text-xs sm:text-sm text-gray-500 mt-1">
+                                                                    <div className="text-xs md:text-sm text-gray-500 mt-1">
                                                                         Requested{" "}
                                                                         {fmtDate(c.createdAt)} •{" "}
                                                                         {fmtTime(c.createdAt)}
@@ -455,8 +457,8 @@ export default function RideDetailsPage() {
 
                     {/* Summary */}
                     <Card variant="elevated">
-                        <CardBody className="p-4 sm:p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                        <CardBody className="p-4 md:p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                 <div className="space-y-3">
                                     <div className="flex items-center text-sm text-gray-700">
                                         <User className="w-4 h-4 mr-2 text-gray-400" />
@@ -529,7 +531,7 @@ export default function RideDetailsPage() {
                                         </div>
 
                                         {ride.status === "unassigned" && canManage && (
-                                            <div className="pl-6 w-full sm:max-w-xs">
+                                            <div className="pl-6 w-full md:max-w-xs">
                                                 <AssignDriverSelect
                                                     rideId={ride._id}
                                                     currentDriverId={ride.assignedDriverId || undefined}
@@ -556,7 +558,7 @@ export default function RideDetailsPage() {
                     {/* Shares */}
                     {canManage && (
                         <Card variant="elevated">
-                            <CardBody className="p-4 sm:p-6 space-y-3">
+                            <CardBody className="p-4 md:p-6 space-y-3">
                                 <div className="flex items-center gap-2">
                                     <Share2 className="w-4 h-4 text-indigo-600" />
                                     <Typography className="font-semibold text-gray-900">
@@ -571,9 +573,9 @@ export default function RideDetailsPage() {
                     {/* Map */}
                     {(hasA || hasB) && (
                         <Card variant="elevated">
-                            <CardBody className="p-3 sm:p-4">
+                            <CardBody className="p-3 md:p-4">
                                 <LeafletMap
-                                    heightClass="h-64 sm:h-80 z-10"
+                                    heightClass="h-64 md:h-80 z-10"
                                     markerA={
                                         hasA
                                             ? (ride!.fromLocation!.coordinates as [number, number])
@@ -601,7 +603,7 @@ export default function RideDetailsPage() {
 
                     {/* Notes + Payment flags */}
                     <Card variant="elevated">
-                        <CardBody className="p-4 sm:p-6 space-y-4">
+                        <CardBody className="p-4 md:p-6 space-y-4">
                             <div>
                                 <Typography className="text-sm font-medium text-gray-900 mb-1">
                                     Notes
@@ -610,7 +612,7 @@ export default function RideDetailsPage() {
                                     {ride.notes?.trim() || "—"}
                                 </div>
                             </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
                                 <div className="rounded-lg border border-gray-200 p-3">
                                     <div className="text-gray-500">Payment Method</div>
                                     <div className="font-medium text-gray-900">

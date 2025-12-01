@@ -2,6 +2,7 @@
 
 import { Switch } from "@/components/ui/switch";
 import { apiPost } from "@/services/http";
+import { useAuthStore } from "@/stores";
 import { cn } from "@/utils/css";
 import { collectDeviceInfo, generateDeviceName } from "@/utils/deviceInfo";
 import { useEffect, useState } from "react";
@@ -22,6 +23,8 @@ function urlBase64ToUint8Array(base64String: string) {
 export default function PushNotificationsSwitch({ className }: { className?: string }) {
     const [isSupported, setIsSupported] = useState(false);
     const [subscription, setSubscription] = useState<PushSubscription | null>();
+
+    const { fetchMe } = useAuthStore();
 
     useEffect(() => {
         if ("serviceWorker" in navigator && "PushManager" in window) {
@@ -108,6 +111,8 @@ export default function PushNotificationsSwitch({ className }: { className?: str
             // Send subscription to server
             await apiPost("/push-notifications/subscribe", pushSubscription);
             console.log("[Push Notifications] Subscription saved to server");
+
+            await fetchMe();
         } catch (error) {
             console.error("[Push Notifications] Error subscribing to push:", error);
             alert("Failed to subscribe to push notifications: " + (error as Error).message);
@@ -117,7 +122,13 @@ export default function PushNotificationsSwitch({ className }: { className?: str
     async function unsubscribeFromPush() {
         await subscription?.unsubscribe();
         setSubscription(null);
-        await apiPost("/push-notifications/unsubscribe");
+
+        const response = await apiPost("/push-notifications/unsubscribe", {
+            endpoint: subscription?.endpoint,
+        });
+        console.log("[Push Notifications] Unsubscription response:", response);
+
+        await fetchMe();
     }
 
     if (!isSupported) {
