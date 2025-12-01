@@ -209,6 +209,78 @@ router.post("/invites",
 
 /**
  * @openapi
+ * /customers/invites:
+ *   get:
+ *     summary: List customer invites created by current user
+ *     description: |
+ *       Returns invitations where `invitedBy` is the authenticated user.
+ *       Only admin/dispatcher/driver are allowed.
+ *     tags: [Customers]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of invites created by current user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   _id:        { type: string }
+ *                   email:      { type: string, format: email }
+ *                   code:       { type: string }
+ *                   status:
+ *                     type: string
+ *                     enum: [pending, used, expired]
+ *                   expiresAt:  { type: string, format: date-time, nullable: true }
+ *                   usedAt:     { type: string, format: date-time, nullable: true }
+ *                   createdAt:  { type: string, format: date-time }
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.get("/invites", requireAuth, async (req: Request, res: Response) => {
+    const me = (req as any).user as { id: string; roles: string[] };
+
+    const allowed = me?.roles?.some((r) => r === "admin" || r === "dispatcher" || r === "driver");
+    if (!allowed) {
+        return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const invites = await CustomerInvite.find({ invitedBy: me.id })
+        .sort({ createdAt: -1 })
+        .lean();
+
+    const now = Date.now();
+
+    const result = invites.map((inv) => {
+        const expired =
+            inv.expiresAt instanceof Date
+                ? inv.expiresAt.getTime() <= now
+                : false;
+
+        const status: "pending" | "used" | "expired" =
+            inv.usedBy != null ? "used" : expired ? "expired" : "pending";
+
+        return {
+            _id: String(inv._id),
+            email: inv.email,
+            code: inv.code,
+            status,
+            expiresAt: inv.expiresAt || null,
+            usedAt: inv.usedAt || null,
+            createdAt: inv.createdAt,
+        };
+    });
+
+    return res.json(result);
+});
+
+/**
+ * @openapi
  * /customers/invites/{code}:
  *   get:
  *     summary: Get customer invite metadata by code

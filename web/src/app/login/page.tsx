@@ -1,3 +1,4 @@
+// app/login/page.tsx
 "use client";
 
 import { Button, Card, CardBody, Typography } from "@/components/ui";
@@ -5,6 +6,7 @@ import { useAuthStore } from "@/stores/auth";
 import { ArrowRight, Car, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -18,8 +20,15 @@ export default function LoginPage() {
     useEffect(() => {
         (async () => {
             const resolvedUser = user || (await fetchMe());
-            if (isAuthenticated || resolvedUser) {
-                router.push("/");
+            const u: any = resolvedUser || user;
+
+            if (isAuthenticated || u) {
+                const roles: string[] = u?.roles || [];
+                if (roles.includes("client")) {
+                    router.push("/customers/account");
+                } else {
+                    router.push("/");
+                }
             }
         })();
     }, [isAuthenticated, user, router, fetchMe]);
@@ -31,7 +40,15 @@ export default function LoginPage() {
         try {
             const success = await login(email, password);
             if (success) {
-                router.push("/");
+                // Make sure we have fresh user with roles
+                const me: any = (await fetchMe()) || user;
+                const roles: string[] = me?.roles || [];
+
+                if (roles.includes("client")) {
+                    router.push("/customers/account");
+                } else {
+                    router.push("/");
+                }
             } else {
                 setError("Invalid credentials");
             }
@@ -156,12 +173,31 @@ export default function LoginPage() {
                 </Card>
 
                 {/* Footer */}
-                <div className="text-center">
-                    <Typography variant="body2" className="text-gray-500 text-xs sm:text-sm">
+                <div className="space-y-2 text-center">
+                    <Typography
+                        variant="body2"
+                        className="text-gray-500 text-xs sm:text-sm"
+                    >
                         Don&apos;t have an account?{" "}
-                        <a href="#" className="font-medium text-indigo-600 hover:text-indigo-500">
+                        <a
+                            href="#"
+                            className="font-medium text-indigo-600 hover:text-indigo-500"
+                        >
                             Contact support
                         </a>
+                    </Typography>
+
+                    <Typography
+                        variant="body2"
+                        className="text-gray-500 text-xs sm:text-sm"
+                    >
+                        Invited as a customer?{" "}
+                        <Link
+                            href="/customers/register"
+                            className="font-medium text-indigo-600 hover:text-indigo-500"
+                        >
+                            Register with your invite
+                        </Link>
                     </Typography>
                 </div>
             </div>

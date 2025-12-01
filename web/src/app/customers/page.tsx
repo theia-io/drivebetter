@@ -12,6 +12,7 @@ import {
     Car,
     Clock,
     Loader2,
+    Info,
 } from "lucide-react";
 
 import ProtectedLayout from "@/components/ProtectedLayout";
@@ -19,14 +20,24 @@ import { useAuthStore } from "@/stores/auth";
 import {
     createCustomerInvite,
     useMyCustomers,
+    useMyCustomerInvites,
     type MyCustomer,
+    type MyCustomerInvite,
 } from "@/stores/customers";
+import { Button } from "@/components/ui";
 
 type InviteFormState = {
     email: string;
     message: string;
     expiresAt: string;
 };
+
+function formatDate(iso?: string | null) {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString();
+}
 
 export default function CustomersPage() {
     const { user } = useAuthStore();
@@ -37,6 +48,13 @@ export default function CustomersPage() {
         error: customersError,
         mutate: reloadCustomers,
     } = useMyCustomers();
+
+    const {
+        data: invites,
+        isLoading: loadingInvites,
+        error: invitesError,
+        mutate: reloadInvites,
+    } = useMyCustomerInvites();
 
     const [inviteForm, setInviteForm] = useState<InviteFormState>({
         email: "",
@@ -74,13 +92,20 @@ export default function CustomersPage() {
                 message: "",
                 expiresAt: "",
             });
-            await reloadCustomers();
+            await Promise.all([reloadCustomers(), reloadInvites()]);
         } catch (err: any) {
             setInviteError(err?.message || "Failed to create invite.");
         } finally {
             setInviting(false);
         }
     }
+
+    const pendingInvites =
+        invites?.filter((i) => i.status === "pending") ?? [];
+    const usedInvites =
+        invites?.filter((i) => i.status === "used") ?? [];
+    const expiredInvites =
+        invites?.filter((i) => i.status === "expired") ?? [];
 
     return (
         <ProtectedLayout>
@@ -97,14 +122,6 @@ export default function CustomersPage() {
                                     Manage invited customers, create rides for them, and review their history.
                                 </p>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => setInviteOpen(true)}
-                                className="inline-flex items-center justify-center rounded-lg border border-sky-200 bg-white px-3 py-1.5 text-xs font-medium text-sky-800 shadow-sm hover:bg-sky-50 sm:text-sm"
-                            >
-                                <UserPlus className="mr-1.5 h-4 w-4" />
-                                Invite customer
-                            </button>
                         </div>
                     </header>
 
@@ -198,16 +215,17 @@ export default function CustomersPage() {
                                 </div>
 
                                 <div className="flex items-end justify-end">
-                                    <button
+                                    <Button
                                         type="submit"
                                         disabled={inviting}
-                                        className="inline-flex w-full items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
+                                        colorScheme="primary"
+                                        className="inline-flex w-full items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
                                     >
                                         {inviting && (
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                         )}
                                         Send invite
-                                    </button>
+                                    </Button>
                                 </div>
 
                                 {(inviteError || inviteSuccess) && (
@@ -223,6 +241,143 @@ export default function CustomersPage() {
                                     </div>
                                 )}
                             </form>
+                        )}
+                    </section>
+
+                    {/* Invites history */}
+                    <section className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50">
+                                    <Mail className="h-4 w-4 text-sky-600" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold text-gray-900">
+                                        Your invitations
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        Pending, used, and expired invites sent by{" "}
+                                        <span className="font-medium">
+                                            {user?.name || "you"}
+                                        </span>
+                                        .
+                                    </p>
+                                </div>
+                            </div>
+                            {invites && invites.length > 0 && (
+                                <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-medium text-gray-600">
+                                    {invites.length} total
+                                </span>
+                            )}
+                        </div>
+
+                        {loadingInvites && (
+                            <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-3 py-3 text-sm text-gray-600">
+                                <div className="flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                                    <span>Loading invitations…</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {invitesError && !loadingInvites && (
+                            <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm text-red-700">
+                                Failed to load invitations.
+                            </div>
+                        )}
+
+                        {!loadingInvites &&
+                            !invitesError &&
+                            (!invites || invites.length === 0) && (
+                                <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-3 py-3 text-sm text-gray-600">
+                                    No invitations yet. New invites will appear here.
+                                </div>
+                            )}
+
+                        {invites && invites.length > 0 && (
+                            <div className="space-y-2">
+                                {/* Pending on top */}
+                                {pendingInvites.length > 0 && (
+                                    <div className="rounded-2xl border border-sky-100 bg-sky-50 px-3 py-3">
+                                        <div className="flex items-center gap-2 text-xs font-semibold text-sky-900">
+                                            <Info className="h-3.5 w-3.5" />
+                                            <span>Pending</span>
+                                        </div>
+                                        <ul className="mt-2 space-y-1.5 text-xs text-gray-800">
+                                            {pendingInvites.map((i: MyCustomerInvite) => (
+                                                <li
+                                                    key={i._id}
+                                                    className="flex flex-wrap items-center justify-between gap-1"
+                                                >
+                                                    <div className="flex flex-col">
+                                                        <span className="font-medium">
+                                                            {i.email}
+                                                        </span>
+                                                        <span className="text-[11px] text-gray-500">
+                                                            Code: {i.code}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-right text-[11px] text-gray-600">
+                                                        <div>
+                                                            Created: {formatDate(i.createdAt)}
+                                                        </div>
+                                                        <div>
+                                                            Expires: {formatDate(i.expiresAt)}
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                {/* Used / expired list */}
+                                {(usedInvites.length > 0 ||
+                                    expiredInvites.length > 0) && (
+                                    <div className="rounded-2xl border border-gray-200 bg-white px-3 py-3">
+                                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-900">
+                                            <Clock className="h-3.5 w-3.5 text-gray-500" />
+                                            <span>Invite history</span>
+                                        </div>
+                                        <ul className="mt-2 space-y-1.5 text-xs text-gray-800">
+                                            {[...usedInvites, ...expiredInvites].map(
+                                                (i: MyCustomerInvite) => (
+                                                    <li
+                                                        key={i._id}
+                                                        className="flex flex-wrap items-center justify-between gap-1"
+                                                    >
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium">
+                                                                {i.email}
+                                                            </span>
+                                                            <span className="text-[11px] text-gray-500">
+                                                                Code: {i.code}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-right text-[11px] text-gray-600">
+                                                            <div>
+                                                                Status:{" "}
+                                                                <span className="font-medium">
+                                                                    {i.status}
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                Created: {formatDate(i.createdAt)}
+                                                            </div>
+                                                            {i.usedAt && (
+                                                                <div>
+                                                                    Used:{" "}
+                                                                    {formatDate(i.usedAt)}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </li>
+                                                ),
+                                            )}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </section>
 
@@ -391,14 +546,15 @@ export default function CustomersPage() {
                                                         )}`}
                                                         className="sm:flex-1"
                                                     >
-                                                        <button
+                                                        <Button
                                                             type="button"
-                                                            className="inline-flex w-full items-center justify-center rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-sky-700"
+                                                            colorScheme="success"
+                                                            className="inline-flex w-full items-center justify-center rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-sky-700"
                                                             disabled={!u}
                                                         >
                                                             <Car className="mr-1.5 h-4 w-4" />
                                                             Create ride
-                                                        </button>
+                                                        </Button>
                                                     </Link>
                                                     <Link
                                                         href={`/rides?customerId=${encodeURIComponent(
@@ -430,7 +586,12 @@ export default function CustomersPage() {
                                                     </Link>
                                                     <button
                                                         type="button"
-                                                        onClick={() => reloadCustomers()}
+                                                        onClick={() =>
+                                                            Promise.all([
+                                                                reloadCustomers(),
+                                                                reloadInvites(),
+                                                            ])
+                                                        }
                                                         className="inline-flex w-full items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 sm:flex-none sm:w-auto"
                                                     >
                                                         Refresh

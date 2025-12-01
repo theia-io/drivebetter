@@ -22,6 +22,16 @@ export interface CustomerInvite {
 
 export type CustomerInviteStatus = "pending" | "used" | "expired";
 
+export interface MyCustomerInvite {
+    _id: string;
+    email: string;
+    code: string;
+    status: CustomerInviteStatus;
+    expiresAt: string | null;
+    usedAt: string | null;
+    createdAt: string;
+}
+
 export interface CustomerInviteMeta {
     email: string;
     invitedBy: {
@@ -111,6 +121,13 @@ export const getCustomerMe = () =>
 export const updateCustomerMe = (payload: UpdateCustomerMePayload) =>
     apiPatch<CustomerMeResponse>("/customers/me", payload);
 
+export function listMyCustomerInvites() {
+    return apiGet<MyCustomerInvite[]>("/customers/invites");
+}
+
+export function useMyCustomerInvites() {
+    return useSWR<MyCustomerInvite[]>("/customers/invites", listMyCustomerInvites);
+}
 /* -------------------------------- Hooks ------------------------------- */
 
 export function useMyCustomers() {
