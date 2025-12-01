@@ -23,7 +23,9 @@ import {
 } from "@/stores/rides";
 
 function StatsNumber({ value }: { value: number | null | undefined }) {
-    if (value === null || value === undefined) return <span className="text-gray-400">—</span>;
+    if (value === null || value === undefined) {
+        return <span className="text-gray-400">—</span>;
+    }
     return <span>{value}</span>;
 }
 
@@ -440,8 +442,8 @@ export default function AccountPage() {
                     {/* Header + profile */}
                     <header className="space-y-3 rounded-2xl bg-gradient-to-r from-sky-50 to-indigo-50 p-4 sm:p-5">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <div>
-                                <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">
+                            <div className="min-w-0">
+                                <h1 className="whitespace-nowrap text-xl font-semibold leading-tight text-gray-900 sm:text-2xl">
                                     Account
                                 </h1>
                                 <p className="mt-1 text-sm text-gray-600">
