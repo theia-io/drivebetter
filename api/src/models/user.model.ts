@@ -72,7 +72,7 @@ const UserSchema = new Schema<IUser>(
 
         roles: {
             type: [String],
-            enum: ["driver", "dispatcher", "client", "admin"],
+            enum: ["driver", "dispatcher", "customer", "admin"],
             default: ["driver"],
         },
         referralCode: { type: String },

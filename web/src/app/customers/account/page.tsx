@@ -52,7 +52,7 @@ export default function CustomerAccountPage() {
                 return;
             }
             const roles: string[] = current.roles || [];
-            if (!roles.includes("client")) {
+            if (!roles.includes("customer")) {
                 router.push("/");
             }
         })();

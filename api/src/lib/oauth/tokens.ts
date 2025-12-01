@@ -5,7 +5,7 @@ const REFRESH_TTL = "30d";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev_secret";
 
-type Roles = Array<"driver" | "dispatcher" | "client" | "admin">;
+type Roles = Array<"driver" | "dispatcher" | "customer" | "admin">;
 
 export interface JwtPayload {
     sub: string;

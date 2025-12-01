@@ -24,7 +24,7 @@ export default function LoginPage() {
 
             if (isAuthenticated || u) {
                 const roles: string[] = u?.roles || [];
-                if (roles.includes("client")) {
+                if (roles.includes("customer")) {
                     router.push("/customers/account");
                 } else {
                     router.push("/");
@@ -44,7 +44,7 @@ export default function LoginPage() {
                 const me: any = (await fetchMe()) || user;
                 const roles: string[] = me?.roles || [];
 
-                if (roles.includes("client")) {
+                if (roles.includes("customer")) {
                     router.push("/customers/account");
                 } else {
                     router.push("/");

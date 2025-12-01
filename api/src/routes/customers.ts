@@ -430,7 +430,7 @@ router.post("/register", async (req: Request, res: Response) => {
             name: name.trim(),
             email: invite.email,
             phone: typeof phone === "string" ? phone.trim() : undefined,
-            roles: ["client"],
+            roles: ["customer"],
             passwordHash,
             emailVerified: true,
         });
@@ -510,7 +510,7 @@ router.post("/register", async (req: Request, res: Response) => {
 router.get("/me", requireAuth, async (req: Request, res: Response) => {
     const me = (req as any).user as { id: string; roles: string[] };
 
-    const isCustomer = me?.roles?.includes("client");
+    const isCustomer = me?.roles?.includes("customer");
     if (!isCustomer) {
         return res.status(403).json({ error: "Forbidden" });
     }
@@ -576,7 +576,7 @@ router.patch("/me", requireAuth, async (req: Request, res: Response) => {
     try {
         const me = (req as any).user as { id: string; roles: string[] };
 
-        const isCustomer = me?.roles?.includes("client");
+        const isCustomer = me?.roles?.includes("customer");
         if (!isCustomer) {
             return res.status(403).json({ error: "Forbidden" });
         }

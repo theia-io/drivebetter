@@ -5,7 +5,7 @@ import { Group, User } from "@/types";
 
 /* ------------------------------- Types ------------------------------- */
 
-export type Role = "driver" | "dispatcher" | "client" | "admin";
+export type Role = "driver" | "dispatcher" | "customer" | "admin";
 
 export type CreateUserRequest = {
     name: string;

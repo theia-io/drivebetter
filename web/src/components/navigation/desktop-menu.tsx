@@ -29,7 +29,6 @@ export default function DesktopMenu({ user, renderNavLabel, className }: Desktop
     const [moreOpen, setMoreOpen] = useState(false);
     const pathname = usePathname();
     const { width } = useWindowSize();
-    console.log(userRoles);
     const items = useMemo(
         () =>
             NAVIGATION_ITEMS.filter((item) => hasRequiredRole(userRoles, item.requiredRoles)).map(

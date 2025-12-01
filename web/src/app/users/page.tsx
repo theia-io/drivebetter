@@ -113,7 +113,7 @@ export default function UsersPage() {
                                         <option value="">All roles</option>
                                         <option value="driver">driver</option>
                                         <option value="dispatcher">dispatcher</option>
-                                        <option value="client">client</option>
+                                        <option value="customer">client</option>
                                         <option value="admin">admin</option>
                                     </select>
                                 )}

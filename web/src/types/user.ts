@@ -1,4 +1,4 @@
-export type Role = "driver" | "dispatcher" | "client" | "admin";
+export type Role = "driver" | "dispatcher" | "customer" | "admin";
 
 // TODO @todo move to a separate file and re-use on FE & BE
 export interface DeviceInfo {

@@ -1,4 +1,4 @@
-export type Role = "driver" | "dispatcher" | "client" | "admin";
+export type Role = "driver" | "dispatcher" | "customer" | "admin";
 
 export type RideType = "reservation" | "asap";
 

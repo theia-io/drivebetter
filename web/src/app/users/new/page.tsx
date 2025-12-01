@@ -293,7 +293,7 @@ export default function NewUserWithDriverDetailsPage() {
                                     <Field>
                                         <FieldLabel>Roles</FieldLabel>
                                         <div className="flex flex-wrap gap-3">
-                                            {["driver", "dispatcher", "client", "admin"].map(
+                                            {["driver", "dispatcher", "customer", "admin"].map(
                                                 (r) => (
                                                     <label
                                                         key={r}

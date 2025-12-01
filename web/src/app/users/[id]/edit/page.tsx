@@ -10,9 +10,9 @@ import { ArrowLeft, Save } from "lucide-react";
 
 import { updateUser, useUser } from "@/stores/users";
 
-type Role = "driver" | "dispatcher" | "client" | "admin";
+type Role = "driver" | "dispatcher" | "customer" | "admin";
 
-const ALL_ROLES: Role[] = ["driver", "dispatcher", "client", "admin"];
+const ALL_ROLES: Role[] = ["driver", "dispatcher", "customer", "admin"];
 
 export default function EditUserPage() {
     const { id } = useParams<{ id: string }>();

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-export type Role = "driver" | "dispatcher" | "client" | "admin";
+export type Role = "driver" | "dispatcher" | "customer" | "admin";
 
 export interface JwtPayload {
     sub: string; // user id

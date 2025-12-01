@@ -48,7 +48,7 @@ router.post("/register", async (req: Request, res: Response) => {
         name,
         email: lower,
         passwordHash,
-        roles: ["client"], // default role; adjust if needed
+        roles: ["customer"], // default role; adjust if needed
     });
 
     // create email verification token
@@ -229,7 +229,7 @@ router.post("/request-otp", async (req: Request, res: Response) => {
         user = await User.create({
             name: lower.split("@")[0],
             email: lower,
-            roles: ["client"],
+            roles: ["customer"],
         });
     }
 
