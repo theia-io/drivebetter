@@ -1,11 +1,15 @@
 import { Types } from "mongoose";
 
+export function isObjectId(v: any): boolean {
+    return v instanceof Types.ObjectId || Types.ObjectId.isValid(String(v));
+}
+
 export function normalizeId(id: any): Types.ObjectId {
     if (!id) {
         throw new Error("normalizeId: id is required");
     }
 
-    if (id instanceof Types.ObjectId) {
+    if (isObjectId(id)) {
         return id;
     }
 

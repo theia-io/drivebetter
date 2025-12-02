@@ -1,10 +1,9 @@
-import useSWR from "swr";
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut } from "@/services/http";
+import { CreateRideRequest, Ride, RideType } from "@/types";
+import { RideStatus } from "@/types/rideStatus";
+import useSWR, { mutate as globalMutate } from "swr";
 import useSWRInfinite from "swr/infinite";
 import useSWRMutation from "swr/mutation";
-import { mutate as globalMutate } from "swr";
-import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from "@/services/http";
-import { CreateRideRequest, RideType, Ride } from "@/types";
-import { RideStatus } from "@/types/rideStatus";
 
 /* ------------------------------- Types ------------------------------- */
 
@@ -37,7 +36,7 @@ export type MyAssignedRideStats = {
 
 export type MyAssignedRideStatsQuery = {
     from?: string; // ISO date-time
-    to?: string;   // ISO date-time
+    to?: string; // ISO date-time
 };
 
 const q = (params?: Record<string, any>) => {
@@ -50,7 +49,6 @@ const q = (params?: Record<string, any>) => {
     const s = sp.toString();
     return s ? `?${s}` : "";
 };
-
 
 export const getMyAssignedRideStats = (params?: MyAssignedRideStatsQuery) =>
     apiGet<MyAssignedRideStats>(`/rides/my-assigned/stats${q(params as any)}`);
@@ -81,6 +79,9 @@ export const claimRide = (id: string, driverId: string) =>
 
 export const assignRide = (id: string, driverId: string) =>
     apiPost<{ ok: true; ride: Ride }>(`/rides/${id}/assign`, { driverId });
+
+export const unassignRide = (id: string) =>
+    apiPost<{ ok: true; ride: Ride }>(`/rides/${id}/unassign`);
 
 export const setRideStatus = (id: string, status: RideStatus) =>
     apiPost<{ ok: true; ride: Ride }>(`/rides/${id}/status`, { status });
@@ -211,6 +212,23 @@ export function useAssignRide(id?: string) {
         isAssigning: m.isMutating,
         assignResult: m.data,
         assignError: m.error as Error | undefined,
+    };
+}
+
+/* ------------------------------ UnAssign (POST) ----------------------------- */
+export function useUnAssignRide(id?: string) {
+    const key = id ? `/rides/${id}/unassign` : null;
+    const m = useSWRMutation(key, async (_key) => unassignRide(id as string), {
+        onSuccess: async () => {
+            await globalMutate(`/rides/${id}`);
+            await revalidateRides();
+        },
+    });
+    return {
+        unassignRide: m.trigger, // call with { driverId }
+        isUnAssigning: m.isMutating,
+        unassignResult: m.data,
+        unassignError: m.error as Error | undefined,
     };
 }
 

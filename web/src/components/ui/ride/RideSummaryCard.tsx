@@ -317,7 +317,7 @@ export default function RideSummaryCard({
                             <div className="mt-1" onClick={(e) => e.stopPropagation()}>
                                 <RideStatusDropdown
                                     rideStatus={statusValue}
-                                    possibleStatuses={getPossibleStatuses(statusValue, ride)}
+                                    possibleStatuses={getPossibleStatuses(statusValue, ride, user)}
                                     disabled={isSettingStatus}
                                     onChange={handleStatusChange}
                                     className="w-full"

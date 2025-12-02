@@ -3,7 +3,7 @@ import { FilterQuery, Types } from "mongoose";
 import { requireAuth, requireRole } from "../lib/auth";
 import { sendPushNotificationToUser, sendPushNotificationToUsers } from "../lib/pushNotifications";
 import { assertCanAccessRide, rideScopeFilter } from "../lib/rideAuthz";
-import { compareIds, normalizeId } from "../lib/utils/db-types";
+import { compareIds, isObjectId, normalizeId } from "../lib/utils/db-types";
 import { Group } from "../models/group.model";
 import Ride from "../models/ride.model";
 import { RideClaim } from "../models/rideClaim.model";
@@ -12,7 +12,6 @@ import User from "../models/user.model";
 
 const router = Router();
 const APP_BASE_URL = process.env.APP_BASE_URL || "http://localhost:3000";
-const isObjectId = (v: any) => Types.ObjectId.isValid(String(v));
 
 function sanitizeRideForDriver(ride: any) {
     const {
@@ -198,7 +197,7 @@ router.get(
 
         // Driver filter
         if (req.query.driverId && isObjectId(req.query.driverId)) {
-            const driverId = new Types.ObjectId(String(req.query.driverId));
+            const driverId = normalizeId(req.query.driverId);
             const includeClaimed =
                 String(req.query.includeClaimed || "false").toLowerCase() === "true";
 
@@ -1103,9 +1102,10 @@ router.post(
         const driver = await User.findById(driverId);
         if (!driver) return res.status(400).json({ error: "Driver not found" });
 
-        const oid = new Types.ObjectId(driverId);
+        const oid = normalizeId(driverId);
         ride.assignedDriverId = oid;
         ride.status = "assigned";
+
         if (!ride.queue.map(String).includes(String(oid))) ride.queue.push(oid);
 
         await ride.save();
@@ -1123,6 +1123,45 @@ router.post(
         }
 
         res.json({ ok: true, ride });
+    }
+);
+
+router.post(
+    "/:id([0-9a-fA-F]{24})/unassign",
+    requireAuth,
+    requireRole(["driver", "dispatcher", "admin"]),
+    async ({ params }: Request, res: Response) => {
+        const { id } = params;
+
+        const ride = await Ride.findById(id);
+        if (!ride) {
+            return res.status(404).json({ error: "Ride not found" });
+        }
+
+        const assignedDriverId = ride.assignedDriverId;
+
+        await ride.updateOne({ $set: { assignedDriverId: null, status: "unassigned" } });
+
+        // Send push notification to assigned driver
+        try {
+            const assignedDriver = await User.findById(assignedDriverId);
+            if (!assignedDriver) {
+                return res
+                    .status(200)
+                    .json({ ok: true, ride, error: "Driver not found, was not notifed" });
+            }
+
+            await sendPushNotificationToUser(assignedDriver, {
+                title: "Your ride has been unassigned",
+                body: `You have been unassigned from a ride: ${ride.from} → ${ride.to}`,
+                url: `/rides/${ride._id}`,
+                tag: `ride-${ride._id}-unassigned`,
+            });
+        } catch (error) {
+            console.error("[Rides] Failed to send push notification to driver:", error);
+        }
+
+        return res.json({ ok: true, ride });
     }
 );
 

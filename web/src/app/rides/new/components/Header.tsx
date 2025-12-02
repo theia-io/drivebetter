@@ -1,4 +1,5 @@
 import { Button, Card, CardBody, Typography } from "@/components/ui";
+import { cn } from "@/utils/css";
 import { ArrowLeft, HelpCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -10,7 +11,12 @@ export default function NewRideHeader() {
 
     return (
         <>
-            <div className="flex flex-col lg:flex-row lg:items-center mb-4 sm:mb-6 justify-between">
+            <div
+                className={cn(
+                    "flex flex-col lg:flex-row lg:items-center justify-between",
+                    !showInfo ? "mb-4 sm:mb-6" : "mb-0"
+                )}
+            >
                 <div>
                     <Button
                         type="button"
@@ -24,7 +30,7 @@ export default function NewRideHeader() {
                     </Button>
                 </div>
 
-                <div className="min-w-0">
+                <div className="text-center lg:text-left">
                     <Typography variant="h1" className="text-lg sm:text-3xl font-bold">
                         New ride
                     </Typography>

@@ -7,8 +7,7 @@ import { ArrowLeft, Share2, Users } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import HandleRideStatus from "@/components/ride/RideStatus";
-import RideSummary from "@/components/ride/RideSummary";
+import RideStatus from "@/components/ride/RideStatus";
 import LeafletMap from "@/components/ui/maps/LeafletMap";
 import RideShareQuickPanel from "@/components/ui/ride/RideShareQuickPanel";
 import { useAuthStore } from "@/stores";
@@ -16,8 +15,13 @@ import { useRideClaims } from "@/stores/rideClaims";
 import { useRide } from "@/stores/rides";
 import { getRoute } from "@/stores/routes";
 import { RideCreatorUser } from "@/types";
-import { getPillStatusColor, getStatusLabel, type RideStatus } from "@/types/rideStatus";
+import {
+    getPillStatusColor,
+    getStatusLabel,
+    type RideStatus as RideStatusType,
+} from "@/types/rideStatus";
 import PendingDriverRequests from "../../../components/ride/PendingDriver";
+import RideSummary from "@/components/ride/RideSummary";
 
 export default function RideDetailsPage() {
     const { user } = useAuthStore();
@@ -63,11 +67,15 @@ export default function RideDetailsPage() {
     const hasA = !!ride?.fromLocation?.coordinates?.length;
     const hasB = !!ride?.toLocation?.coordinates?.length;
 
-    const statusValue: RideStatus = (ride?.status as RideStatus) || "unassigned";
+    const statusValue: RideStatusType = (ride?.status as RideStatusType) || "unassigned";
     const statusLabel = getStatusLabel(statusValue);
     const statusPillClasses = getPillStatusColor(statusValue);
 
     const requestsRef = useRef<HTMLDivElement | null>(null);
+
+    useEffect(() => {
+        console.log("ride changed", ride);
+    }, [ride]);
 
     useEffect(() => {
         let cancelled = false;
@@ -108,8 +116,6 @@ export default function RideDetailsPage() {
             block: "start",
         });
     }
-
-    console.log("ride", ride);
 
     // --- Ride details view ---
     return (
@@ -171,7 +177,7 @@ export default function RideDetailsPage() {
                         )}
                     </div>
 
-                    <HandleRideStatus id={id} />
+                    <RideStatus id={id} />
 
                     {/* Pending driver requests */}
                     {canManage && <PendingDriverRequests requestsRef={requestsRef} id={id} />}

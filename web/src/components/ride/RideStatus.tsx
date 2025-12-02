@@ -6,12 +6,18 @@ import RideStatusStepper from "@/components/ui/ride/RideStatusStepper";
 import { Play, Trash2 } from "lucide-react";
 
 import { useAuthStore } from "@/stores";
-import { useDeleteRide, useRide, useSetRideStatus } from "@/stores/rides";
+import {
+    useAssignRide,
+    useDeleteRide,
+    useRide,
+    useSetRideStatus,
+    useUnAssignRide,
+} from "@/stores/rides";
 import { RideCreatorUser } from "@/types";
 import { getPossibleStatuses, getStatusLabel, type RideStatus } from "@/types/rideStatus";
 import { useRouter } from "next/navigation";
 
-export default function HandleRideStatus({ id }: { id: string }) {
+export default function RideStatus({ id }: { id: string }) {
     const { data: ride, mutate } = useRide(id);
     const router = useRouter();
 
@@ -29,15 +35,25 @@ export default function HandleRideStatus({ id }: { id: string }) {
 
     const { setRideStatus, isSettingStatus } = useSetRideStatus(id);
 
+    const { unassignRide } = useUnAssignRide(id);
+    const { assignRide } = useAssignRide(id);
+
     const { deleteRide, isDeleting } = useDeleteRide(id);
 
     const statusValue: RideStatus = (ride?.status as RideStatus) || "unassigned";
     const statusLabel = getStatusLabel(statusValue);
 
-    async function handleStatusChange(next: RideStatus) {
-        const res = await setRideStatus({ status: next });
-
-        if (res?.ok) await mutate();
+    async function handleStatusChange(nextStatus: RideStatus) {
+        if (nextStatus === "assigned" && user?._id === ride?.creatorId?._id) {
+            await assignRide({ driverId: user?._id });
+        } else if (nextStatus === "unassigned" && user?._id === ride?.creatorId?._id) {
+            await unassignRide();
+        } else {
+            const res = await setRideStatus({ status: nextStatus });
+            if (res?.ok) {
+                await mutate();
+            }
+        }
     }
 
     async function onDelete() {
@@ -49,6 +65,17 @@ export default function HandleRideStatus({ id }: { id: string }) {
 
     const isActiveModeAvailable =
         isAssignedDriver && ride.status !== "unassigned" && ride.status !== "completed";
+
+    console.log(
+        "canManage: ",
+        canManage,
+        ", canChangeStatus: ",
+        canChangeStatus,
+        ", isAssignedDriver: ",
+        isAssignedDriver,
+        ", ride.status: ",
+        ride?.status
+    );
 
     return (
         <>
@@ -77,7 +104,7 @@ export default function HandleRideStatus({ id }: { id: string }) {
                             <div className="w-full md:w-80" onClick={(e) => e.stopPropagation()}>
                                 <RideStatusDropdown
                                     rideStatus={statusValue}
-                                    possibleStatuses={getPossibleStatuses(statusValue, ride)}
+                                    possibleStatuses={getPossibleStatuses(statusValue, ride, user)}
                                     disabled={isSettingStatus}
                                     onChange={handleStatusChange}
                                     className="w-full"
