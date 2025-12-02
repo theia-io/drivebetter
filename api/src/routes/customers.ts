@@ -8,6 +8,7 @@ import { hashPassword } from "../lib/crypto";
 import User from "../models/user.model";
 import CustomerProfile from "../models/customerProfile.model";
 import { CustomerInvite } from "../models/customerInvite.model";
+import Ride from "@/models/ride.model";
 
 const router = Router();
 const generateInviteCode = customAlphabet("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 10);
@@ -111,6 +112,113 @@ router.get("/", requireAuth, async (req: Request, res: Response) => {
 
     return res.json(result);
 });
+
+
+/**
+ * @openapi
+ * /api/v1/customers/{id}/rides:
+ *   get:
+ *     summary: Get rides for a customer
+ *     description: |
+ *       Returns rides linked to a customer. The `{id}` can be either:
+ *       - the customer's User ID, or
+ *       - the Client (customer profile) ID; in that case its `userId` will be used.
+ *     tags:
+ *       - Customers
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Customer user ID or customer profile ID
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: List of rides for this customer
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Ride'
+ *                 page:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *                 total:
+ *                   type: integer
+ *       404:
+ *         description: Customer not found
+ *       401:
+ *         description: Unauthorized
+ */
+router.get(
+    "/:id/rides",
+    requireAuth,
+    requireRole(["driver", "dispatcher", "admin", "customer"]),
+    async (req: Request, res: Response) => {
+        try {
+            const { id } = req.params;
+            const page = Math.max(parseInt(String(req.query.page || "1"), 10), 1);
+            const limit = Math.max(
+                Math.min(parseInt(String(req.query.limit || "10"), 10), 100),
+                1,
+            );
+
+            // 1) Resolve userId from either Client profile or direct user id
+            let userId: string | null = null;
+
+            // Try as Client (customer profile) id
+            const client = await CustomerProfile.findById(id).lean();
+            if (client && client.userId) {
+                userId = String(client.userId);
+            } else {
+                // Otherwise treat :id as user id directly
+                userId = id;
+            }
+
+            // 2) Query rides linked to this customer user
+            const filter = { customerUserId: userId };
+
+            const [rides, total] = await Promise.all([
+                Ride.find(filter)
+                    .sort({ datetime: -1 })
+                    .skip((page - 1) * limit)
+                    .limit(limit)
+                    .lean(),
+                Ride.countDocuments(filter),
+            ]);
+
+            return res.json({
+                data: rides,
+                page,
+                limit,
+                total,
+            });
+        } catch (err) {
+            console.error("GET /api/v1/customers/:id/rides failed", err);
+            return res.status(500).json({ message: "Internal server error" });
+        }
+    },
+);
 
 /**
  * @openapi

@@ -4,6 +4,7 @@
 import useSWR from "swr";
 import { mutate as globalMutate } from "swr";
 import { apiGet, apiPost, apiPatch } from "@/services/http";
+import {Ride} from "@/types";
 
 /* ------------------------------- Types ------------------------------- */
 
@@ -99,6 +100,69 @@ export interface MyCustomer {
     profile: CustomerProfile | null;
     stats?: MyCustomerStats | null;
 }
+
+export type CustomerRidesResponse = {
+    data: Ride[];
+    page: number;
+    limit: number;
+    total: number;
+};
+
+// ---------- Plain API function ----------
+
+/**
+ * Fetch rides assigned to a given customer (user or profile id).
+ *
+ * Internally calls GET /customers/{id}/rides?page=&limit=
+ * API prefix (/api/v1) is handled inside request().
+ */
+export function getCustomerRides(
+    customerId: string,
+    params?: { page?: number; limit?: number },
+) {
+    const page = params?.page ?? 1;
+    const limit = params?.limit ?? 10;
+
+    const query = new URLSearchParams();
+    query.set("page", String(page));
+    query.set("limit", String(limit));
+
+    const path = `/customers/${encodeURIComponent(customerId)}/rides?${query.toString()}`;
+
+    return apiGet<CustomerRidesResponse>(path);
+}
+
+export function useCustomerRides(
+    customerId?: string,
+    options?: { page?: number; limit?: number; enabled?: boolean },
+) {
+    const page = options?.page ?? 1;
+    const limit = options?.limit ?? 10;
+    const enabled = options?.enabled ?? true;
+
+    const key =
+        customerId && enabled
+            ? `/customers/${encodeURIComponent(customerId)}/rides?page=${page}&limit=${limit}`
+            : null;
+
+    const { data, error, isLoading, mutate } = useSWR(
+        key,
+        (url: string) => {
+            return apiGet<CustomerRidesResponse>(url);
+        },
+    );
+
+    return {
+        data: data?.data ?? [],
+        page: data?.page ?? page,
+        limit: data?.limit ?? limit,
+        total: data?.total ?? 0,
+        error,
+        mutate,
+        isLoading,
+    };
+}
+
 
 /* -------------------------------- API -------------------------------- */
 

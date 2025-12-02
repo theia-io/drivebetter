@@ -15,8 +15,9 @@ import {
     Clock,
     Car,
     Info,
+    MapPin,
 } from "lucide-react";
-import { useMyCustomers } from "@/stores/customers";
+import {useCustomerRides, useMyCustomers} from "@/stores/customers";
 
 const dt = (iso?: string | null) => (iso ? new Date(iso).toLocaleString() : "—");
 
@@ -28,7 +29,10 @@ export default function CustomerDetailsPage() {
     const customer = useMemo(
         () =>
             customers?.find(
-                (c) => c.user?._id === id || c.profile?._id === id || c.profile?.userId === id,
+                (c) =>
+                    c.user?._id === id ||
+                    c.profile?._id === id ||
+                    c.profile?.userId === id,
             ),
         [customers, id],
     );
@@ -43,6 +47,22 @@ export default function CustomerDetailsPage() {
     const updatedAt = customer?.profile?.updatedAt || customer?.user?.updatedAt;
 
     const isRegistered = !!customer?.user?._id;
+
+    // Resolve user id for rides:
+    const customerUserId =
+        customer?.user?._id || customer?.profile?.userId || (isRegistered ? id : undefined);
+
+    const {
+        data: ridesResponse,
+        isLoading: ridesLoading,
+        error: ridesError,
+    } = useCustomerRides(customerUserId, {
+        enabled: !!customerUserId,
+        page: 1,
+        limit: 5,
+    });
+
+    const rides = ridesResponse ?? [];
 
     return (
         <ProtectedLayout>
@@ -211,8 +231,88 @@ export default function CustomerDetailsPage() {
                                 </Card>
                             </div>
 
-                            {/* Right: stats and quick links */}
+                            {/* Right: stats and rides */}
                             <div className="space-y-4 sm:space-y-5">
+                                {/* Recent rides */}
+                                <Card>
+                                    <CardBody className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <Typography className="text-sm font-semibold text-gray-900">
+                                                Recent rides
+                                            </Typography>
+                                            {customerUserId && (
+                                                <Button
+                                                    size="xs"
+                                                    variant="outline"
+                                                    onClick={() =>
+                                                        router.push(
+                                                            `/rides?customerId=${encodeURIComponent(
+                                                                customer.user?._id || id,
+                                                            )}`,
+                                                        )
+                                                    }
+                                                >
+                                                    View all
+                                                </Button>
+                                            )}
+                                        </div>
+
+                                        {ridesLoading && (
+                                            <div className="text-xs text-gray-500">
+                                                Loading rides…
+                                            </div>
+                                        )}
+
+                                        {!ridesLoading && ridesError && (
+                                            <div className="flex items-center gap-2 text-xs text-red-600">
+                                                <Info className="w-3 h-3" />
+                                                <span>Failed to load rides.</span>
+                                            </div>
+                                        )}
+
+                                        {!ridesLoading && !ridesError && rides.length === 0 && (
+                                            <div className="text-xs text-gray-500">
+                                                No rides for this customer yet.
+                                            </div>
+                                        )}
+
+                                        {!ridesLoading && !ridesError && rides.length > 0 && (
+                                            <ul className="divide-y divide-gray-100">
+                                                {rides.map((ride: any) => (
+                                                    <li
+                                                        key={ride._id}
+                                                        className="py-2.5 flex flex-col gap-1 text-xs sm:text-sm"
+                                                    >
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                                <MapPin className="w-3 h-3 text-gray-400" />
+                                                                <span className="truncate font-medium text-gray-900">
+                                                                    {ride.from} → {ride.to}
+                                                                </span>
+                                                            </div>
+                                                            <span className="ml-2 inline-flex items-center rounded-full border border-gray-200 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-600">
+                                                                {ride.status}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between gap-2 text-[11px] text-gray-500">
+                                                            <span>
+                                                                {dt(ride.datetime)}
+                                                            </span>
+                                                            <Link
+                                                                href={`/rides/${ride._id}`}
+                                                                className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700"
+                                                            >
+                                                                View ride
+                                                            </Link>
+                                                        </div>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </CardBody>
+                                </Card>
+
+                                {/* Ride statistics */}
                                 <Card>
                                     <CardBody className="space-y-4">
                                         <Typography className="text-sm font-semibold text-gray-900">
@@ -271,6 +371,7 @@ export default function CustomerDetailsPage() {
                                     </CardBody>
                                 </Card>
 
+                                {/* Notes placeholder */}
                                 <Card>
                                     <CardBody className="space-y-2">
                                         <Typography className="text-sm font-semibold text-gray-900">
