@@ -45,7 +45,7 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
                 <FocusedRide />
 
                 {/* reserve space: 4rem top bar, ~4rem bottom bar on mobile */}
-                <main className={`max-w-7xl mx-automt-4 px-4 sm:px-6 lg:px-8`}>{children}</main>
+                <main className={`max-w-7xl mx-auto mt-4 px-4 sm:px-6 lg:px-8`}>{children}</main>
             </div>
 
             <AppVersion className="hidden md:block" />
