@@ -249,8 +249,8 @@ export default function PWAInstallPrompt() {
                     <div className="flex items-start gap-4">
                         {/* Icon */}
                         <div className="flex-shrink-0">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-                                <Download className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 ">
+                                <Download className="h-6 w-6 text-blue-600 " />
                             </div>
                         </div>
 
@@ -258,13 +258,13 @@ export default function PWAInstallPrompt() {
                         <div className="flex-1 min-w-0">
                             <Typography
                                 variant="h5"
-                                className="mb-1 !text-gray-900 dark:!text-white"
+                                className="mb-1 !text-gray-900 "
                             >
                                 Install DriveBetter
                             </Typography>
                             <Typography
                                 variant="body2"
-                                className="!text-gray-600 dark:!text-gray-300 mb-3"
+                                className="!text-gray-600 "
                             >
                                 Install our app to access DriveBetter faster and use it offline. Get
                                 quick access from your home screen!
@@ -274,7 +274,7 @@ export default function PWAInstallPrompt() {
                         {/* Close button */}
                         <button
                             onClick={() => handleDismiss(false)}
-                            className="flex-shrink-0 rounded-full p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                            className="flex-shrink-0 rounded-full p-1 text-gray-400 hover:bg-gray-100 "
                             aria-label="Dismiss"
                         >
                             <X className="h-5 w-5" />

@@ -7,12 +7,15 @@ type GeoPoint = {
     coordinates: [number, number]; // [lon, lat]
 };
 
+export interface RideCustomer {
+    name: string;
+    phone?: string;
+}
+
 export interface IRide extends Document {
     creatorId?: Types.ObjectId | null;
-    customer?: {
-        name: string;
-        phone?: string;
-    };
+    customerUserId?: Types.ObjectId | null;
+    customer?: RideCustomer;
 
     // Display strings
     from: string;
@@ -50,6 +53,14 @@ export interface IRide extends Document {
     createdAt: Date;
     updatedAt: Date;
 }
+
+const RideCustomerSchema = new Schema<RideCustomer>(
+    {
+        name: { type: String, required: true, trim: true },
+        phone: { type: String, trim: true },
+    },
+    { _id: false },
+);
 
 // Reusable GeoJSON Point schema
 const PointSchema = new Schema<GeoPoint>(

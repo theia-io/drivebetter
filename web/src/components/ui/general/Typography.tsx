@@ -23,14 +23,14 @@ const variantClasses = {
 };
 
 const colorSchemes = {
-    primary: "text-blue-600 dark:text-blue-400",
-    secondary: "text-gray-600 dark:text-gray-400",
-    success: "text-green-600 dark:text-green-400",
-    warning: "text-yellow-600 dark:text-yellow-400",
-    error: "text-red-600 dark:text-red-400",
-    info: "text-cyan-600 dark:text-cyan-400",
+    primary: "text-blue-600 ",
+    secondary: "text-gray-600 ",
+    success: "text-green-600 ",
+    warning: "text-yellow-600 ",
+    error: "text-red-600 ",
+    info: "text-cyan-600 ",
     inherit: "text-inherit",
-    muted: "text-gray-500 dark:text-gray-400",
+    muted: "text-gray-500 ",
 };
 
 const defaultElements = {

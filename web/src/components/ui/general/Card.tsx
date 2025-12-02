@@ -18,18 +18,18 @@ const paddingClasses = {
 };
 
 const variantClasses = {
-    elevated: "shadow-lg bg-white dark:bg-gray-800",
-    outlined: "border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800",
-    filled: "bg-gray-50 dark:bg-gray-800",
+    elevated: "shadow-lg bg-white ",
+    outlined: "border border-gray-200 ",
+    filled: "bg-gray-50 ",
 };
 
 const colorSchemes = {
-    primary: "border-blue-200 dark:border-blue-800",
-    secondary: "border-gray-200 dark:border-gray-700",
-    success: "border-green-200 dark:border-green-800",
-    warning: "border-yellow-200 dark:border-yellow-800",
-    error: "border-red-200 dark:border-red-800",
-    info: "border-cyan-200 dark:border-cyan-800",
+    primary: "border-blue-200 ",
+    secondary: "border-gray-200 ",
+    success: "border-green-200 ",
+    warning: "border-yellow-200 ",
+    error: "border-red-200 ",
+    info: "border-cyan-200 ",
 };
 
 export const Card: React.FC<CardProps> = ({
