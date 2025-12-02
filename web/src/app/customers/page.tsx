@@ -1,7 +1,7 @@
 // app/customers/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
     UserPlus,
@@ -106,6 +106,60 @@ export default function CustomersPage() {
         invites?.filter((i) => i.status === "used") ?? [];
     const expiredInvites =
         invites?.filter((i) => i.status === "expired") ?? [];
+
+    // ---------- Aggregated rides stats across all customers ----------
+    const {
+        totalCustomers,
+        registeredCustomers,
+        invitedCustomers,
+        totalRides,
+        lastRideGlobal,
+    } = useMemo(() => {
+        if (!customers || customers.length === 0) {
+            return {
+                totalCustomers: 0,
+                registeredCustomers: 0,
+                invitedCustomers: 0,
+                totalRides: 0,
+                lastRideGlobal: null as Date | null,
+            };
+        }
+
+        let registered = 0;
+        let rides = 0;
+        let lastRide: Date | null = null;
+
+        for (const c of customers as MyCustomer[]) {
+            const u: any = c.user;
+            const s: any = c.stats;
+
+            if (u) registered += 1;
+
+            if (typeof s?.ridesTotal === "number") {
+                rides += s.ridesTotal;
+            }
+
+            if (s?.lastRideAt) {
+                const d = new Date(s.lastRideAt);
+                if (!Number.isNaN(d.getTime())) {
+                    if (!lastRide || d > lastRide) {
+                        lastRide = d;
+                    }
+                }
+            }
+        }
+
+        const total = customers.length;
+        const invited = total - registered;
+
+        return {
+            totalCustomers: total,
+            registeredCustomers: registered,
+            invitedCustomers: invited,
+            totalRides: rides,
+            lastRideGlobal: lastRide,
+        };
+    }, [customers]);
 
     return (
         <ProtectedLayout>
@@ -408,6 +462,69 @@ export default function CustomersPage() {
                             )}
                         </div>
 
+                        {/* Aggregated rides stats strip */}
+                        {!loadingCustomers &&
+                            !customersError &&
+                            customers &&
+                            customers.length > 0 && (
+                                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 mt-1">
+                                    <div className="rounded-xl border border-gray-200 bg-white px-3 py-2.5">
+                                        <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-gray-500">
+                                            <Users className="h-3.5 w-3.5 text-gray-400" />
+                                            <span>Customers</span>
+                                        </div>
+                                        <div className="mt-1 text-lg font-semibold text-gray-900">
+                                            {totalCustomers}
+                                        </div>
+                                        <div className="mt-0.5 text-[11px] text-gray-500">
+                                            {registeredCustomers} registered,{" "}
+                                            {invitedCustomers} invited
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border border-gray-200 bg-white px-3 py-2.5">
+                                        <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-gray-500">
+                                            <Car className="h-3.5 w-3.5 text-gray-400" />
+                                            <span>Total rides</span>
+                                        </div>
+                                        <div className="mt-1 text-lg font-semibold text-gray-900">
+                                            {totalRides}
+                                        </div>
+                                        <div className="mt-0.5 text-[11px] text-gray-500">
+                                            Across all customers
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border border-gray-200 bg-white px-3 py-2.5">
+                                        <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-gray-500">
+                                            <CalendarClock className="h-3.5 w-3.5 text-gray-400" />
+                                            <span>Last ride</span>
+                                        </div>
+                                        <div className="mt-1 text-sm font-semibold text-gray-900">
+                                            {lastRideGlobal
+                                                ? lastRideGlobal.toLocaleDateString()
+                                                : "—"}
+                                        </div>
+                                        <div className="mt-0.5 text-[11px] text-gray-500">
+                                            Most recent ride date
+                                        </div>
+                                    </div>
+
+                                    <div className="hidden sm:block rounded-xl border border-gray-200 bg-white px-3 py-2.5">
+                                        <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-gray-500">
+                                            <Clock className="h-3.5 w-3.5 text-gray-400" />
+                                            <span>Invites</span>
+                                        </div>
+                                        <div className="mt-1 text-lg font-semibold text-gray-900">
+                                            {invites?.length ?? 0}
+                                        </div>
+                                        <div className="mt-0.5 text-[11px] text-gray-500">
+                                            Total invites sent
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                         {loadingCustomers && (
                             <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-3 py-3 text-sm text-gray-600">
                                 <div className="flex items-center gap-2">
@@ -486,7 +603,7 @@ export default function CustomersPage() {
                                                 </span>
                                             </div>
 
-                                            {/* Stats */}
+                                            {/* Stats for this customer */}
                                             <dl className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-gray-600">
                                                 <div className="space-y-0.5">
                                                     <dt className="uppercase tracking-wide text-gray-500">
