@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardBody } from "@/components/ui";
-import AssignDriverSelect from "@/components/ui/ride/AssignDriverSelect";
+import AssignDriverSelect from "@/components/ride/selectors/AssignDriverSelect";
 import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
 import { useAuthStore } from "@/stores";
 import { useRide } from "@/stores/rides";
@@ -18,7 +18,7 @@ import {
     User,
 } from "lucide-react";
 
-export default function RideSummary({ id }: { id: string }) {
+export default function ShortRideSummary({ id }: { id: string }) {
     const { user } = useAuthStore();
 
     const { data: ride, mutate } = useRide(id);

@@ -6,7 +6,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import Navigation, { NAVIGATION_HEIGHT_SUFFIX } from "./navigation/Navigation";
-import FocusedRide from "./ui/ride/FocusedRide";
+import FocusedRide from "./ride/FocusedRide";
 
 interface ProtectedLayoutProps {
     children: React.ReactNode;

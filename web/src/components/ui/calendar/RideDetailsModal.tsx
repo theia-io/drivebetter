@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 
 import { Button, Typography } from "@/components/ui";
-import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
+import RideSummaryCard from "@/components/ride/cards/RideSummaryCard";
 import { Ride } from "@/types";
 import { type RideStatus, getPillStatusColor, getStatusDotColor } from "@/types/rideStatus";
 

@@ -7,9 +7,9 @@ import { ArrowLeft, Share2, Users } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import RideStatus from "@/components/ride/RideStatus";
+import RideStatus from "@/components/ride/status/RideStatus";
 import LeafletMap from "@/components/ui/maps/LeafletMap";
-import RideShareQuickPanel from "@/components/ui/ride/RideShareQuickPanel";
+import RideShareQuickPanel from "@/components/ride/RideShareQuickPanel";
 import { useAuthStore } from "@/stores";
 import { useRideClaims } from "@/stores/rideClaims";
 import { useRide } from "@/stores/rides";
@@ -21,7 +21,7 @@ import {
     type RideStatus as RideStatusType,
 } from "@/types/rideStatus";
 import PendingDriverRequests from "../../../components/ride/PendingDriver";
-import RideSummary from "@/components/ride/RideSummary";
+import ShortRideSummary from "@/components/ride/ShortRideSummary";
 
 export default function RideDetailsPage() {
     const { user } = useAuthStore();
@@ -195,7 +195,7 @@ export default function RideDetailsPage() {
                         </Card>
                     )}
 
-                    <RideSummary id={id} />
+                    <ShortRideSummary id={id} />
 
                     {/* Map */}
                     {(hasA || hasB) && (

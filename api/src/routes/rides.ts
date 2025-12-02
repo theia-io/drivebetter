@@ -272,13 +272,11 @@ router.get(
  *             required: [from, to, datetime]
  *             properties:
  *               creatorId: { type: string, description: "Dispatcher/User ID" }
- *               customer: {
- *                 type: object,
- *                 properties: {
- *                   name:  { type: string },
- *                   phone: { type: string }
- *                 }
- *               }
+ *               customerUserId:
+ *                 type: string
+ *                 nullable: true
+ *               customer:
+ *                 $ref: '#/components/schemas/RideCustomer'
  *               distance: { type: number }
  *               driverEmail: { type: string, format: email, description: "Assign by driver email (optional)" }
  *               assignedDriverId: { type: string, description: "Assign by driver id (optional)" }
@@ -343,17 +341,17 @@ router.post(
 
             // Note @todo Once I guess we always want to choose body.creatorId if it exists, otherwise use user.id (?) especially  when we create from a client name (?)
             const creatorId = normalizeId(user.id ?? body.creatorId);
-
+            const customerUserId = body.customerUserId || undefined;
+            if (customerUserId) {
+                const customerUser = await User.findById(customerUserId);
+                if (!customerUser) {
+                    return res.status(400).json({error: "Invalid customerUserId"});
+                }
+            }
             const doc = await Ride.create({
                 creatorId,
-                customer: body.customer
-                    ? {
-                          name: String(body.customer.name || "").trim(),
-                          phone: body.customer.phone
-                              ? String(body.customer.phone).trim()
-                              : undefined,
-                      }
-                    : undefined,
+                customerUserId: customerUserId,
+                customer: body.customer || undefined,
                 from: body.from,
                 to: body.to,
                 stops: Array.isArray(body.stops) ? body.stops : [],
@@ -1799,5 +1797,18 @@ router.get(
         return res.json({ items, nextCursor });
     }
 );
+
+/**
+ * @openapi
+ * components:
+ *   schemas:
+ *     RideCustomer:
+ *       type: object
+ *       properties:
+ *         name:
+ *           type: string
+ *         phone:
+ *           type: string
+ */
 
 export default router;

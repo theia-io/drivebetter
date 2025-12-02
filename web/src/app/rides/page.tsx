@@ -7,9 +7,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useRidesInfinite } from "@/stores/rides";
 import { Ride } from "@/types";
 import { useAuthStore } from "@/stores";
-import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
+import RideSummaryCard from "@/components/ride/cards/RideSummaryCard";
 import { type RideStatus, getStatusLabel } from "@/types/rideStatus";
-import RidesFilters, { SortKey } from "@/components/ui/ride/RidesFilters";
+import RidesFilters, { SortKey } from "@/components/ride/RidesFilters";
 
 export default function RidesPage() {
     const { user } = useAuthStore();

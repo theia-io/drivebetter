@@ -3,7 +3,7 @@ import { Eye } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo } from "react";
-import ActiveCard from "../cards/active";
+import ActiveCard from "../ui/cards/active";
 
 export default function FocusedRide() {
     const { data, isLoading, mutate } = useMyRides();

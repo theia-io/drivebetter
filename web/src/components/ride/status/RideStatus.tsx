@@ -1,8 +1,8 @@
 "use client";
 
 import { Button, Card, CardBody, Typography } from "@/components/ui";
-import RideStatusDropdown from "@/components/ui/ride/RideStatusDropdown";
-import RideStatusStepper from "@/components/ui/ride/RideStatusStepper";
+import RideStatusDropdown from "@/components/ride/status/RideStatusDropdown";
+import RideStatusStepper from "@/components/ride/status/RideStatusStepper";
 import { Play, Trash2 } from "lucide-react";
 
 import { useAuthStore } from "@/stores";

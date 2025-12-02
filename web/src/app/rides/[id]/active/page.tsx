@@ -7,8 +7,8 @@ import { ArrowLeft, Calendar, Clock, Loader2, MapPin, Navigation, PhoneIcon } fr
 import { useParams, useRouter } from "next/navigation";
 import { useMemo } from "react";
 
-import ActiveRideCard from "@/components/ride/ActiveRideCard";
-import RideStatusStepper from "@/components/ui/ride/RideStatusStepper";
+import ActiveRideCard from "@/components/ride/cards/ActiveRideCard";
+import RideStatusStepper from "@/components/ride/status/RideStatusStepper";
 import { fmtDate, fmtTime } from "@/services/convertors";
 import { useAuthStore } from "@/stores";
 import { useRide, useSetRideStatus } from "@/stores/rides";

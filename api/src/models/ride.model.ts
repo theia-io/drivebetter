@@ -87,11 +87,17 @@ const PointSchema = new Schema<GeoPoint>(
 const RideSchema = new Schema<IRide>(
     {
         creatorId: { type: Schema.Types.ObjectId, ref: "User", default: null },
-        customer: {
-            name: { type: String, trim: true, required: false },
-            phone: { type: String, trim: true, required: false },
+        customerUserId: {
+            type: Schema.Types.ObjectId,
+            ref: "User",
+            required: false,
+            index: true,
         },
 
+        customer: {
+            type: RideCustomerSchema,
+            required: false,
+        },
         // Display strings
         from: { type: String, required: true },
         to: { type: String, required: true },

@@ -1,12 +1,12 @@
 "use client";
 
 import { Button, Card, CardBody, Typography } from "@/components/ui";
-import AssignDriverSelect from "@/components/ui/ride/AssignDriverSelect";
-import AssignedDriverBadge from "@/components/ui/ride/AssignedDriverBadge";
-import RideCreatorBadge from "@/components/ui/ride/RideCreatorBadge";
-import RideShareQuickPanel from "@/components/ui/ride/RideShareQuickPanel";
-import RideStatusDropdown from "@/components/ui/ride/RideStatusDropdown";
-import RideStatusStepper from "@/components/ui/ride/RideStatusStepper";
+import AssignDriverSelect from "@/components/ride/selectors/AssignDriverSelect";
+import AssignedDriverBadge from "@/components/ride/badges/AssignedDriverBadge";
+import RideCreatorBadge from "@/components/ride/badges/RideCreatorBadge";
+import RideShareQuickPanel from "@/components/ride/RideShareQuickPanel";
+import RideStatusDropdown from "@/components/ride/status/RideStatusDropdown";
+import RideStatusStepper from "@/components/ride/status/RideStatusStepper";
 import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
 import { useAuthStore } from "@/stores";
 import { useApproveRideClaim, useRejectRideClaim, useRideClaims } from "@/stores/rideClaims";

@@ -22,7 +22,7 @@ import {
 } from "@/stores/rideShares";
 import { useGroups } from "@/stores/groups";
 import { useDriversPublicBatchMap } from "@/stores/users";
-import { DriverCombobox, type SimpleDriver } from "@/components/ui/ride/DriverCombobox";
+import { DriverCombobox, type SimpleDriver } from "@/components/ride/selectors/DriverCombobox";
 import { UserChip } from "@/components/ui/general/UserChip";
 
 type RideShareQuickPanelProps = {

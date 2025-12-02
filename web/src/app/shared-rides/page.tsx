@@ -5,7 +5,7 @@ import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
 import { useDriverInbox } from "@/stores/rideClaims";
 import { Info, Loader2, Share2 } from "lucide-react";
 import { useState } from "react";
-import SharedRideRequestCard from "@/components/ui/ride/SharedRideRequestCard";
+import SharedRideRequestCard from "@/components/ride/cards/SharedRideRequestCard";
 
 export default function DriverSharedRidesPage() {
     const [tab, setTab] = useState<"available" | "claimed">("available");

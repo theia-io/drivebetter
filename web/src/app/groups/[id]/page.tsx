@@ -39,10 +39,10 @@ import {
 import {
     DriverCombobox,
     type SimpleDriver,
-} from "@/components/ui/ride/DriverCombobox";
+} from "@/components/ride/selectors/DriverCombobox";
 
-import RideSummaryCard from "@/components/ui/ride/RideSummaryCard";
-import SharedRideRequestCard from "@/components/ui/ride/SharedRideRequestCard";
+import RideSummaryCard from "@/components/ride/cards/RideSummaryCard";
+import SharedRideRequestCard from "@/components/ride/cards/SharedRideRequestCard";
 
 import type { GroupType } from "@/types/group";
 import {AccordionItem} from "@/components/ui/general/AccordionItem";

@@ -1,8 +1,8 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
-import { Button } from "../ui";
-import ActiveCard from "../ui/cards/active";
+import {Button} from "@/components/ui";
+import ActiveCard from "@/components/ui/cards/active";
 
 export type ActiveRideCardProps = {
     clickHandler: () => void;

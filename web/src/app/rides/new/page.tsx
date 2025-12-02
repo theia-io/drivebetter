@@ -1,23 +1,30 @@
 // app/rides/new/page.tsx
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import { Field, FieldError, FieldLabel, inputClass } from "@/components/ui/commmon";
-import LeafletMap from "@/components/ui/maps/LeafletMap";
+import { Save, ChevronDown } from "lucide-react";
 import PlaceCombobox from "@/components/ui/maps/PlaceCombobox";
-import { currentHourTimeInput, todayDateInput } from "@/services/datetime";
-import { useAuthStore } from "@/stores";
-import { PlaceHit } from "@/stores/geocode";
+import LeafletMap from "@/components/ui/maps/LeafletMap";
 import { createRide } from "@/stores/rides";
+import { PlaceHit } from "@/stores/geocode";
 import { getRoute } from "@/stores/routes";
+import { currentHourTimeInput, todayDateInput } from "@/services/datetime";
 import { VehicleType } from "@/types/driver-details";
 import { RideType } from "@/types/ride";
+import {
+    Field,
+    FieldLabel,
+    FieldError,
+    inputClass,
+} from "@/components/ui/commmon";
+import { useAuthStore } from "@/stores";
 import { RideStatus } from "@/types/rideStatus";
-import { ArrowLeft, ChevronDown, HelpCircle, Save } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import NewRideHeader from "./components/Header";
+import { useMyCustomers } from "@/stores/customers";
+import NewRideHeader from "@/app/rides/new/components/NewRideHeader";
+import CustomerSelect from "@/components/ride/selectors/CustomerSelect";
 
 /* ------------------------------- Types ------------------------------- */
 
@@ -26,6 +33,8 @@ interface RideFormValues {
         name: string;
         phone: string;
     };
+    customerUserId?: string;
+
     fromLabel: string;
     toLabel: string;
     date: string; // YYYY-MM-DD
@@ -48,6 +57,7 @@ interface RideFormValues {
 
 const initialValues: RideFormValues = {
     customer: { name: "", phone: "" },
+    customerUserId: undefined,
     fromLabel: "",
     toLabel: "",
     date: todayDateInput(),
@@ -68,6 +78,7 @@ type NextStep = "assign" | "share" | "skip";
 
 export default function NewRidePage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { user } = useAuthStore();
 
     const [values, setValues] = useState<RideFormValues>(initialValues);
@@ -83,6 +94,10 @@ export default function NewRidePage() {
 
     const [clientOpen, setClientOpen] = useState(false);
 
+    const { data: customers = [] } = useMyCustomers();
+
+    const urlCustomerId = searchParams.get("customerId") || "";
+
     const set = <K extends keyof RideFormValues>(k: K, v: RideFormValues[K]) =>
         setValues((prev) => ({ ...prev, [k]: v }));
 
@@ -97,6 +112,27 @@ export default function NewRidePage() {
         return e;
     };
 
+    // Prefill from ?customerId=
+    useEffect(() => {
+        if (!customers.length || !urlCustomerId) return;
+
+        const c = customers.find(
+            (cust: any) =>
+                cust.user?._id === urlCustomerId || cust.profile?._id === urlCustomerId,
+        );
+        if (!c) return;
+
+        const u = c.user || {};
+        setValues((prev) => ({
+            ...prev,
+            customerUserId: u._id,
+            customer: {
+                name: u.name || prev.customer?.name || "",
+                phone: u.phone || prev.customer?.phone || "",
+            },
+        }));
+    }, [customers, urlCustomerId]);
+
     const onSubmit = async (ev: React.FormEvent) => {
         ev.preventDefault();
         const e = validate(values);
@@ -109,6 +145,7 @@ export default function NewRidePage() {
 
             const payload: any = {
                 creatorId: user._id,
+                customerUserId: values.customerUserId || undefined,
                 customer: values.customer || undefined,
                 from: values.fromLabel,
                 to: values.toLabel,
@@ -120,15 +157,15 @@ export default function NewRidePage() {
                 distance: distanceMeters,
                 fromLocation: pickupHit
                     ? {
-                          type: "Point",
-                          coordinates: [pickupHit.lon, pickupHit.lat],
-                      }
+                        type: "Point",
+                        coordinates: [pickupHit.lon, pickupHit.lat],
+                    }
                     : undefined,
                 toLocation: destHit
                     ? {
-                          type: "Point",
-                          coordinates: [destHit.lon, destHit.lat],
-                      }
+                        type: "Point",
+                        coordinates: [destHit.lon, destHit.lat],
+                    }
                     : undefined,
             };
 
@@ -161,6 +198,7 @@ export default function NewRidePage() {
         }
     };
 
+    // route preview
     useEffect(() => {
         let cancelled = false;
         (async () => {
@@ -170,7 +208,10 @@ export default function NewRidePage() {
                 setDurationMinutes(0);
                 return;
             }
-            const r = await getRoute([pickupHit.lon, pickupHit.lat], [destHit.lon, destHit.lat]);
+            const r = await getRoute(
+                [pickupHit.lon, pickupHit.lat],
+                [destHit.lon, destHit.lat],
+            );
             if (cancelled) return;
             setRouteLine(r.geometry);
             setDistanceMeters(r.distanceMeters);
@@ -186,13 +227,12 @@ export default function NewRidePage() {
             <Container className="px-3 sm:px-6 lg:px-8">
                 <NewRideHeader />
 
-                {/* Layout: form + right info panel */}
                 <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start">
                     {/* Left: form */}
                     <Card variant="elevated" className="w-full">
                         <CardBody className="p-4 sm:p-6">
                             <form onSubmit={onSubmit} className="space-y-6" noValidate>
-                                {/* REQUIRED: Ride details */}
+                                {/* Ride details */}
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <Typography className="text-sm sm:text-base font-semibold text-gray-900">
@@ -203,7 +243,7 @@ export default function NewRidePage() {
                                         </span>
                                     </div>
 
-                                    {/* Pickup / Destination */}
+                                    {/* Pickup / destination */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <Field>
                                             <FieldLabel htmlFor="pickup">
@@ -228,7 +268,8 @@ export default function NewRidePage() {
 
                                         <Field>
                                             <FieldLabel htmlFor="destination">
-                                                Destination <span className="text-red-500">*</span>
+                                                Destination{" "}
+                                                <span className="text-red-500">*</span>
                                             </FieldLabel>
                                             <PlaceCombobox
                                                 id="destination"
@@ -261,19 +302,22 @@ export default function NewRidePage() {
                                             />
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm text-gray-700">
                                                 <div>
-                                                    Distance: {(distanceMeters / 1000).toFixed(1)}{" "}
-                                                    km
+                                                    Distance:{" "}
+                                                    {(distanceMeters / 1000).toFixed(1)} km
                                                 </div>
-                                                <div>Estimated duration: {durationMinutes} min</div>
+                                                <div>
+                                                    Estimated duration: {durationMinutes} min
+                                                </div>
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* Pickup date & time */}
+                                    {/* date & time */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <Field>
                                             <FieldLabel htmlFor="date">
-                                                Pickup date <span className="text-red-500">*</span>
+                                                Pickup date{" "}
+                                                <span className="text-red-500">*</span>
                                             </FieldLabel>
                                             <input
                                                 id="date"
@@ -286,7 +330,8 @@ export default function NewRidePage() {
                                         </Field>
                                         <Field>
                                             <FieldLabel htmlFor="time">
-                                                Pickup time <span className="text-red-500">*</span>
+                                                Pickup time{" "}
+                                                <span className="text-red-500">*</span>
                                             </FieldLabel>
                                             <input
                                                 id="time"
@@ -326,7 +371,47 @@ export default function NewRidePage() {
 
                                     {clientOpen && (
                                         <div className="mt-2 space-y-4">
-                                            {/* Client */}
+                                            {/* Linked customer selector */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <CustomerSelect
+                                                    customers={customers as any[]}
+                                                    currentCustomerId={
+                                                        values.customerUserId ||
+                                                        (urlCustomerId || undefined)
+                                                    }
+                                                    label="Linked customer"
+                                                    onSelected={({
+                                                                     customerUserId,
+                                                                     name,
+                                                                     phone,
+                                                                 }) => {
+                                                        set(
+                                                            "customerUserId",
+                                                            customerUserId || undefined,
+                                                        );
+                                                        if (name || phone) {
+                                                            set("customer", {
+                                                                name:
+                                                                    name ??
+                                                                    values.customer?.name ??
+                                                                    "",
+                                                                phone:
+                                                                    phone ??
+                                                                    values.customer?.phone ??
+                                                                    "",
+                                                            });
+                                                        }
+                                                    }}
+                                                />
+
+                                                <div className="text-[11px] text-gray-500 pt-5">
+                                                    Search and select a customer you invited to link
+                                                    this ride to their history. Leave as “Not
+                                                    linked” for one-off clients.
+                                                </div>
+                                            </div>
+
+                                            {/* Client name / phone */}
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <Field>
                                                     <FieldLabel htmlFor="customerName">
@@ -387,7 +472,9 @@ export default function NewRidePage() {
                                                         onChange={(e) =>
                                                             set(
                                                                 "passengers",
-                                                                Number(e.target.value || 1)
+                                                                Number(
+                                                                    e.target.value || 1,
+                                                                ),
                                                             )
                                                         }
                                                         className={inputClass()}
@@ -406,7 +493,9 @@ export default function NewRidePage() {
                                                         onChange={(e) =>
                                                             set(
                                                                 "luggages",
-                                                                Number(e.target.value || 0)
+                                                                Number(
+                                                                    e.target.value || 0,
+                                                                ),
                                                             )
                                                         }
                                                         className={inputClass()}
@@ -423,7 +512,8 @@ export default function NewRidePage() {
                                                         onChange={(e) =>
                                                             set(
                                                                 "vehicleType",
-                                                                e.target.value as VehicleType | ""
+                                                                e.target
+                                                                    .value as VehicleType | "",
                                                             )
                                                         }
                                                         className={inputClass()}
@@ -433,7 +523,9 @@ export default function NewRidePage() {
                                                         <option value="suv">SUV</option>
                                                         <option value="van">Van</option>
                                                         <option value="wagon">Wagon</option>
-                                                        <option value="hatchback">Hatchback</option>
+                                                        <option value="hatchback">
+                                                            Hatchback
+                                                        </option>
                                                         <option value="pickup">Pickup</option>
                                                         <option value="other">Other</option>
                                                     </select>
@@ -450,7 +542,10 @@ export default function NewRidePage() {
                                                         type="text"
                                                         value={values.language || ""}
                                                         onChange={(e) =>
-                                                            set("language", e.target.value)
+                                                            set(
+                                                                "language",
+                                                                e.target.value,
+                                                            )
                                                         }
                                                         className={inputClass()}
                                                         placeholder='e.g. "en"'
@@ -461,9 +556,14 @@ export default function NewRidePage() {
                                                     <label className="inline-flex items-center gap-2 text-xs sm:text-sm">
                                                         <input
                                                             type="checkbox"
-                                                            checked={values.airportTrip ?? false}
+                                                            checked={
+                                                                values.airportTrip ?? false
+                                                            }
                                                             onChange={(e) =>
-                                                                set("airportTrip", e.target.checked)
+                                                                set(
+                                                                    "airportTrip",
+                                                                    e.target.checked,
+                                                                )
                                                             }
                                                         />
                                                         Airport trip
@@ -471,11 +571,13 @@ export default function NewRidePage() {
                                                     <label className="inline-flex items-center gap-2 text-xs sm:text-sm">
                                                         <input
                                                             type="checkbox"
-                                                            checked={values.longDistance ?? false}
+                                                            checked={
+                                                                values.longDistance ?? false
+                                                            }
                                                             onChange={(e) =>
                                                                 set(
                                                                     "longDistance",
-                                                                    e.target.checked
+                                                                    e.target.checked,
                                                                 )
                                                             }
                                                         />
@@ -490,7 +592,6 @@ export default function NewRidePage() {
                                 {/* TYPE, NOTES, COVERAGE */}
                                 <div className="space-y-4 pt-2 border-t border-gray-100">
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        {/* Type – vertical radios */}
                                         <Field>
                                             <FieldLabel>Ride type</FieldLabel>
                                             <div className="mt-1 space-y-2">
@@ -499,8 +600,15 @@ export default function NewRidePage() {
                                                         type="radio"
                                                         name="rideType"
                                                         value="reservation"
-                                                        checked={values.type === "reservation"}
-                                                        onChange={() => set("type", "reservation")}
+                                                        checked={
+                                                            values.type === "reservation"
+                                                        }
+                                                        onChange={() =>
+                                                            set(
+                                                                "type",
+                                                                "reservation" as RideType,
+                                                            )
+                                                        }
                                                         className="mt-0.5"
                                                     />
                                                     <span>
@@ -519,7 +627,12 @@ export default function NewRidePage() {
                                                         name="rideType"
                                                         value="asap"
                                                         checked={values.type === "asap"}
-                                                        onChange={() => set("type", "asap")}
+                                                        onChange={() =>
+                                                            set(
+                                                                "type",
+                                                                "asap" as RideType,
+                                                            )
+                                                        }
                                                         className="mt-0.5"
                                                     />
                                                     <span>
@@ -538,7 +651,9 @@ export default function NewRidePage() {
                                                         name="rideType"
                                                         value=""
                                                         checked={!values.type}
-                                                        onChange={() => set("type", "")}
+                                                        onChange={() =>
+                                                            set("type", "" as RideType | "")
+                                                        }
                                                         className="mt-0.5"
                                                     />
                                                     <span>
@@ -554,28 +669,33 @@ export default function NewRidePage() {
                                             </div>
                                         </Field>
 
-                                        {/* Notes */}
                                         <Field>
-                                            <FieldLabel htmlFor="notes">Internal notes</FieldLabel>
+                                            <FieldLabel htmlFor="notes">
+                                                Internal notes
+                                            </FieldLabel>
                                             <textarea
                                                 id="notes"
                                                 rows={4}
                                                 value={values.notes}
-                                                onChange={(e) => set("notes", e.target.value)}
+                                                onChange={(e) =>
+                                                    set("notes", e.target.value)
+                                                }
                                                 className={inputClass()}
                                                 placeholder="Driver instructions, internal comments…"
                                             />
                                         </Field>
                                     </div>
 
-                                    {/* Coverage visibility */}
                                     <div className="space-y-1">
                                         <label className="inline-flex items-start gap-2 text-xs sm:text-sm">
                                             <input
                                                 type="checkbox"
                                                 checked={values.coveredVisible}
                                                 onChange={(e) =>
-                                                    set("coveredVisible", e.target.checked)
+                                                    set(
+                                                        "coveredVisible",
+                                                        e.target.checked,
+                                                    )
                                                 }
                                                 className="mt-0.5"
                                             />
@@ -592,7 +712,7 @@ export default function NewRidePage() {
                                     </div>
                                 </div>
 
-                                {/* AFTER SAVING: NEXT STEP */}
+                                {/* AFTER SAVING */}
                                 <div className="space-y-3 pt-2 border-t border-gray-100">
                                     <Typography className="text-sm font-semibold text-gray-900">
                                         After saving
@@ -664,7 +784,6 @@ export default function NewRidePage() {
                                     <Button
                                         type="button"
                                         variant="outline"
-                                        leftIcon={<ArrowLeft className="w-4 h-4" />}
                                         onClick={() => router.push("/rides")}
                                         className="w-full sm:w-auto"
                                     >
@@ -715,9 +834,8 @@ export default function NewRidePage() {
                                     </ol>
 
                                     <div className="rounded-md border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-900">
-                                        Tip: if time is critical, assign a driver directly. For
-                                        general availability, create a share and let drivers request
-                                        the ride.
+                                        Tip: link a registered customer so all their rides stay
+                                        connected in reports and history.
                                     </div>
                                 </CardBody>
                             </Card>
