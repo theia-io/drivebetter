@@ -7,6 +7,8 @@ import { ArrowLeft, Share2, Users } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import HandleRideStatus from "@/components/ride/RideStatus";
+import RideSummary from "@/components/ride/RideSummary";
 import LeafletMap from "@/components/ui/maps/LeafletMap";
 import RideShareQuickPanel from "@/components/ui/ride/RideShareQuickPanel";
 import { useAuthStore } from "@/stores";
@@ -15,9 +17,7 @@ import { useRide } from "@/stores/rides";
 import { getRoute } from "@/stores/routes";
 import { RideCreatorUser } from "@/types";
 import { getPillStatusColor, getStatusLabel, type RideStatus } from "@/types/rideStatus";
-import PendingDriverRequests from "./pending-driver";
-import HandleRideStatus from "./status";
-import RideSummary from "./summary";
+import PendingDriverRequests from "../../../components/ride/PendingDriver";
 
 export default function RideDetailsPage() {
     const { user } = useAuthStore();

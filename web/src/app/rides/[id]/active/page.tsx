@@ -7,6 +7,7 @@ import { ArrowLeft, Calendar, Clock, Loader2, MapPin, Navigation, PhoneIcon } fr
 import { useParams, useRouter } from "next/navigation";
 import { useMemo } from "react";
 
+import ActiveRideCard from "@/components/ride/ActiveRideCard";
 import RideStatusStepper from "@/components/ui/ride/RideStatusStepper";
 import { fmtDate, fmtTime } from "@/services/convertors";
 import { useAuthStore } from "@/stores";
@@ -15,7 +16,7 @@ import {
     getStatusColors,
     getStatusLabel,
     getStatusShortCode,
-    type RideStatus
+    type RideStatus,
 } from "@/types/rideStatus";
 
 const ACTIVE_MODE_FLOW: RideStatus[] = ["assigned", "on_my_way", "on_location", "pob", "completed"];
@@ -30,7 +31,7 @@ export default function RideActivePage() {
 
     const isAssignedDriver = useMemo(() => {
         if (!ride || !user?._id || !ride.assignedDriverId) return false;
-        return String(ride.assignedDriverId) === String(user._id);
+        return ride.assignedDriverId === user._id;
     }, [ride, user?._id]);
 
     const statusValue: RideStatus = (ride?.status as RideStatus) || "unassigned";
@@ -92,25 +93,10 @@ export default function RideActivePage() {
             {/* Full-screen overlay: hides app header / side / bottom nav visually */}
             <div className="fixed inset-0 z-40 flex flex-col bg-gray-50">
                 {/* Top bar: vibrant, clearly Active Ride mode */}
-                <div className="flex items-center gap-3 px-4 py-3 shadow-md bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        leftIcon={<ArrowLeft className="w-4 h-4" />}
-                        onClick={() => router.push(`/rides/${id}`)}
-                        className="border-white/80 bg-white/10 hover:bg-white/20 text-xs font-semibold"
-                    >
-                        Back
-                    </Button>
-                    <div className="min-w-0">
-                        <div className="text-[11px] uppercase tracking-[0.14em] font-semibold text-white/90">
-                            Active ride mode
-                        </div>
-                        <div className="text-sm sm:text-base font-semibold truncate">
-                            {ride.from} → {ride.to}
-                        </div>
-                    </div>
-                </div>
+                <ActiveRideCard
+                    clickHandler={() => router.push(`/rides/${id}`)}
+                    header={`${ride.from} → ${ride.to}`}
+                />
 
                 {/* Scrollable content */}
                 <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 sm:space-y-5">

@@ -1,22 +1,22 @@
 // app/rides/new/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Card, CardBody, Container, Typography } from "@/components/ui";
-import { ArrowLeft, HelpCircle, Save, ChevronDown } from "lucide-react";
-import PlaceCombobox from "@/components/ui/maps/PlaceCombobox";
+import { Field, FieldError, FieldLabel, inputClass } from "@/components/ui/commmon";
 import LeafletMap from "@/components/ui/maps/LeafletMap";
-import { createRide } from "@/stores/rides";
-import { PlaceHit } from "@/stores/geocode";
-import { getRoute } from "@/stores/routes";
+import PlaceCombobox from "@/components/ui/maps/PlaceCombobox";
 import { currentHourTimeInput, todayDateInput } from "@/services/datetime";
+import { useAuthStore } from "@/stores";
+import { PlaceHit } from "@/stores/geocode";
+import { createRide } from "@/stores/rides";
+import { getRoute } from "@/stores/routes";
 import { VehicleType } from "@/types/driver-details";
 import { RideType } from "@/types/ride";
-import { Field, FieldLabel, FieldError, inputClass } from "@/components/ui/commmon";
-import { useAuthStore } from "@/stores";
 import { RideStatus } from "@/types/rideStatus";
+import { ArrowLeft, ChevronDown, HelpCircle, Save } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 /* ------------------------------- Types ------------------------------- */
 

@@ -4,15 +4,16 @@ import { Button, Card, CardBody, Typography } from "@/components/ui";
 import RideStatusDropdown from "@/components/ui/ride/RideStatusDropdown";
 import RideStatusStepper from "@/components/ui/ride/RideStatusStepper";
 import { Play, Trash2 } from "lucide-react";
-import router from "next/router";
 
 import { useAuthStore } from "@/stores";
 import { useDeleteRide, useRide, useSetRideStatus } from "@/stores/rides";
 import { RideCreatorUser } from "@/types";
 import { getPossibleStatuses, getStatusLabel, type RideStatus } from "@/types/rideStatus";
+import { useRouter } from "next/navigation";
 
 export default function HandleRideStatus({ id }: { id: string }) {
     const { data: ride, mutate } = useRide(id);
+    const router = useRouter();
 
     const { user } = useAuthStore();
     const canManage =
