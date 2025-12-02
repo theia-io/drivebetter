@@ -25,6 +25,8 @@ export default function Navigation() {
             {/* fixed top nav on all breakpoints */}
             <nav className="fixed top-0 inset-x-0 z-40 bg-white shadow-sm border-b">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    {/* hotfix for tailwind css to work with dynamic class names */}
+                    <div className="hidden h-16 pt-16 "></div>
                     <div className={`flex items-center h-${NAVIGATION_HEIGHT_SUFFIX}`}>
                         {/* brand */}
                         <h1 className="text-xl font-bold text-gray-900">

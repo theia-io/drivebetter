@@ -1,10 +1,9 @@
-import ActiveRideCard from "@/components/ride/ActiveRideCard";
-import { useMyRides, useRide } from "@/stores/rides";
+import { useMyRides } from "@/stores/rides";
+import { Eye } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 import ActiveCard from "../cards/active";
-import Link from "next/link";
-import { ArrowRight, Eye } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
 
 export default function FocusedRide() {
     const { data, isLoading, mutate } = useMyRides();

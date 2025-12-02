@@ -41,7 +41,7 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
             {/* fixed top + bottom nav live inside Navigation */}
             <Navigation />
 
-            <div className={` pt-${NAVIGATION_HEIGHT_SUFFIX} pb-16 `}>
+            <div className={`pt-${NAVIGATION_HEIGHT_SUFFIX} pb-16`}>
                 <FocusedRide />
 
                 {/* reserve space: 4rem top bar, ~4rem bottom bar on mobile */}
