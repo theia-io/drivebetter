@@ -270,6 +270,7 @@ router.patch(
         if (visibility) {
             if (!["public", "groups", "drivers"].includes(visibility))
                 return res.status(400).json({ error: "Invalid visibility" });
+            
             $set.visibility = visibility;
             if (visibility !== "groups") $set.groupIds = [];
             if (visibility !== "drivers") $set.driverIds = [];

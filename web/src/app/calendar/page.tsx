@@ -24,6 +24,7 @@ import {
 
 import MultiRideModal from "@/components/ui/calendar/MultiRideModal";
 import RideDetailsModal from "@/components/ui/calendar/RideDetailsModal";
+import { useWindowSize } from "@/hooks/useWindowSize";
 import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
 import { useRidesInfinite } from "@/stores/rides";
 import { Ride } from "@/types";
@@ -34,8 +35,6 @@ import {
     getStatusDotColor,
     getStatusIcon,
 } from "@/types/rideStatus";
-import { useWindowSize } from "@/hooks/useWindowSize";
-import { constrainedMemory } from "process";
 
 const locales = { "en-GB": enGB };
 
@@ -317,7 +316,7 @@ export default function CalendarPage() {
     const [listModalSelectedId, setListModalSelectedId] = useState<string | null>(null);
     const [listFilterStatus, setListFilterStatus] = useState<RideStatus | "all">("all");
 
-    const { isMobile, width } = useWindowSize();
+    const { isMobile } = useWindowSize();
 
     const [listSort, setListSort] = useState<"timeAsc" | "timeDesc" | "status" | "amountDesc">(
         "timeAsc"
@@ -329,7 +328,6 @@ export default function CalendarPage() {
     const [rideOverrides, setRideOverrides] = useState<Record<string, Ride>>({});
 
     useEffect(() => {
-        console.log("isMobile", isMobile, width);
         setView(isMobile ? "day" : "week");
     }, [isMobile]);
 
@@ -686,98 +684,96 @@ export default function CalendarPage() {
             <Container className="px-3 sm:px-6 lg:px-8">
                 <div className="space-y-4 sm:space-y-6 pb-4 sm:pb-8">
                     {/* Header + controls */}
-                    <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-start gap-2">
-                            <div className="mt-0.5 sm:mt-1">
-                                <CalendarDays className="w-5 h-5 text-indigo-600" />
+                    <div className="flex items-start gap-2">
+                        <div className="mt-0.5 sm:mt-1">
+                            <CalendarDays className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <div className="min-w-0">
+                            <Typography className="text-lg sm:text-2xl font-bold text-gray-900 truncate">
+                                Calendar
+                            </Typography>
+                            <Typography className="text-xs sm:text-sm text-gray-600">
+                                Rides schedule with daily stats and quick preview.
+                            </Typography>
+                        </div>
+                    </div>
+
+                    <div className="w-full flex flex-col md:flex-row gap-2 mb-2">
+                        <div className="flex flex-wrap justify-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={goToPrevious}
+                                leftIcon={<ChevronLeft className="w-4 h-4" />}
+                            >
+                                Previous
+                            </Button>
+
+                            <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs sm:text-sm">
+                                <CalendarDays className="w-4 h-4 text-gray-500" />
+                                <span className="font-medium text-gray-800">{rangeLabel}</span>
+                                {isLoading && (
+                                    <span className="inline-flex items-center gap-1 text-[11px] text-gray-500">
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        Loading…
+                                    </span>
+                                )}
                             </div>
-                            <div className="min-w-0">
-                                <Typography className="text-lg sm:text-2xl font-bold text-gray-900 truncate">
-                                    Calendar
-                                </Typography>
-                                <Typography className="text-xs sm:text-sm text-gray-600">
-                                    Rides schedule with daily stats and quick preview.
-                                </Typography>
-                            </div>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={goToNext}
+                                rightIcon={<ChevronRight className="w-4 h-4" />}
+                            >
+                                Next
+                            </Button>
+
+                            <Button
+                                variant="solid"
+                                size="sm"
+                                leftIcon={<CalendarIcon className="w-4 h-4" />}
+                                onClick={() => onNavigate(new Date())}
+                            >
+                                Today
+                            </Button>
                         </div>
 
-                        <div className="w-full sm:w-auto flex flex-col gap-2">
-                            <div className="flex flex-wrap justify-center sm:justify-end gap-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={goToPrevious}
-                                    leftIcon={<ChevronLeft className="w-4 h-4" />}
+                        <div className="ml-auto flex justify-center sm:justify-end">
+                            <div className="inline-flex w-full max-w-xs sm:max-w-none sm:w-auto rounded-lg border border-gray-200 bg-white text-xs sm:text-sm">
+                                <button
+                                    type="button"
+                                    onClick={() => onViewChange("day")}
+                                    className={`flex-1 px-3 py-1.5 rounded-l-lg ${
+                                        view === "day"
+                                            ? "bg-indigo-50 text-indigo-700 border-r border-indigo-100"
+                                            : "border-r border-gray-200 text-gray-600 hover:bg-gray-50"
+                                    }`}
                                 >
-                                    Previous
-                                </Button>
-
-                                <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs sm:text-sm">
-                                    <CalendarDays className="w-4 h-4 text-gray-500" />
-                                    <span className="font-medium text-gray-800">{rangeLabel}</span>
-                                    {isLoading && (
-                                        <span className="inline-flex items-center gap-1 text-[11px] text-gray-500">
-                                            <Loader2 className="w-3 h-3 animate-spin" />
-                                            Loading…
-                                        </span>
-                                    )}
-                                </div>
-
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={goToNext}
-                                    rightIcon={<ChevronRight className="w-4 h-4" />}
+                                    Day
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => onViewChange("week")}
+                                    className={`flex-1 px-3 py-1.5 ${
+                                        view === "week"
+                                            ? "bg-indigo-50 text-indigo-700 border-x border-indigo-100"
+                                            : "border-x border-gray-200 text-gray-600 hover:bg-gray-50"
+                                    }`}
                                 >
-                                    Next
-                                </Button>
-
-                                <Button
-                                    variant="solid"
-                                    size="sm"
-                                    leftIcon={<CalendarIcon className="w-4 h-4" />}
-                                    onClick={() => onNavigate(new Date())}
+                                    Week
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => onViewChange("month")}
+                                    className={`flex-1 px-3 py-1.5 rounded-r-lg ${
+                                        view === "month"
+                                            ? "bg-indigo-50 text-indigo-700"
+                                            : "text-gray-600 hover:bg-gray-50"
+                                    }`}
                                 >
-                                    Today
-                                </Button>
-                            </div>
-
-                            <div className="flex justify-center sm:justify-end">
-                                <div className="inline-flex w-full max-w-xs sm:max-w-none sm:w-auto rounded-lg border border-gray-200 bg-white text-xs sm:text-sm">
-                                    <button
-                                        type="button"
-                                        onClick={() => onViewChange("day")}
-                                        className={`flex-1 px-3 py-1.5 rounded-l-lg ${
-                                            view === "day"
-                                                ? "bg-indigo-50 text-indigo-700 border-r border-indigo-100"
-                                                : "border-r border-gray-200 text-gray-600 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        Day
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => onViewChange("week")}
-                                        className={`flex-1 px-3 py-1.5 ${
-                                            view === "week"
-                                                ? "bg-indigo-50 text-indigo-700 border-x border-indigo-100"
-                                                : "border-x border-gray-200 text-gray-600 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        Week
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => onViewChange("month")}
-                                        className={`flex-1 px-3 py-1.5 rounded-r-lg ${
-                                            view === "month"
-                                                ? "bg-indigo-50 text-indigo-700"
-                                                : "text-gray-600 hover:bg-gray-50"
-                                        }`}
-                                    >
-                                        Month
-                                    </button>
-                                </div>
+                                    Month
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -800,6 +796,12 @@ export default function CalendarPage() {
                                     popup={false}
                                     dayLayoutAlgorithm="no-overlap"
                                     onSelectEvent={(event) => {
+                                        console.log(
+                                            "event",
+                                            event,
+                                            event.resource,
+                                            event.resource?.kind
+                                        );
                                         const e = event as CalendarEvent;
                                         const res = e.resource;
                                         if (res.kind === "ride") {

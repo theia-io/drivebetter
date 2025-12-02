@@ -4,7 +4,7 @@ import { requireAuth, requireRole } from "../lib/auth";
 import { sendPushNotificationToUser, sendPushNotificationToUsers } from "../lib/pushNotifications";
 import { assertCanAccessRide, rideScopeFilter } from "../lib/rideAuthz";
 import { compareIds, normalizeId } from "../lib/utils/db-types";
-import {Group} from "../models/group.model";
+import { Group } from "../models/group.model";
 import Ride from "../models/ride.model";
 import { RideClaim } from "../models/rideClaim.model";
 import { RideShare } from "../models/rideShare.model";
@@ -405,12 +405,12 @@ router.get(
         const user = (req as any).user;
         const ride = await Ride.findById(req.params.id).populate("creatorId", "name email phone");
         try {
+            console.log("ride", ride);
+            console.log("user", user);
             assertCanAccessRide(user, ride);
         } catch (e: any) {
             console.error("[getRide] Error asserting access:", e);
-            return res
-                .status(e.status || 403)
-                .json({ error: (e.message || "Forbidden") + " dan test" });
+            return res.status(e.status || 403).json({ error: e.message || "Forbidden" });
         }
 
         if (!ride) return res.status(404).json({ error: "Ride not found" });
@@ -1258,8 +1258,9 @@ router.post(
 
         // validate vis + targets
         if (!["public", "groups", "drivers"].includes(visibility)) {
-            return res.status(400).json({ error: "Invalid visibility" });
+            return res.status(400).json({ error: "Invalid visibility 1" });
         }
+
         if (visibility === "groups" && (!Array.isArray(groupIds) || groupIds.length === 0)) {
             return res.status(400).json({ error: "groupIds required for groups visibility" });
         }
@@ -1606,7 +1607,7 @@ router.get(
         }
 
         res.json({ total, byStatus });
-    },
+    }
 );
 
 /**

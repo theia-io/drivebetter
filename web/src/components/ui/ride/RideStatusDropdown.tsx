@@ -9,30 +9,34 @@ import {
     getStatusLabel,
     type RideStatus,
 } from "@/types/rideStatus";
+import { cn } from "@/utils/css";
 
 type RideStatusDropdownProps = {
-    value: RideStatus;
+    rideStatus: RideStatus;
+    possibleStatuses: RideStatus[];
     onChange?: (next: RideStatus) => Promise<void> | void;
     disabled?: boolean;
     className?: string;
 };
 
 export default function RideStatusDropdown({
-    value,
+    rideStatus,
+    possibleStatuses,
     onChange,
     disabled,
     className,
 }: RideStatusDropdownProps) {
     const [open, setOpen] = useState(false);
 
-    const meta = STATUS_OPTIONS.find((s) => s.value === value);
-    const label = meta?.label ?? getStatusLabel(value);
-    const desc = meta?.description ?? "Tap to update the ride status.";
-    const colors = getStatusColors(value);
+    const currentStatus = STATUS_OPTIONS.find((s) => s.value === rideStatus);
+    const label = currentStatus?.label ?? getStatusLabel(rideStatus);
+    const desc = currentStatus?.description ?? "Tap to update the ride status.";
+    const colors = getStatusColors(rideStatus);
 
     async function handleSelect(next: RideStatus) {
         setOpen(false);
-        if (next === value) return;
+
+        if (next === rideStatus) return;
         if (onChange) {
             await onChange(next);
         }
@@ -61,7 +65,7 @@ export default function RideStatusDropdown({
                     <span
                         className={[
                             "mt-1 h-2 w-2 rounded-full flex-shrink-0",
-                            getStatusDotColor(value),
+                            getStatusDotColor(rideStatus),
                         ].join(" ")}
                     />
                     <div className="min-w-0 flex flex-col">
@@ -83,21 +87,25 @@ export default function RideStatusDropdown({
                     </div>
                     <ul className="max-h-80 overflow-y-auto py-1 text-sm">
                         {STATUS_OPTIONS.map((opt) => {
-                            const isActive = opt.value === value;
+                            const isActive = opt.value === rideStatus;
                             const dotClass = getStatusDotColor(opt.value);
                             const optColors = getStatusColors(opt.value);
+                            const possibleToChange = possibleStatuses.includes(opt.value);
+
                             return (
                                 <li key={opt.value}>
                                     <button
                                         type="button"
                                         onClick={() => handleSelect(opt.value)}
+                                        disabled={!possibleToChange}
                                         style={
                                             isActive ? { backgroundColor: optColors.bg } : undefined
                                         }
-                                        className={[
+                                        className={cn(
                                             "flex w-full items-start gap-3 px-3 py-2.5 text-left hover:bg-gray-50",
                                             isActive ? "bg-gray-50/80" : "",
-                                        ].join(" ")}
+                                            !possibleToChange ? "opacity-50 cursor-not-allowed" : ""
+                                        )}
                                     >
                                         <span
                                             className={[
@@ -110,6 +118,7 @@ export default function RideStatusDropdown({
                                                 <span className="text-sm font-semibold text-gray-900">
                                                     {opt.label}
                                                 </span>
+
                                                 {isActive && (
                                                     <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-1.5 py-0.5 text-[10px] font-medium text-gray-900 border border-black/5">
                                                         <Check className="h-3 w-3" />

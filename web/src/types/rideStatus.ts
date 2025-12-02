@@ -1,6 +1,7 @@
 // src/types/rideStatus.ts
 
 import { Car, Check, MapPin, Navigation, User, Users } from "lucide-react";
+import { Ride } from "./ride";
 
 export type RideStatus =
     | "unassigned"
@@ -193,4 +194,24 @@ export function getStatusDotColor(status: string): string {
         return DOT_COLOR_MAP[status as RideStatus];
     }
     return "bg-gray-400";
+}
+
+export function getPossibleStatuses(status: RideStatus, ride: Ride): RideStatus[] {
+    if (ride.status === "unassigned") {
+        return [];
+    }
+    if (ride.status === "assigned") {
+        return ["unassigned", "on_my_way"];
+    }
+    if (ride.status === "on_my_way") {
+        return ["unassigned", "assigned", "on_location"];
+    }
+    if (ride.status === "on_location") {
+        return ["unassigned", "assigned", "on_my_way", "pob"];
+    }
+    if (ride.status === "pob") {
+        return ["unassigned", "assigned", "on_my_way", "on_location", "completed"];
+    }
+
+    return [];
 }

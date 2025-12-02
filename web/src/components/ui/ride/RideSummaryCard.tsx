@@ -1,42 +1,43 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import {
-    Calendar,
-    Car,
-    Clock,
-    DollarSign,
-    MapPin,
-    Navigation,
-    User,
-    Eye,
-    ChevronDown,
-    Users,
-    UserIcon,
-    Check,
-    X as XIcon,
-    Loader2,
-} from "lucide-react";
 import { Button, Card, CardBody, Typography } from "@/components/ui";
-import { Ride, RideCreatorUser } from "@/types";
-import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
+import AssignDriverSelect from "@/components/ui/ride/AssignDriverSelect";
 import AssignedDriverBadge from "@/components/ui/ride/AssignedDriverBadge";
 import RideCreatorBadge from "@/components/ui/ride/RideCreatorBadge";
-import { useAuthStore } from "@/stores";
-import AssignDriverSelect from "@/components/ui/ride/AssignDriverSelect";
 import RideShareQuickPanel from "@/components/ui/ride/RideShareQuickPanel";
 import RideStatusDropdown from "@/components/ui/ride/RideStatusDropdown";
 import RideStatusStepper from "@/components/ui/ride/RideStatusStepper";
+import { fmtDate, fmtTime, km, mins, money } from "@/services/convertors";
+import { useAuthStore } from "@/stores";
+import { useApproveRideClaim, useRejectRideClaim, useRideClaims } from "@/stores/rideClaims";
+import { useSetRideStatus } from "@/stores/rides";
+import { useDriversPublicBatchMap } from "@/stores/users";
+import { Ride, RideCreatorUser } from "@/types";
 import {
     getPillStatusColor,
+    getPossibleStatuses,
     getStatusDotColor,
     getStatusLabel,
     type RideStatus,
 } from "@/types/rideStatus";
-import { useSetRideStatus } from "@/stores/rides";
-import { useRideClaims, useApproveRideClaim, useRejectRideClaim } from "@/stores/rideClaims";
-import { useDriversPublicBatchMap } from "@/stores/users";
+import {
+    Calendar,
+    Car,
+    Check,
+    ChevronDown,
+    Clock,
+    DollarSign,
+    Eye,
+    Loader2,
+    MapPin,
+    Navigation,
+    User,
+    UserIcon,
+    Users,
+    X as XIcon,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 type RideSummaryCardProps = {
     ride: Ride;
@@ -315,7 +316,8 @@ export default function RideSummaryCard({
                         {canChangeStatus && (
                             <div className="mt-1" onClick={(e) => e.stopPropagation()}>
                                 <RideStatusDropdown
-                                    value={statusValue}
+                                    rideStatus={statusValue}
+                                    possibleStatuses={getPossibleStatuses(statusValue, ride)}
                                     disabled={isSettingStatus}
                                     onChange={handleStatusChange}
                                     className="w-full"
