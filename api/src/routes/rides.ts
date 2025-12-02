@@ -930,7 +930,7 @@ router.post(
             if (!driver) return res.status(404).json({ error: "Driver not found" });
 
             await sendPushNotificationToUser(driver, {
-                title: "Ride Claim Approved",
+                title: "You got the ride!",
                 body: `Your ride claim has been approved! Ride: ${ride.from} → ${ride.to}`,
                 url: `/rides/${rideId}`,
                 tag: `ride-${rideId}-assigned`,
@@ -1000,6 +1000,17 @@ router.post(
 
         claim.status = "rejected";
         await claim.save();
+
+        const driver = await User.findById(claim.driverId);
+        if (driver) {
+            const ride = await Ride.findById(id);
+            await sendPushNotificationToUser(driver, {
+                title: "Ride Claim Rejected",
+                body: `Your ride claim has been rejected! Ride: ${ride?.from} → ${ride?.to}`,
+                url: `/rides/${id}`,
+                tag: `ride-${id}-rejected`,
+            });
+        }
 
         return res.json({ ok: true });
     }

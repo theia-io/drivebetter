@@ -2,6 +2,7 @@
 
 import { ArrowLeft } from "lucide-react";
 import { Button } from "../ui";
+import ActiveCard from "../ui/cards/active";
 
 export type ActiveRideCardProps = {
     clickHandler: () => void;
@@ -20,12 +21,7 @@ export default function ActiveRideCard({ clickHandler, header }: ActiveRideCardP
             >
                 Back
             </Button>
-            <div className="min-w-0">
-                <div className="text-[11px] uppercase tracking-[0.14em] font-semibold text-white/90">
-                    Active ride mode
-                </div>
-                <div className="text-sm sm:text-base font-semibold truncate">{header}</div>
-            </div>
+            <ActiveCard content={header} header="Active ride mode" />
         </div>
     );
 }

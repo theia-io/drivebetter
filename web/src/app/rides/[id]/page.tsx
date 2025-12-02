@@ -28,7 +28,7 @@ export default function RideDetailsPage() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
 
-    const { data: ride, mutate } = useRide(id);
+    const { data: ride } = useRide(id);
 
     const canManage =
         user?.roles?.some((r) => r === "admin") ||
@@ -42,7 +42,7 @@ export default function RideDetailsPage() {
     const canChangeStatus = !!ride && (canManage || isAssignedDriver);
 
     // Claims (driver requests)
-    const { data: claims = [], isLoading: claimsLoading } = useRideClaims(id);
+    const { data: claims = [] } = useRideClaims(id);
 
     // Sort queued claims by createdAt ascending so order is clear
     const queuedClaims = useMemo(
@@ -57,8 +57,6 @@ export default function RideDetailsPage() {
                 }),
         [claims]
     );
-
-    const approvedClaim = useMemo(() => claims.find((c) => c.status === "approved"), [claims]);
 
     const hasQueuedClaims = queuedClaims.length > 0;
 
@@ -185,7 +183,7 @@ export default function RideDetailsPage() {
                     {/* Shares */}
                     {canManage && (
                         <Card variant="elevated">
-                            <CardBody className="p-4 md:p-6 space-y-3">
+                            <CardBody className="dspace-y-3">
                                 <div className="flex items-center gap-2">
                                     <Share2 className="w-4 h-4 text-indigo-600" />
                                     <Typography className="font-semibold text-gray-900">

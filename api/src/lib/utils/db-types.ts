@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 
 export function isObjectId(v: any): boolean {
-    return v instanceof Types.ObjectId || Types.ObjectId.isValid(String(v));
+    return v instanceof Types.ObjectId;
 }
 
 export function normalizeId(id: any): Types.ObjectId {
@@ -25,5 +25,10 @@ export function normalizeId(id: any): Types.ObjectId {
 }
 
 export function compareIds(id1: any, id2: any): boolean {
-    return normalizeId(id1).equals(normalizeId(id2));
+    const id1Normalized = normalizeId(id1);
+    const id2Normalized = normalizeId(id2);
+    if (!id1Normalized || !id2Normalized) {
+        return false;
+    }
+    return id1Normalized.equals(id2Normalized);
 }

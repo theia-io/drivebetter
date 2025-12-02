@@ -5,7 +5,8 @@ import AppVersion from "@/components/meta-info/app-version";
 import { useAuthStore } from "@/stores/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import Navigation from "./navigation/Navigation";
+import Navigation, { NAVIGATION_HEIGHT_SUFFIX } from "./navigation/Navigation";
+import FocusedRide from "./ui/ride/FocusedRide";
 
 interface ProtectedLayoutProps {
     children: React.ReactNode;
@@ -40,10 +41,12 @@ export default function ProtectedLayout({ children }: ProtectedLayoutProps) {
             {/* fixed top + bottom nav live inside Navigation */}
             <Navigation />
 
-            {/* reserve space: 4rem top bar, ~4rem bottom bar on mobile */}
-            <main className="max-w-7xl mx-auto pt-16 pb-16 mt-4 px-4 sm:px-6 lg:px-8">
-                {children}
-            </main>
+            <div className={` pt-${NAVIGATION_HEIGHT_SUFFIX} pb-16 `}>
+                <FocusedRide />
+
+                {/* reserve space: 4rem top bar, ~4rem bottom bar on mobile */}
+                <main className={`max-w-7xl mx-automt-4 px-4 sm:px-6 lg:px-8`}>{children}</main>
+            </div>
 
             <AppVersion className="hidden md:block" />
         </div>

@@ -9,6 +9,7 @@ import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
     CREATE_RIDE_ITEM,
+    CUSTOMERS_ITEM,
     GROUPS_ITEM,
     NAVIGATION_ITEMS,
     NavItem,
@@ -51,7 +52,7 @@ export default function DesktopMenu({ user, renderNavLabel, className }: Desktop
 
         // Non-clients: original behaviour (role-filtered)
         return NAVIGATION_ITEMS.filter((item) =>
-            hasRequiredRole(userRoles, item.requiredRoles),
+            hasRequiredRole(userRoles, item.requiredRoles)
         ).map((item) => getNavigationForUser(item, userRoles));
     }, [isPureClient, userRoles]);
 
@@ -65,7 +66,7 @@ export default function DesktopMenu({ user, renderNavLabel, className }: Desktop
         }
 
         // Only add Groups / Users if user actually has roles for them
-        return [GROUPS_ITEM, USERS_ITEM]
+        return [GROUPS_ITEM, USERS_ITEM, CUSTOMERS_ITEM]
             .filter((item) => hasRequiredRole(userRoles, item.requiredRoles))
             .map((item) => getNavigationForUser(item, userRoles));
     }, [isPureClient, userRoles]);
@@ -85,7 +86,7 @@ export default function DesktopMenu({ user, renderNavLabel, className }: Desktop
                         "inline-flex items-center px-2 pt-1 border-b-2 text-sm font-medium transition-all duration-300",
                         isActive(item.href, pathname)
                             ? "border-indigo-500 pb-2 font-semibold shadow-md rounded-md text-gray-900"
-                            : "border-transparent hover:pb-2 text-gray-500 hover:border-gray-300 hover:text-gray-700 hover:shadow-md hover:rounded-md",
+                            : "border-transparent hover:pb-2 text-gray-500 hover:border-gray-300 hover:text-gray-700 hover:shadow-md hover:rounded-md"
                     )}
                 >
                     {renderNavLabel(item)}
@@ -104,7 +105,7 @@ export default function DesktopMenu({ user, renderNavLabel, className }: Desktop
                             "inline-flex items-center gap-1 px-2 pt-1 border-b-2 text-sm font-medium transition-all duration-300",
                             dropdownItems.some((d) => isActive(d.href, pathname))
                                 ? "border-indigo-500 pb-2 font-semibold shadow-md rounded-md text-gray-900"
-                                : "border-transparent hover:pb-2 text-gray-500 hover:border-gray-300 hover:text-gray-700 hover:shadow-md hover:rounded-md",
+                                : "border-transparent hover:pb-2 text-gray-500 hover:border-gray-300 hover:text-gray-700 hover:shadow-md hover:rounded-md"
                         )}
                     >
                         <MoreHorizontal className="h-4 w-4" />
@@ -123,7 +124,7 @@ export default function DesktopMenu({ user, renderNavLabel, className }: Desktop
                                             "flex items-center gap-2 px-3 py-2 text-sm",
                                             isActive(item.href, pathname)
                                                 ? "bg-indigo-50 text-indigo-700"
-                                                : "text-gray-700 hover:bg-gray-50",
+                                                : "text-gray-700 hover:bg-gray-50"
                                         )}
                                     >
                                         {renderNavLabel(item)}

@@ -66,17 +66,6 @@ export default function RideStatus({ id }: { id: string }) {
     const isActiveModeAvailable =
         isAssignedDriver && ride.status !== "unassigned" && ride.status !== "completed";
 
-    console.log(
-        "canManage: ",
-        canManage,
-        ", canChangeStatus: ",
-        canChangeStatus,
-        ", isAssignedDriver: ",
-        isAssignedDriver,
-        ", ride.status: ",
-        ride?.status
-    );
-
     return (
         <>
             {/* Status / actions card */}
@@ -133,7 +122,7 @@ export default function RideStatus({ id }: { id: string }) {
                                     <button
                                         type="button"
                                         onClick={() => router.push(`/rides/${id}/active`)}
-                                        className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                                        className="inline-flex h-16 w-16 items-center justify-center cursor-pointer rounded-full bg-indigo-600 text-white shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-400"
                                         aria-label="Open Active Ride mode"
                                     >
                                         <Play className="w-7 h-7" />
@@ -143,7 +132,7 @@ export default function RideStatus({ id }: { id: string }) {
                                         Active Ride mode
                                     </div>
                                     {/* Hover label on larger screens */}
-                                    <div className="pointer-events-none absolute right-full mr-2 top-1/2 -translate-y-1/2 rounded-md bg-gray-900 px-2 py-1 text-[11px] text-white opacity-0 group-hover:opacity-100 hidden md:block">
+                                    <div className="pointer-events-none absolute right-full w-[150px] mr-2 top-1/2 -translate-y-1/2 rounded-md bg-gray-900 px-2 py-1 text-[11px] text-white opacity-0 group-hover:opacity-100 hidden md:block">
                                         Open Active Ride mode
                                     </div>
                                 </div>

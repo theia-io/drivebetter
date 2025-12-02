@@ -8,6 +8,8 @@ import DesktopMenu from "./desktop-menu";
 import MobileMenu from "./mobile-menu";
 import MobileSticky from "./mobile-sticky";
 
+export const NAVIGATION_HEIGHT_SUFFIX = "16";
+
 export default function Navigation() {
     const { user, logout } = useAuthStore();
 
@@ -23,18 +25,14 @@ export default function Navigation() {
             {/* fixed top nav on all breakpoints */}
             <nav className="fixed top-0 inset-x-0 z-40 bg-white shadow-sm border-b">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex h-16 items-center">
+                    <div className={`flex items-center h-${NAVIGATION_HEIGHT_SUFFIX}`}>
                         {/* brand */}
                         <h1 className="text-xl font-bold text-gray-900">
                             <Link href="/">DriveBetter</Link>
                         </h1>
 
                         {/* desktop menu */}
-                        <DesktopMenu
-                            className="ml-6"
-                            user={user}
-                            renderNavLabel={renderNavLabel}
-                        />
+                        <DesktopMenu className="ml-6" user={user} renderNavLabel={renderNavLabel} />
 
                         {/* mobile menu trigger + modal/drawer (keep as is) */}
                         <MobileMenu

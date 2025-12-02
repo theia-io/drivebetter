@@ -14,7 +14,7 @@ export default function PendingDriverRequests({
     id: string;
     requestsRef: React.RefObject<HTMLDivElement>;
 }) {
-    const { mutate } = useRide(id);
+    const { data: ride, mutate } = useRide(id);
     const { data: claims = [], isLoading: claimsLoading, mutate: mutateClaims } = useRideClaims(id);
 
     const queuedClaims = useMemo(
@@ -38,6 +38,15 @@ export default function PendingDriverRequests({
     const { approve, isApproving } = useApproveRideClaim(id);
     const { reject, isRejecting } = useRejectRideClaim(id);
 
+    // Resolve driver names/emails for all claims
+    const claimDriverIds = useMemo(
+        () => Array.from(new Set(claims.map((c) => c.driverId))),
+        [claims]
+    );
+
+    const { map: claimDriversMap, isLoading: claimDriversLoading } =
+        useDriversPublicBatchMap(claimDriverIds);
+
     async function onApproveClaim(claimId: string) {
         try {
             setError(null);
@@ -58,19 +67,10 @@ export default function PendingDriverRequests({
         }
     }
 
-    // Resolve driver names/emails for all claims
-    const claimDriverIds = useMemo(
-        () => Array.from(new Set(claims.map((c) => c.driverId))),
-        [claims]
-    );
-
-    const { map: claimDriversMap, isLoading: claimDriversLoading } =
-        useDriversPublicBatchMap(claimDriverIds);
-
     return (
         <div ref={requestsRef}>
             <Card variant="elevated">
-                <CardBody className="p-4 md:p-6 space-y-3">
+                <CardBody className="space-y-3">
                     <div className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-indigo-600" />
                         <Typography className="font-semibold text-gray-900">
@@ -105,7 +105,7 @@ export default function PendingDriverRequests({
                                 return (
                                     <div
                                         key={c.claimId}
-                                        className="flex flex-wrap items-center gap-2 justify-between rounded-lg border p-2 bg-white"
+                                        className="flex flex-wrap items-center gap-2 justify-between rounded-lg border bg-white"
                                     >
                                         <div className="min-w-0 flex items-start gap-2">
                                             {/* queue index */}

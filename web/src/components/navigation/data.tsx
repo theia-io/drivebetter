@@ -1,4 +1,13 @@
-import {BookUserIcon, Calendar, Plus, Route, Share2, UserCheck, Users, UsersRound} from "lucide-react";
+import {
+    BookUserIcon,
+    Calendar,
+    Plus,
+    Route,
+    Share2,
+    UserCheck,
+    Users,
+    UsersRound,
+} from "lucide-react";
 import { ReactNode } from "react";
 
 export type NavItem = {
@@ -69,7 +78,6 @@ export const NAVIGATION_ITEMS: NavItem[] = [
     MY_CREATED_ITEM,
     MY_ASSIGNMENTS_ITEM,
     NEW_RIDES_ITEM,
-    CUSTOMERS_ITEM,
 ];
 
 export const getNavigationForUser = (item: NavItem, userRoles?: string[]): NavItem => {
