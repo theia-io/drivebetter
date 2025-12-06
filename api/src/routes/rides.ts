@@ -112,36 +112,62 @@ function getPaging(req: Request) {
  *     parameters:
  *       - in: query
  *         name: status
- *         schema: { type: string, enum: [unassigned, assigned, on_my_way, on_location, pob, clear, completed] }
+ *         schema:
+ *           type: string
+ *           enum: [unassigned, assigned, on_my_way, on_location, pob, clear, completed]
  *       - in: query
  *         name: type
- *         schema: { type: string, enum: [reservation, asap] }
+ *         schema:
+ *           type: string
+ *           enum: [reservation, asap]
+ *       - in: query
+ *         name: customerId
+ *         description: Filter by linked customer user id (customerUserId)
+ *         schema:
+ *           type: string
  *       - in: query
  *         name: driverId
  *         description: Filter by assigned driver
- *         schema: { type: string }
+ *         schema:
+ *           type: string
  *       - in: query
  *         name: includeClaimed
  *         description: Also include rides where driver is in claim queue
- *         schema: { type: boolean, default: false }
+ *         schema:
+ *           type: boolean
+ *           default: false
  *       - in: query
  *         name: from
  *         description: ISO date-time inclusive lower bound
- *         schema: { type: string, format: date-time }
+ *         schema:
+ *           type: string
+ *           format: date-time
  *       - in: query
  *         name: to
  *         description: ISO date-time inclusive upper bound
- *         schema: { type: string, format: date-time }
+ *         schema:
+ *           type: string
+ *           format: date-time
  *       - in: query
  *         name: page
- *         schema: { type: integer, default: 1, minimum: 1 }
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *           minimum: 1
  *       - in: query
  *         name: limit
- *         schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           minimum: 1
+ *           maximum: 100
  *       - in: query
  *         name: sort
  *         description: Sort by datetime asc|desc
- *         schema: { type: string, enum: [asc, desc], default: desc }
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
  *     responses:
  *       200:
  *         description: Paged list of rides
@@ -179,20 +205,33 @@ router.get(
         const user = (req as any).user;
         const page = Math.max(Number(req.query.page || 1), 1);
         const limit = Math.min(Math.max(Number(req.query.limit || 20), 1), 100);
+
         const sortDirParam = String(req.query.sort || "asc").toLowerCase();
         const sortDir: 1 | -1 = sortDirParam === "asc" ? 1 : -1;
+
         const sortByParam = String(req.query.sortBy || "createdAt");
         const sortField = sortByParam === "datetime" ? "datetime" : "createdAt";
+
         const filter: any = {};
 
+        // Basic filters
         if (req.query.status) filter.status = req.query.status;
         if (req.query.type) filter.type = req.query.type;
+
+        // NEW: filter by customerId (linked customer user id)
+        if (req.query.customerId) {
+            filter.customerUserId = String(req.query.customerId);
+        }
 
         // Date range
         if (req.query.from || req.query.to) {
             filter.datetime = {};
-            if (req.query.from) filter.datetime.$gte = new Date(String(req.query.from));
-            if (req.query.to) filter.datetime.$lte = new Date(String(req.query.to));
+            if (req.query.from) {
+                filter.datetime.$gte = new Date(String(req.query.from));
+            }
+            if (req.query.to) {
+                filter.datetime.$lte = new Date(String(req.query.to));
+            }
         }
 
         // Driver filter
@@ -254,7 +293,7 @@ router.get(
             total,
             pages: Math.ceil(total / limit),
         });
-    }
+    },
 );
 
 /**

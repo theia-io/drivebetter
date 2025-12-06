@@ -17,7 +17,7 @@ import {
     Info,
     MapPin,
 } from "lucide-react";
-import {useCustomerRides, useMyCustomers} from "@/stores/customers";
+import { useCustomerRides, useMyCustomers } from "@/stores/customers";
 
 const dt = (iso?: string | null) => (iso ? new Date(iso).toLocaleString() : "—");
 
@@ -53,16 +53,26 @@ export default function CustomerDetailsPage() {
         customer?.user?._id || customer?.profile?.userId || (isRegistered ? id : undefined);
 
     const {
-        data: ridesResponse,
+        data: rides,
         isLoading: ridesLoading,
         error: ridesError,
+        total: ridesTotalFromApi,
     } = useCustomerRides(customerUserId, {
         enabled: !!customerUserId,
         page: 1,
         limit: 5,
     });
 
-    const rides = ridesResponse ?? [];
+    // Derived stats: total + last ride
+    const totalRides =
+        (stats && typeof stats.ridesTotal === "number" && stats.ridesTotal) ||
+        ridesTotalFromApi ||
+        rides.length ||
+        0;
+
+    const lastRideAtIso: string | null =
+        (stats && stats.lastRideAt) ||
+        (rides.length > 0 ? rides[0].datetime : null);
 
     return (
         <ProtectedLayout>
@@ -295,9 +305,7 @@ export default function CustomerDetailsPage() {
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center justify-between gap-2 text-[11px] text-gray-500">
-                                                            <span>
-                                                                {dt(ride.datetime)}
-                                                            </span>
+                                                            <span>{dt(ride.datetime)}</span>
                                                             <Link
                                                                 href={`/rides/${ride._id}`}
                                                                 className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700"
@@ -325,7 +333,7 @@ export default function CustomerDetailsPage() {
                                                     Total rides
                                                 </div>
                                                 <div className="mt-1 text-lg font-semibold text-gray-900">
-                                                    {stats?.ridesTotal ?? 0}
+                                                    {totalRides}
                                                 </div>
                                             </div>
                                             <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
@@ -333,7 +341,7 @@ export default function CustomerDetailsPage() {
                                                     Last ride
                                                 </div>
                                                 <div className="mt-1 text-xs font-medium text-gray-900">
-                                                    {dt(stats?.lastRideAt ?? null)}
+                                                    {dt(lastRideAtIso)}
                                                 </div>
                                             </div>
                                         </div>
