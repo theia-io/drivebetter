@@ -37,27 +37,27 @@ export default function ShortRideSummary({ id }: { id: string }) {
                         <div className="flex items-center text-sm text-gray-700">
                             <User className="w-4 h-4 mr-2 text-gray-400" />
                             <span className="font-medium mr-1">Customer Name:</span>
-                            {ride.customer.name}
+                            {ride?.customer?.name}
                         </div>
                         <div className="flex items-center text-sm text-gray-700">
                             <Calendar className="w-4 h-4 mr-2 text-gray-400" />
                             <span className="font-medium mr-1">When:</span>
-                            {fmtDate(ride.datetime)} • {fmtTime(ride.datetime)}
+                            {fmtDate(ride?.datetime)} • {fmtTime(ride?.datetime)}
                         </div>
                         <div className="flex items-center text-sm text-gray-700">
                             <MapPin className="w-4 h-4 mr-2 text-gray-400" />
                             <span className="font-medium mr-1">From:</span>
-                            <span className="truncate">{ride.from}</span>
+                            <span className="truncate">{ride?.from}</span>
                         </div>
                         <div className="flex items-center text-sm text-gray-700">
                             <MapPin className="w-4 h-4 mr-2 text-gray-400" />
                             <span className="font-medium mr-1">To:</span>
-                            <span className="truncate">{ride.to}</span>
+                            <span className="truncate">{ride?.to}</span>
                         </div>
                         <div className="flex items-center text-sm text-gray-700">
                             <Navigation className="w-4 h-4 mr-2 text-gray-400" />
                             <span className="font-medium mr-1">Type:</span>
-                            {ride.type}
+                            {ride?.type}
                         </div>
                     </div>
 
@@ -65,31 +65,31 @@ export default function ShortRideSummary({ id }: { id: string }) {
                         <div className="flex items-center text-sm text-gray-700">
                             <PhoneIcon className="w-4 h-4 mr-2 text-gray-400" />
                             <span className="font-medium mr-1">Customer Phone:</span>
-                            {ride.customer.phone}
+                            {ride?.customer?.phone}
                         </div>
                         <div className="flex items-center text-sm text-gray-700">
                             <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
                             <span className="font-medium mr-1">Fare:</span>
-                            {money(ride.payment?.amountCents)}
+                            {money(ride?.payment?.amountCents)}
                         </div>
                         <div className="flex items-center text-sm text-gray-700">
                             <Clock className="w-4 h-4 mr-2 text-gray-400" />
                             <span className="font-medium mr-1">ETA:</span>
-                            {mins((ride as any).durationMinutes)}
+                            {mins((ride as any)?.durationMinutes)}
                         </div>
                         <div className="flex items-center text-sm text-gray-700">
                             <Navigation className="w-4 h-4 mr-2 text-gray-400" />
                             <span className="font-medium mr-1">Distance:</span>
-                            {km(ride.distance)}
+                            {km(ride?.distance)}
                         </div>
                         <div className="space-y-1 text-sm text-gray-700">
                             <div className="flex items-center gap-2">
                                 <User className="w-4 h-4 text-gray-400" />
                                 <span className="font-medium">Assigned driver</span>
 
-                                {ride.assignedDriverId && (
+                                {ride?.assignedDriverId && (
                                     <Link
-                                        href={`/users/${ride.assignedDriverId}`}
+                                        href={`/users/${ride?.assignedDriverId}`}
                                         className="ml-1 inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-600/20 hover:bg-indigo-100 transition-colors truncate"
                                     >
                                         <span className="truncate">
@@ -104,7 +104,7 @@ export default function ShortRideSummary({ id }: { id: string }) {
                                 )}
                             </div>
 
-                            {ride.status === "unassigned" && canManage && (
+                            {ride?.status === "unassigned" && canManage && (
                                 <div className="pl-6 w-full md:max-w-xs">
                                     <AssignDriverSelect
                                         rideId={ride._id}
@@ -121,7 +121,7 @@ export default function ShortRideSummary({ id }: { id: string }) {
                                 </div>
                             )}
 
-                            {!ride.assignedDriverId &&
+                            {!ride?.assignedDriverId &&
                                 (!canManage || ride.status !== "unassigned") && (
                                     <div className="pl-6 text-xs text-gray-500">
                                         No driver assigned

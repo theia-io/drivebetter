@@ -1,7 +1,7 @@
 // web/ui/src/services/customers.ts
 "use client";
 
-import useSWR from "swr";
+import useSWR, {SWRConfiguration} from "swr";
 import { mutate as globalMutate } from "swr";
 import { apiGet, apiPost, apiPatch } from "@/services/http";
 import {Ride} from "@/types";
@@ -130,6 +130,32 @@ export function getCustomerRides(
     const path = `/customers/${encodeURIComponent(customerId)}/rides?${query.toString()}`;
 
     return apiGet<CustomerRidesResponse>(path);
+}
+
+/**
+ * Fetch a single ride for the logged-in customer.
+ * Uses /customers/me/rides/:rideId
+ */
+export const getCustomerRide = async (rideId: string): Promise<Ride> => {
+    return await apiGet<Ride>(`/customers/me/rides/${rideId}`);
+};
+
+/**
+ * SWR hook for a single ride (customer-safe).
+ */
+export const useCustomerRide = (
+    rideId?: string,
+    config?: SWRConfiguration<Ride>,
+) => {
+    const key = rideId ? `/customers/me/rides/${rideId}` : null;
+
+    return useSWR<Ride>(
+        key,
+        async (url: string) => {
+            return await apiGet<Ride>(url);
+        },
+        config,
+    );
 }
 
 export function useCustomerRides(

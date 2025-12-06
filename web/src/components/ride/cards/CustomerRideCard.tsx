@@ -91,7 +91,7 @@ export default function CustomerRideCard({ ride }: Props) {
 
                 {/* Actions */}
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                    <Link href={`/rides/${ride._id}`} className="w-full sm:w-auto">
+                    <Link href={`/customer-rides/${ride._id}`} className="w-full sm:w-auto">
                         <Button
                             size="sm"
                             variant="outline"

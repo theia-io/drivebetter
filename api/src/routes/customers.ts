@@ -9,6 +9,8 @@ import User from "../models/user.model";
 import CustomerProfile from "../models/customerProfile.model";
 import { CustomerInvite } from "../models/customerInvite.model";
 import Ride from "@/models/ride.model";
+import {isObjectId, normalizeId} from "@/lib/utils/db-types";
+import {rideScopeFilter} from "@/lib/rideAuthz";
 
 const router = Router();
 const generateInviteCode = customAlphabet("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 10);
@@ -578,6 +580,136 @@ router.post("/register", async (req: Request, res: Response) => {
         return res.status(400).json({ error: err.message });
     }
 });
+
+/**@openapi
+ * /customers/me/rides/{rideId}:
+ *   get:
+ *     summary: Get a single ride for the logged-in customer
+ *     tags: [Customers]
+ *     parameters:
+ *       - in: path
+ *         name: rideId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Ride details
+ *       400:
+ *         description: Invalid id
+ *       404:
+ *         description: Ride not found
+ */
+router.get(
+    "/me/rides/:rideId",
+    requireAuth,
+    requireRole(["customer"]),
+    async (req: Request, res: Response) => {
+        const user = (req as any).user;
+        const { rideId } = req.params;
+
+        const ride = await Ride.findOne({
+            _id: normalizeId(rideId),
+            customerUserId: normalizeId(user.id),
+        })
+            .populate("creatorId", "name email phone")
+            .lean();
+
+        if (!ride) {
+            return res.status(404).json({ message: "Ride not found" });
+        }
+
+        res.json(ride);
+    },
+);
+
+
+/**@openapi
+ * /customers/{customerId}/rides/{rideId}:
+ *   get:
+ *     summary: Get a single ride for a customer
+ *     description: >
+ *       Returns a ride that belongs to the specified customer. Customers can only
+ *       access rides linked to their own user (customerUserId). Staff roles
+ *       (driver/dispatcher/admin) are additionally constrained by ride scope rules.
+ *     tags: [Customers]
+ *     parameters:
+ *       - in: path
+ *         name: customerId
+ *         required: true
+ *         description: Customer user id (for staff). For customers, this is ignored and their own id is used.
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: rideId
+ *         required: true
+ *         description: Ride id
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Ride details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Ride'
+ *       400:
+ *         description: Invalid id
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Ride not found
+ */
+router.get(
+    "/:customerId/rides/:rideId",
+    requireAuth,
+    requireRole(["driver", "dispatcher", "admin", "customer"]),
+    async (req: Request, res: Response) => {
+        const user = (req as any).user;
+        const { customerId, rideId } = req.params;
+
+        let filter: any = {
+            _id: normalizeId(rideId),
+        };
+
+        const roles: string[] = user.roles || [];
+        const isCustomer = roles.includes("customer");
+        const isStaff =
+            roles.includes("driver") ||
+            roles.includes("dispatcher") ||
+            roles.includes("admin");
+
+        if (isCustomer) {
+            // Customer can only see rides where they are the linked customer
+            filter.customerUserId = normalizeId(user.id);
+        } else if (isStaff) {
+            // For staff, enforce customerId + scope
+            if (!isObjectId(customerId)) {
+                return res
+                    .status(400)
+                    .json({ message: "Invalid customerId; must be a valid ObjectId" });
+            }
+
+            filter.customerUserId = normalizeId(customerId);
+            filter = {
+                ...filter,
+                ...rideScopeFilter(user),
+            };
+        } else {
+            return res.status(403).json({ message: "Forbidden" });
+        }
+
+        const ride = await Ride.findOne(filter)
+            .populate("creatorId", "name email phone")
+            .lean();
+
+        if (!ride) {
+            return res.status(404).json({ message: "Ride not found" });
+        }
+
+        res.json(ride);
+    },
+);
 
 /**
  * @openapi
