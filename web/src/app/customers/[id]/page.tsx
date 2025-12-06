@@ -77,28 +77,30 @@ export default function CustomerDetailsPage() {
     return (
         <ProtectedLayout>
             <Container className="px-3 sm:px-6 lg:px-8">
-                <div className="space-y-4 sm:space-y-6">
-                    {/* Toolbar */}
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
+                <div className="space-y-4 sm:space-y-6 pb-4 sm:pb-8">
+                    {/* Toolbar – mobile-friendly layout */}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        {/* Back + avatar + basic info */}
+                        <div className="min-w-0 space-y-2">
                             <Button
                                 variant="outline"
                                 size="sm"
                                 leftIcon={<ArrowLeft className="w-4 h-4" />}
+                                className="w-fit"
                                 onClick={() => router.push("/customers")}
                             >
                                 Back
                             </Button>
 
-                            <div className="flex items-center gap-3 min-w-0">
-                                <div className="p-2 bg-indigo-50 rounded-xl border border-indigo-200">
+                            <div className="flex items-start gap-3 min-w-0">
+                                <div className="p-2 bg-indigo-50 rounded-xl border border-indigo-200 shrink-0">
                                     <UserIcon className="w-5 h-5 text-indigo-600" />
                                 </div>
-                                <div className="min-w-0">
-                                    <Typography className="text-base sm:text-lg font-semibold text-gray-900 truncate">
+                                <div className="min-w-0 space-y-1">
+                                    <Typography className="text-lg sm:text-xl font-semibold text-gray-900 truncate">
                                         {name}
                                     </Typography>
-                                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 text-xs sm:text-sm text-gray-500">
+                                    <div className="flex flex-col gap-1 text-xs sm:text-sm text-gray-500">
                                         {email && (
                                             <span className="flex items-center gap-1 min-w-0">
                                                 <Mail className="w-3 h-3" />
@@ -106,7 +108,7 @@ export default function CustomerDetailsPage() {
                                             </span>
                                         )}
                                         {phone && (
-                                            <span className="flex items-center gap-1 min-w-0 sm:ml-3">
+                                            <span className="flex items-center gap-1 min-w-0">
                                                 <Phone className="w-3 h-3" />
                                                 <span className="truncate">{phone}</span>
                                             </span>
@@ -116,12 +118,13 @@ export default function CustomerDetailsPage() {
                             </div>
                         </div>
 
-                        {/* Actions */}
+                        {/* Actions – full width on mobile, inline on desktop */}
                         {customer && (
-                            <div className="flex flex-col sm:flex-row gap-2">
+                            <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:justify-end">
                                 <Button
                                     size="sm"
-                                    variant="outline"
+                                    colorScheme="success"
+                                    className="w-full sm:w-auto"
                                     onClick={() =>
                                         router.push(
                                             `/rides/new?customerId=${encodeURIComponent(
@@ -136,6 +139,8 @@ export default function CustomerDetailsPage() {
                                 <Button
                                     size="sm"
                                     variant="outline"
+                                    colorScheme="secondary"
+                                    className="w-full sm:w-auto"
                                     onClick={() =>
                                         router.push(
                                             `/rides?customerId=${encodeURIComponent(
@@ -176,7 +181,7 @@ export default function CustomerDetailsPage() {
                                         <CardBody className="flex items-start gap-3">
                                             <Info className="w-4 h-4 mt-0.5 text-amber-600" />
                                             <div className="space-y-1">
-                                                <Typography className="text-sm font-medium text-amber-800">
+                                                <Typography className="text-xs sm:text-sm font-medium text-amber-800">
                                                     Invitation pending
                                                 </Typography>
                                                 <Typography className="text-xs sm:text-sm text-amber-800">
@@ -189,50 +194,58 @@ export default function CustomerDetailsPage() {
 
                                 <Card>
                                     <CardBody className="space-y-4 sm:space-y-5">
-                                        <Typography className="text-sm font-semibold text-gray-900">
+                                        <Typography className="text-sm sm:text-base font-semibold text-gray-900">
                                             Basic information
                                         </Typography>
 
                                         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3 text-sm">
                                             <div>
-                                                <dt className="text-gray-500">Name</dt>
-                                                <dd className="font-medium text-gray-900 break-words">
+                                                <dt className="text-xs sm:text-sm text-gray-500">
+                                                    Name
+                                                </dt>
+                                                <dd className="mt-0.5 text-sm sm:text-base font-medium text-gray-900 break-words">
                                                     {name}
                                                 </dd>
                                             </div>
                                             <div>
-                                                <dt className="text-gray-500">Email</dt>
-                                                <dd className="font-medium text-gray-900 break-words">
+                                                <dt className="text-xs sm:text-sm text-gray-500">
+                                                    Email
+                                                </dt>
+                                                <dd className="mt-0.5 text-sm sm:text-base font-medium text-gray-900 break-words">
                                                     {email || "—"}
                                                 </dd>
                                             </div>
                                             <div>
-                                                <dt className="text-gray-500">Phone</dt>
-                                                <dd className="font-medium text-gray-900 break-words">
+                                                <dt className="text-xs sm:text-sm text-gray-500">
+                                                    Phone
+                                                </dt>
+                                                <dd className="mt-0.5 text-sm sm:text-base font-medium text-gray-900 break-words">
                                                     {phone || "—"}
                                                 </dd>
                                             </div>
                                             <div>
-                                                <dt className="text-gray-500">Age</dt>
-                                                <dd className="font-medium text-gray-900">
+                                                <dt className="text-xs sm:text-sm text-gray-500">
+                                                    Age
+                                                </dt>
+                                                <dd className="mt-0.5 text-sm sm:text-base font-medium text-gray-900">
                                                     {age != null ? age : "—"}
                                                 </dd>
                                             </div>
                                             <div>
-                                                <dt className="text-gray-500 flex items-center gap-1">
+                                                <dt className="flex items-center gap-1 text-xs sm:text-sm text-gray-500">
                                                     <Calendar className="w-3 h-3" />
                                                     Created
                                                 </dt>
-                                                <dd className="font-medium text-gray-900">
+                                                <dd className="mt-0.5 text-sm sm:text-base font-medium text-gray-900">
                                                     {dt(createdAt)}
                                                 </dd>
                                             </div>
                                             <div>
-                                                <dt className="text-gray-500 flex items-center gap-1">
+                                                <dt className="flex items-center gap-1 text-xs sm:text-sm text-gray-500">
                                                     <Clock className="w-3 h-3" />
                                                     Last update
                                                 </dt>
-                                                <dd className="font-medium text-gray-900">
+                                                <dd className="mt-0.5 text-sm sm:text-base font-medium text-gray-900">
                                                     {dt(updatedAt)}
                                                 </dd>
                                             </div>
@@ -246,14 +259,16 @@ export default function CustomerDetailsPage() {
                                 {/* Recent rides */}
                                 <Card>
                                     <CardBody className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <Typography className="text-sm font-semibold text-gray-900">
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                            <Typography className="text-sm sm:text-base font-semibold text-gray-900">
                                                 Recent rides
                                             </Typography>
                                             {customerUserId && (
                                                 <Button
                                                     size="xs"
                                                     variant="outline"
+                                                    colorScheme="secondary"
+                                                    className="w-full sm:w-auto"
                                                     onClick={() =>
                                                         router.push(
                                                             `/rides?customerId=${encodeURIComponent(
@@ -293,18 +308,18 @@ export default function CustomerDetailsPage() {
                                                         key={ride._id}
                                                         className="py-2.5 flex flex-col gap-1 text-xs sm:text-sm"
                                                     >
-                                                        <div className="flex items-center justify-between gap-2">
+                                                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                                                             <div className="flex items-center gap-1.5 min-w-0">
                                                                 <MapPin className="w-3 h-3 text-gray-400" />
                                                                 <span className="truncate font-medium text-gray-900">
                                                                     {ride.from} → {ride.to}
                                                                 </span>
                                                             </div>
-                                                            <span className="ml-2 inline-flex items-center rounded-full border border-gray-200 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-600">
+                                                            <span className="inline-flex items-center self-start rounded-full border border-gray-200 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-600 sm:self-auto">
                                                                 {ride.status}
                                                             </span>
                                                         </div>
-                                                        <div className="flex items-center justify-between gap-2 text-[11px] text-gray-500">
+                                                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between text-[11px] text-gray-500">
                                                             <span>{dt(ride.datetime)}</span>
                                                             <Link
                                                                 href={`/rides/${ride._id}`}
@@ -323,11 +338,11 @@ export default function CustomerDetailsPage() {
                                 {/* Ride statistics */}
                                 <Card>
                                     <CardBody className="space-y-4">
-                                        <Typography className="text-sm font-semibold text-gray-900">
+                                        <Typography className="text-sm sm:text-base font-semibold text-gray-900">
                                             Ride statistics
                                         </Typography>
 
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
                                                 <div className="text-xs text-gray-500">
                                                     Total rides
@@ -340,17 +355,17 @@ export default function CustomerDetailsPage() {
                                                 <div className="text-xs text-gray-500">
                                                     Last ride
                                                 </div>
-                                                <div className="mt-1 text-xs font-medium text-gray-900">
+                                                <div className="mt-1 text-xs sm:text-sm font-medium text-gray-900">
                                                     {dt(lastRideAtIso)}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             <Button
                                                 size="sm"
-                                                colorScheme="secondary"
                                                 variant="outline"
+                                                colorScheme="secondary"
                                                 className="w-full"
                                                 onClick={() =>
                                                     router.push(
@@ -366,7 +381,7 @@ export default function CustomerDetailsPage() {
                                                 href={`/rides/new?customerId=${encodeURIComponent(
                                                     customer.user?._id || id,
                                                 )}`}
-                                                className="w-full sm:w-auto"
+                                                className="w-full"
                                             >
                                                 <Button
                                                     size="sm"
