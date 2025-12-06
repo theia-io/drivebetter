@@ -4,7 +4,7 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button, Container, Typography } from "@/components/ui";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import {useRouter, useSearchParams} from "next/navigation";
 import { useRidesInfinite } from "@/stores/rides";
 import { Ride } from "@/types";
 import { useAuthStore } from "@/stores";
@@ -16,12 +16,24 @@ import { User as UserIcon, Mail, Phone } from "lucide-react";
 
 export default function RidesPage() {
     const { user } = useAuthStore();
+    const router = useRouter();
     const roles = user?.roles ?? [];
     const isDriver = roles.includes("driver");
 
     const searchParams = useSearchParams();
     const customerId = searchParams?.get("customerId") || "";
     const isCustomerFiltered = Boolean(customerId);
+
+    const isCustomer = roles.includes("customer");
+
+    const isCustomerOnly = isCustomer && !isDriver;
+
+    // hard guard: customer-only users should not be here
+    useEffect(() => {
+        if (isCustomerOnly) {
+            router.replace("/customer-rides");
+        }
+    }, [isCustomerOnly, router]);
 
     const { data: customers } = useMyCustomers();
 
