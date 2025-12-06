@@ -78,6 +78,7 @@ export const NAVIGATION_ITEMS: NavItem[] = [
     MY_CREATED_ITEM,
     MY_ASSIGNMENTS_ITEM,
     NEW_RIDES_ITEM,
+    CUSTOMERS_ITEM,
 ];
 
 export const getNavigationForUser = (item: NavItem, userRoles?: string[]): NavItem => {

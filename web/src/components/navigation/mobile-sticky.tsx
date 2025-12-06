@@ -19,7 +19,7 @@ export default function MobileSticky() {
     const newRidesCount = inboxCountData?.count ?? 0;
 
     return (
-        <nav className="fixed bottom-0 left-0 right-0 z-30 md:hidden bg-white border-t">
+        <nav className="fixed bottom-0 left-0 right-0 z-1110 md:hidden bg-white border-t">
             <div className="mx-auto max-w-lg">
                 <div className="grid h-16 grid-cols-5 text-xs text-gray-500">
                     {/* 1. Calendar */}

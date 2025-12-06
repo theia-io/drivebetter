@@ -346,9 +346,11 @@ export default function CustomerDetailsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-col sm:flex-row gap-2">
+                                        <div className="grid grid-cols-2 gap-3">
                                             <Button
                                                 size="sm"
+                                                colorScheme="secondary"
+                                                variant="outline"
                                                 className="w-full"
                                                 onClick={() =>
                                                     router.push(
@@ -368,7 +370,7 @@ export default function CustomerDetailsPage() {
                                             >
                                                 <Button
                                                     size="sm"
-                                                    variant="outline"
+                                                    colorScheme="success"
                                                     className="w-full"
                                                     leftIcon={<Car className="w-4 h-4" />}
                                                 >
@@ -376,19 +378,6 @@ export default function CustomerDetailsPage() {
                                                 </Button>
                                             </Link>
                                         </div>
-                                    </CardBody>
-                                </Card>
-
-                                {/* Notes placeholder */}
-                                <Card>
-                                    <CardBody className="space-y-2">
-                                        <Typography className="text-sm font-semibold text-gray-900">
-                                            Internal notes
-                                        </Typography>
-                                        <Typography className="text-xs sm:text-sm text-gray-500">
-                                            Notes for this customer are not implemented yet on the
-                                            API side. Once available, render them here.
-                                        </Typography>
                                     </CardBody>
                                 </Card>
                             </div>

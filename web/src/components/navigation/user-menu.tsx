@@ -27,7 +27,7 @@ export default function UserMenu({ user, className }: { user: User; className?: 
             </button>
 
             {userMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 rounded-md bg-white shadow-lg border border-gray-100 z-50">
+                <div className="absolute right-0 mt-2 w-48 rounded-md bg-white shadow-lg border border-gray-100 z-1110">
                     <div className="py-1">
                         <Link
                             href="/account"
